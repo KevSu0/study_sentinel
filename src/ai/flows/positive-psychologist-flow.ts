@@ -29,51 +29,45 @@ const positivePsychologistFlow = ai.defineFlow(
   async (input: PositivePsychologistInput) => {
     const {profile, dailySummary, history} = input;
 
-    // Definitive, Failsafe Sanitization.
+    // Definitive, Failsafe Sanitization with an explicit loop.
     // This creates a clean, validated history before any other logic runs.
-    const genkitHistory: MessageData[] = (history || [])
-      .filter(
-        (
-          msg
-        ): msg is {
-          role: 'user' | 'model';
-          content: string;
-        } =>
-          !!msg &&
+    const genkitHistory: MessageData[] = [];
+    if (Array.isArray(history)) {
+      for (const msg of history) {
+        // Explicitly check every condition for every message.
+        if (
+          msg &&
           typeof msg === 'object' &&
           (msg.role === 'user' || msg.role === 'model') &&
-          typeof msg.content === 'string'
-      )
-      .map(msg => ({
-        role: msg.role,
-        parts: [{text: msg.content}],
-      }));
+          typeof msg.content === 'string' &&
+          msg.content.trim() !== ''
+        ) {
+          // Only if all conditions are met, push to the clean history.
+          genkitHistory.push({
+            role: msg.role,
+            parts: [{text: msg.content}],
+          });
+        } else {
+          // This allows debugging of corrupted data without crashing the app.
+          console.warn('Skipping corrupted message in chat history:', msg);
+        }
+      }
+    }
+
 
     // The Gemini API requires the history to start with a 'user' message.
     if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {
       genkitHistory.shift();
     }
 
-    // If, after cleaning, the history is empty, but the user *did* send a message,
-    // we should use that last message. This handles the case of a fully corrupt
-    // history where only the newest message is valid.
-    if (genkitHistory.length === 0 && history && history.length > 0) {
-      const lastMessage = history[history.length - 1];
-      if (
-        lastMessage &&
-        lastMessage.role === 'user' &&
-        typeof lastMessage.content === 'string'
-      ) {
-        genkitHistory.push({
-          role: 'user',
-          parts: [{text: lastMessage.content}],
-        });
-      }
-    }
-
     // Add a final check to prevent sending an empty history which can cause issues.
     if (genkitHistory.length === 0) {
-      return {response: "I'm ready to listen. What's on your mind?"};
+      // If original history was also empty or just whitespace, send default.
+      if (!history || history.every(h => !h?.content?.trim())) {
+         return {response: "I'm ready to listen. What's on your mind?"};
+      }
+      // If history was corrupt but not empty, acknowledge it.
+      return {response: "It seems there was an issue with my memory. Could you please repeat your last message?"};
     }
 
     // Now that history is clean, build the system prompt.

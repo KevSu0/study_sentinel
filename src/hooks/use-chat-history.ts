@@ -16,7 +16,6 @@ const initialMessage: ChatMessage = {
     "Hello! I'm your personal motivation coach. How can I help you on your journey today?",
 };
 
-// A simple, direct validation function.
 const isValidMessage = (msg: any): msg is ChatMessage => {
   return (
     !!msg &&
@@ -31,31 +30,43 @@ export function useChatHistory() {
   const [messages, setInternalMessages] = useState<ChatMessage[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // This effect runs only once on component mount to load and clean data from localStorage.
   useEffect(() => {
-    let loadedMessages: ChatMessage[] = [initialMessage];
     try {
       const savedHistory = localStorage.getItem(CHAT_HISTORY_KEY);
       if (savedHistory) {
-        const parsedHistory = JSON.parse(savedHistory);
-        if (Array.isArray(parsedHistory)) {
-          // Filter the array aggressively, keeping only valid messages.
-          const cleanHistory = parsedHistory.filter(isValidMessage);
+        const parsed = JSON.parse(savedHistory);
+        if (Array.isArray(parsed)) {
+          // Use a robust reduce to filter and map simultaneously, creating a guaranteed-clean array.
+          const cleanHistory = parsed.reduce((acc: ChatMessage[], msg: any) => {
+            if (isValidMessage(msg)) {
+              acc.push({ role: msg.role, content: msg.content });
+            }
+            return acc;
+          }, []);
+
           if (cleanHistory.length > 0) {
-            loadedMessages = cleanHistory;
+            setInternalMessages(cleanHistory);
+          } else {
+            // If the saved history was entirely corrupt, start fresh.
+            setInternalMessages([initialMessage]);
           }
+        } else {
+           // If saved data is not an array, it's corrupt. Start fresh.
+          setInternalMessages([initialMessage]);
         }
+      } else {
+         // No history found, start fresh.
+        setInternalMessages([initialMessage]);
       }
     } catch (error) {
       console.error('Failed to load or parse chat history, resetting.', error);
-      // Ensure we start fresh if parsing fails.
-      loadedMessages = [initialMessage];
+      localStorage.removeItem(CHAT_HISTORY_KEY);
+      setInternalMessages([initialMessage]);
+    } finally {
+      setIsLoaded(true);
     }
-    setInternalMessages(loadedMessages);
-    setIsLoaded(true);
   }, []);
 
-  // This effect runs whenever messages change to save the clean state back to localStorage.
   useEffect(() => {
     if (isLoaded) {
       try {
@@ -68,7 +79,6 @@ export function useChatHistory() {
   }, [messages, isLoaded]);
 
   const addMessage = useCallback((message: ChatMessage) => {
-    // Re-validate here to be absolutely sure we're not adding bad data.
     if (!isValidMessage(message)) {
       console.error(
         'CRITICAL: Attempted to add invalid message. Operation aborted.',
@@ -83,6 +93,8 @@ export function useChatHistory() {
 
   const clearMessages = useCallback(() => {
     setInternalMessages([initialMessage]);
+    // Also clear from local storage immediately.
+    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify([initialMessage]));
   }, []);
 
   return {messages, addMessage, clearMessages, isLoaded};
