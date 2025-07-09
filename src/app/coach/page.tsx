@@ -47,15 +47,27 @@ function ChatBubble({role, content}: ChatMessage) {
           'max-w-sm rounded-lg px-4 py-3 text-sm md:max-w-md',
           isUser
             ? 'bg-primary text-primary-foreground'
-            : 'bg-muted text-muted-foreground',
-          // Styling for markdown elements.
-          '[&_p]:mb-2 [&_p:last-of-type]:mb-0',
-          '[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5',
-          '[&_li]:my-1',
-          !isUser && '[&_strong]:text-foreground'
+            : 'bg-muted text-muted-foreground'
         )}
       >
-        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+            ul: ({node, ...props}) => (
+              <ul className="my-2 list-disc pl-5" {...props} />
+            ),
+            li: ({node, ...props}) => <li className="my-1" {...props} />,
+            strong: ({node, ...props}) => (
+              <strong
+                className={cn(!isUser && 'text-foreground')}
+                {...props}
+              />
+            ),
+          }}
+        >
+          {content}
+        </ReactMarkdown>
       </div>
       {isUser && (
         <Avatar className="h-8 w-8">
