@@ -145,7 +145,13 @@ export default function CoachPage() {
         dailySummary: dailySummary || undefined,
       });
 
-      if (result && !('error' in result) && result.response) {
+      // Check for a valid, non-empty string response
+      if (
+        result &&
+        !('error' in result) &&
+        typeof result.response === 'string' &&
+        result.response.trim()
+      ) {
         const modelMessage: ChatMessage = {
           role: 'model',
           content: result.response,
@@ -155,15 +161,18 @@ export default function CoachPage() {
         const errorMessage: ChatMessage = {
           role: 'model',
           content:
-            result?.error ||
+            (result as any)?.error ||
             "Sorry, I couldn't get a response. Please try again.",
         };
         addMessage(errorMessage);
       }
     } catch (error) {
+      console.error('AI Chat Error:', error);
       const errorMessage: ChatMessage = {
         role: 'model',
-        content: 'Sorry, an unexpected error occurred. Please try again.',
+        content: `Sorry, an unexpected error occurred: ${
+          error instanceof Error ? error.message : 'Unknown error'
+        }. Please try again.`,
       };
       addMessage(errorMessage);
     } finally {

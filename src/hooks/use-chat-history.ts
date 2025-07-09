@@ -23,13 +23,33 @@ export function useChatHistory() {
   useEffect(() => {
     try {
       const savedHistory = localStorage.getItem(CHAT_HISTORY_KEY);
-      if (savedHistory && JSON.parse(savedHistory).length > 0) {
-        setMessages(JSON.parse(savedHistory));
+      if (savedHistory) {
+        const parsedHistory = JSON.parse(savedHistory);
+        if (Array.isArray(parsedHistory) && parsedHistory.length > 0) {
+          // Robustly filter for valid message objects to prevent crashes
+          const cleanHistory: ChatMessage[] = parsedHistory.filter(
+            (msg: any): msg is ChatMessage =>
+              msg &&
+              typeof msg.role === 'string' &&
+              typeof msg.content === 'string'
+          );
+
+          if (cleanHistory.length > 0) {
+            setMessages(cleanHistory);
+          } else {
+            // If filtering removed everything, start fresh
+            setMessages([initialMessage]);
+          }
+        } else {
+          setMessages([initialMessage]);
+        }
       } else {
         setMessages([initialMessage]);
       }
     } catch (error) {
-      console.error('Failed to load chat history', error);
+      console.error('Failed to load or parse chat history, resetting.', error);
+      // If parsing fails, clear the corrupted data to prevent app crashes
+      localStorage.removeItem(CHAT_HISTORY_KEY);
       setMessages([initialMessage]);
     } finally {
       setIsLoaded(true);
