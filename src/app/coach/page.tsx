@@ -129,7 +129,8 @@ export default function CoachPage() {
     setInputValue('');
     setIsChatLoading(true);
 
-    const history = messages.slice(1); // Exclude initial welcome message
+    // Send the last 10 messages from the history for context, excluding the initial welcome message.
+    const history = messages.slice(1).slice(-10);
 
     const result = await getChatbotResponse({
       message: inputValue,
