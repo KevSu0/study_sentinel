@@ -14,19 +14,6 @@ import {
 } from '@/lib/types';
 import {MessageData} from 'genkit/ai';
 
-// A robust type guard to ensure a message is a valid object with the required properties.
-// This is the definitive fix to prevent crashes from corrupted history data.
-const isValidMessage = (
-  msg: any
-): msg is {role: 'user' | 'model'; content: string} => {
-  return (
-    msg &&
-    typeof msg === 'object' &&
-    typeof msg.role === 'string' &&
-    typeof msg.content === 'string'
-  );
-};
-
 export async function getChatbotResponse(
   input: PositivePsychologistInput
 ): Promise<PositivePsychologistOutput> {
@@ -91,13 +78,23 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    // Final validation step: Filter the history with the robust type guard.
-    const cleanHistory = Array.isArray(history) ? history.filter(isValidMessage) : [];
-    
-    const genkitHistory: MessageData[] = cleanHistory.map(msg => ({
-      role: msg.role,
-      parts: [{text: msg.content}],
-    }));
+    // Manually and explicitly build a clean history to prevent any crashes.
+    const genkitHistory: MessageData[] = [];
+    if (Array.isArray(history)) {
+      for (const message of history) {
+        // This check ensures the message and its properties are valid before use.
+        if (
+          message &&
+          (message.role === 'user' || message.role === 'model') &&
+          typeof message.content === 'string'
+        ) {
+          genkitHistory.push({
+            role: message.role,
+            parts: [{text: message.content}],
+          });
+        }
+      }
+    }
 
     // The Gemini API requires the history to start with a 'user' message.
     if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {
