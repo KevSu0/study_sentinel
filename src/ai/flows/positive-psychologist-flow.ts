@@ -60,14 +60,12 @@ const positivePsychologistFlow = ai.defineFlow(
       genkitHistory.shift();
     }
 
-    // Add a final check to prevent sending an empty history which can cause issues.
+    // Add a final check to prevent sending an empty/invalid history.
+    // If our sanitized history is empty at this point, it means the original
+    // history was empty, corrupt, or contained only an initial model message.
+    // In all cases, we should start fresh.
     if (genkitHistory.length === 0) {
-      // If original history was also empty or just whitespace, send default.
-      if (!history || history.every(h => !h?.content?.trim())) {
-         return {response: "I'm ready to listen. What's on your mind?"};
-      }
-      // If history was corrupt but not empty, acknowledge it.
-      return {response: "It seems there was an issue with my memory. Could you please repeat your last message?"};
+      return {response: "I'm ready to listen. What's on your mind?"};
     }
 
     // Now that history is clean, build the system prompt.
