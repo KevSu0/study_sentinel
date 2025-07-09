@@ -57,7 +57,7 @@ function ChatBubble({role, content}: ChatMessage) {
       )}
       <div
         className={cn(
-          'max-w-sm rounded-lg px-4 py-3 text-sm md:max-w-md',
+          'max-w-[90%] rounded-lg px-4 py-3 text-sm',
           isUser
             ? 'bg-primary text-primary-foreground'
             : 'bg-muted text-muted-foreground'
@@ -199,22 +199,20 @@ export function ChatWidget() {
 
   return (
     <>
-      <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50">
-        <Button
-          onClick={() => setIsOpen(!isOpen)}
-          size="icon"
-          className="w-14 h-14 md:w-16 md:h-16 rounded-full shadow-lg"
-        >
-          {isOpen ? (
-            <X className="h-7 w-7 md:h-8 md:h-8" />
-          ) : (
+      {!isOpen && (
+        <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50">
+          <Button
+            onClick={() => setIsOpen(true)}
+            size="icon"
+            className="w-14 h-14 md:w-16 md:h-16 rounded-full shadow-lg animate-in fade-in-0"
+          >
             <Bot className="h-7 w-7 md:h-8 md:h-8" />
-          )}
-        </Button>
-      </div>
+          </Button>
+        </div>
+      )}
 
       {isOpen && (
-        <div className="fixed bottom-20 md:bottom-24 right-4 md:right-6 z-50 w-[calc(100vw-2rem)] max-w-sm animate-in fade-in-0 slide-in-from-bottom-5">
+        <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 w-[calc(100vw-2rem)] max-w-sm animate-in fade-in-0 slide-in-from-bottom-5">
           <Card className="h-[70vh] max-h-[600px] flex flex-col shadow-2xl">
             <CardHeader className="flex flex-row items-center justify-between p-4 border-b">
               <CardTitle className="flex items-center gap-2 text-lg">
@@ -247,6 +245,14 @@ export function ChatWidget() {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <X className="h-5 w-5" />
+                  <span className="sr-only">Close chat</span>
+                </Button>
               </div>
             </CardHeader>
 
