@@ -37,10 +37,7 @@ export function useChatHistory() {
   }, []);
 
   const addMessage = useCallback(
-    (
-      newMessage: ChatMessage,
-      callback?: (updatedHistory: ChatMessage[]) => void
-    ) => {
+    (newMessage: ChatMessage) => {
       setMessages(prevMessages => {
         let updatedMessages = [...prevMessages, newMessage];
 
@@ -61,11 +58,7 @@ export function useChatHistory() {
         } catch (error) {
           console.error('Failed to save chat history', error);
         }
-
-        if (callback) {
-          callback(updatedMessages);
-        }
-
+        
         return updatedMessages;
       });
     },

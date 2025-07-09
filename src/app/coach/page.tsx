@@ -136,11 +136,16 @@ export default function CoachPage() {
     if (!inputValue.trim() || isChatLoading || isContextLoading) return;
 
     const userMessage: ChatMessage = {role: 'user', content: inputValue};
+    
+    // Create the new history first for the API call
+    const updatedHistory = [...messages, userMessage];
+
+    // Then update the UI
+    addMessage(userMessage);
     setInputValue('');
     setIsChatLoading(true);
 
-    // This callback ensures the API call uses the most up-to-date history.
-    addMessage(userMessage, async updatedHistory => {
+    try {
       const result = await getChatbotResponse({
         history: updatedHistory.slice(-10), // Send last 10 messages for context
         profile,
@@ -160,8 +165,16 @@ export default function CoachPage() {
         };
         addMessage(errorMessage);
       }
+    } catch (error) {
+       const errorMessage: ChatMessage = {
+          role: 'model',
+          content: "Sorry, an unexpected error occurred. Please try again.",
+        };
+        addMessage(errorMessage);
+    }
+    finally {
       setIsChatLoading(false);
-    });
+    }
   };
 
   const allLoaded = historyLoaded && !isContextLoading;
