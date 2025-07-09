@@ -1,3 +1,4 @@
+
 import React, {memo, useState, useEffect, Suspense, lazy, useMemo} from 'react';
 import {
   MoreVertical,
@@ -111,7 +112,8 @@ export const SimpleTaskItem = memo(function SimpleTaskItem({
       <div
         className={cn(
           'flex items-center gap-4 p-3 border rounded-lg transition-colors hover:bg-muted/50',
-          isOverdue && 'border-destructive/50 bg-destructive/5'
+          isOverdue && 'border-destructive/50 bg-destructive/5',
+          isCompleted && 'bg-accent/10'
         )}
       >
         <Checkbox
