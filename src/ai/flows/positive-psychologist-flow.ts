@@ -20,7 +20,6 @@ const PositivePsychologistInputSchema = z.object({
       content: z.string(),
     })
   ),
-  message: z.string(),
 });
 export type PositivePsychologistInput = z.infer<
   typeof PositivePsychologistInputSchema
@@ -46,7 +45,16 @@ const positivePsychologistFlow = ai.defineFlow(
     outputSchema: PositivePsychologistOutputSchema,
   },
   async input => {
-    const {profile, dailySummary, message, history} = input;
+    const {profile, dailySummary, history} = input;
+
+    // Handle empty history case
+    if (!history || history.length === 0) {
+      return {response: 'Hello! How can I help you today?'};
+    }
+
+    // Extract the prompt (last message) and the conversation history
+    const promptMessage = history[history.length - 1];
+    const conversationHistory = history.slice(0, -1);
 
     // Construct the system prompt with context
     const profileContext = profile
@@ -99,7 +107,7 @@ ${summaryContext}
 - You have the last 10 messages for context. Use them to maintain a coherent conversation.
 `;
 
-    const genkitHistory: MessageData[] = history.map(h => ({
+    const genkitHistory: MessageData[] = conversationHistory.map(h => ({
       role: h.role,
       parts: [{text: h.content}],
     }));
@@ -107,7 +115,7 @@ ${summaryContext}
     // Using ai.generate for chat history support
     const response = await ai.generate({
       model: 'googleai/gemini-2.0-flash',
-      prompt: message,
+      prompt: promptMessage.content,
       history: genkitHistory,
       system: systemPrompt,
     });

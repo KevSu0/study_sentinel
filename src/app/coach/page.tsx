@@ -135,15 +135,14 @@ export default function CoachPage() {
 
     const userMessage: ChatMessage = {role: 'user', content: inputValue};
     addMessage(userMessage);
-    const currentInputValue = inputValue;
+
+    const newHistory = [...messages, userMessage];
+
     setInputValue('');
     setIsChatLoading(true);
 
-    const historyForAI = messages.slice(-10);
-
     const result = await getChatbotResponse({
-      message: currentInputValue,
-      history: historyForAI,
+      history: newHistory.slice(-10),
       profile,
       dailySummary: dailySummary || undefined,
     });
