@@ -29,6 +29,54 @@ const positivePsychologistFlow = ai.defineFlow(
   async (input: PositivePsychologistInput) => {
     const {profile, dailySummary, history} = input;
 
+    // Definitive, Failsafe Sanitization.
+    // This creates a clean, validated history before any other logic runs.
+    const genkitHistory: MessageData[] = (history || [])
+      .filter(
+        (
+          msg
+        ): msg is {
+          role: 'user' | 'model';
+          content: string;
+        } =>
+          !!msg &&
+          typeof msg === 'object' &&
+          (msg.role === 'user' || msg.role === 'model') &&
+          typeof msg.content === 'string'
+      )
+      .map(msg => ({
+        role: msg.role,
+        parts: [{text: msg.content}],
+      }));
+
+    // The Gemini API requires the history to start with a 'user' message.
+    if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {
+      genkitHistory.shift();
+    }
+
+    // If, after cleaning, the history is empty, but the user *did* send a message,
+    // we should use that last message. This handles the case of a fully corrupt
+    // history where only the newest message is valid.
+    if (genkitHistory.length === 0 && history && history.length > 0) {
+      const lastMessage = history[history.length - 1];
+      if (
+        lastMessage &&
+        lastMessage.role === 'user' &&
+        typeof lastMessage.content === 'string'
+      ) {
+        genkitHistory.push({
+          role: 'user',
+          parts: [{text: lastMessage.content}],
+        });
+      }
+    }
+
+    // Add a final check to prevent sending an empty history which can cause issues.
+    if (genkitHistory.length === 0) {
+      return {response: "I'm ready to listen. What's on your mind?"};
+    }
+
+    // Now that history is clean, build the system prompt.
     const profileContext = profile
       ? `
 **User Profile:**
@@ -77,46 +125,6 @@ ${summaryContext}
 - Ask clarifying questions when needed to better understand the user's request.
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
-
-    // Final, definitive server-side validation.
-    // This creates a new, guaranteed-clean array to send to the AI.
-    const genkitHistory: MessageData[] = [];
-    if (Array.isArray(history)) {
-      for (const message of history) {
-        // Step 1: Ensure message is a non-null object before destructuring.
-        if (!message || typeof message !== 'object') {
-          console.error('Skipping corrupted (non-object) message:', message);
-          continue;
-        }
-
-        // Step 2: Ensure role and content are of the correct type.
-        const {role, content} = message;
-        if (
-          (role === 'user' || role === 'model') &&
-          typeof content === 'string'
-        ) {
-          genkitHistory.push({
-            role: role,
-            parts: [{text: content}],
-          });
-        } else {
-          console.error(
-            'Skipping corrupted (invalid fields) message:',
-            message
-          );
-        }
-      }
-    }
-
-    // The Gemini API requires the history to start with a 'user' message.
-    if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {
-      genkitHistory.shift();
-    }
-
-    // Add a check to prevent sending an empty history which can cause issues.
-    if (genkitHistory.length === 0) {
-      return {response: "I'm ready to listen. What's on your mind?"};
-    }
 
     const response = await ai.generate({
       model: 'googleai/gemini-2.5-flash-lite-preview-06-17',
