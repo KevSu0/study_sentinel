@@ -101,34 +101,25 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    // The last message in the history is the user's current prompt.
-    const lastMessage = history.pop();
-
-    if (!lastMessage || lastMessage.role !== 'user') {
-      // This should not happen with the current client-side logic, but it's good practice.
-      return {
-        response:
-          "I'm sorry, something went wrong. Could you try sending your message again?",
-      };
-    }
-    const userPrompt = lastMessage.content;
-
-    // The rest of the conversation is the history for the model.
-    // The history from the client might include the initial model greeting.
+    // The history from the client includes the user's latest message and
+    // might include the initial model greeting.
     // The Gemini API requires the history to start with a 'user' message.
     let conversation = history;
     if (conversation.length > 0 && conversation[0].role === 'model') {
+      // If the first message is the model's initial greeting, remove it for the API call.
       conversation = conversation.slice(1);
     }
-
+    
+    // Convert the entire prepared conversation to the format Genkit expects.
     const genkitHistory: MessageData[] = conversation.map(h => ({
       role: h.role,
       parts: [{text: h.content}],
     }));
 
+    // Generate a response using the full conversation history.
+    // The model understands the last message in the history is the one to respond to.
     const response = await ai.generate({
       model: 'googleai/gemini-2.5-flash-lite-preview-06-17',
-      prompt: userPrompt,
       history: genkitHistory,
       system: systemPrompt,
     });
