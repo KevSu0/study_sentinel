@@ -24,6 +24,8 @@ import {
   TrendingUp,
   Award,
   Archive,
+  Sparkles,
+  ScrollText,
 } from 'lucide-react';
 import {ConfettiProvider} from './providers/confetti-provider';
 import {SplashScreen} from '@/components/splash-screen';
@@ -47,10 +49,12 @@ export function Providers({children}: {children: ReactNode}) {
 
   const menuItems = [
     {href: '/', label: 'Dashboard', icon: LayoutDashboard},
+    {href: '/briefing', label: 'Daily Briefing', icon: Sparkles},
     {href: '/tasks', label: 'All Tasks', icon: ListChecks},
-    {href: '/archive', label: 'Archived Tasks', icon: Archive},
-    {href: '/badges', label: 'Badges', icon: Award},
     {href: '/stats', label: 'Stats', icon: TrendingUp},
+    {href: '/badges', label: 'Badges', icon: Award},
+    {href: '/archive', label: 'Archived Tasks', icon: Archive},
+    {href: '/logs', label: 'Activity Log', icon: ScrollText},
   ];
 
   return (
