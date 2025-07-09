@@ -13,12 +13,6 @@ export type StudyTask = {
   points: number;
   status: TaskStatus;
   priority: TaskPriority;
-  progressDescription?: string;
-  analysis?: {
-    isOnTrack: boolean;
-    analysis: string;
-    error?: string;
-  };
 };
 
 export type BadgeCategory = 'daily' | 'weekly' | 'monthly' | 'overall';

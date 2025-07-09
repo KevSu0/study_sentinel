@@ -1,10 +1,16 @@
 'use client';
 
-import React, {useState, useMemo} from 'react';
+import React, {useState, useMemo, useEffect} from 'react';
 import dynamic from 'next/dynamic';
 import {format} from 'date-fns';
 import {Button} from '@/components/ui/button';
-import {PlusCircle, Star, Award as BadgeIcon, Lightbulb} from 'lucide-react';
+import {
+  PlusCircle,
+  Star,
+  Award as BadgeIcon,
+  Lightbulb,
+  Sparkles,
+} from 'lucide-react';
 import {useTasks} from '@/hooks/use-tasks';
 import {TaskList} from '@/components/tasks/task-list';
 import {EmptyState} from '@/components/tasks/empty-state';
@@ -14,6 +20,7 @@ import {useBadges} from '@/hooks/useBadges';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {BadgeCard} from '@/components/badges/badge-card';
 import Link from 'next/link';
+import {getDailySummary} from '@/lib/actions';
 
 const TaskDialog = dynamic(
   () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),
@@ -243,10 +250,56 @@ export default function DashboardPage() {
     isLoaded: tasksLoaded,
   } = useTasks();
   const {allBadges, earnedBadges, isLoaded: badgesLoaded} = useBadges();
-
   const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
+  const [dailySummary, setDailySummary] = useState<{
+    evaluation: string;
+    motivationalParagraph: string;
+  } | null>(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(true);
 
   const isTaskFormOpen = !!editingTask;
+
+  useEffect(() => {
+    const fetchDailySummary = async () => {
+      if (!tasksLoaded) return;
+
+      const DAILY_SUMMARY_KEY = 'dailySummaryLastShown';
+      const lastShownDate = localStorage.getItem(DAILY_SUMMARY_KEY);
+
+      const now = new Date();
+      const currentHour = now.getHours();
+      const sessionDate = new Date();
+
+      if (currentHour < 4) {
+        sessionDate.setDate(sessionDate.getDate() - 1);
+      }
+      const sessionDateStr = format(sessionDate, 'yyyy-MM-dd');
+
+      if (lastShownDate === sessionDateStr) {
+        setIsSummaryLoading(false);
+        return;
+      }
+
+      const previousDay = new Date(sessionDate);
+      previousDay.setDate(previousDay.getDate() - 1);
+      const previousDayStr = format(previousDay, 'yyyy-MM-dd');
+
+      const yesterdaysCompletedTasks = tasks
+        .filter(t => t.status === 'completed' && t.date === previousDayStr)
+        .map(({title, description, duration}) => ({title, description, duration}));
+
+      if (yesterdaysCompletedTasks.length > 0) {
+        const summary = await getDailySummary({tasks: yesterdaysCompletedTasks});
+        if (summary && !('error' in summary)) {
+          setDailySummary(summary as any);
+          localStorage.setItem(DAILY_SUMMARY_KEY, sessionDateStr);
+        }
+      }
+      setIsSummaryLoading(false);
+    };
+
+    fetchDailySummary();
+  }, [tasksLoaded, tasks]);
 
   const openEditTaskDialog = (task: StudyTask) => {
     setEditingTask(task);
@@ -328,19 +381,50 @@ export default function DashboardPage() {
           </div>
         ) : (
           <>
-            <Card className="bg-primary/5">
-              <CardContent className="p-4 flex items-center gap-4">
-                <Lightbulb className="h-8 w-8 text-yellow-400 shrink-0" />
-                <div>
-                  <p className="italic text-primary/90">
-                    "{dailyQuote.quote}"
-                  </p>
-                  <p className="text-sm text-right font-medium text-muted-foreground mt-1">
-                    - {dailyQuote.author}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            {isSummaryLoading ? (
+              <Skeleton className="h-32 w-full" />
+            ) : dailySummary ? (
+              <Card className="bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-6 w-6 text-yellow-400" />
+                    Your Daily Briefing
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold text-primary/90">
+                      Yesterday's Evaluation
+                    </h3>
+                    <p className="text-sm text-muted-foreground italic">
+                      {dailySummary.evaluation}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-primary/90">
+                      Today's Motivation
+                    </h3>
+                    <p className="text-sm text-muted-foreground italic">
+                      {dailySummary.motivationalParagraph}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="bg-primary/5">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <Lightbulb className="h-8 w-8 text-yellow-400 shrink-0" />
+                  <div>
+                    <p className="italic text-primary/90">
+                      "{dailyQuote.quote}"
+                    </p>
+                    <p className="text-sm text-right font-medium text-muted-foreground mt-1">
+                      - {dailyQuote.author}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <section>
               <Card>
