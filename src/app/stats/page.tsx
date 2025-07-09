@@ -1,6 +1,12 @@
 'use client';
 import React, {useMemo, lazy, Suspense, useState} from 'react';
-import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
 import {
   Tabs,
   TabsContent,
@@ -19,7 +25,8 @@ import {useTasks} from '@/hooks/use-tasks';
 import {useBadges} from '@/hooks/useBadges';
 import {format, subDays, startOfDay, parseISO} from 'date-fns';
 import {Skeleton} from '@/components/ui/skeleton';
-import {Progress} from '@/components/ui/progress';
+import {BadgeCard} from '@/components/badges/badge-card';
+import type {Badge, BadgeCategory} from '@/lib/types';
 
 const StudyActivityChart = lazy(
   () => import('@/components/stats/weekly-chart')
@@ -27,6 +34,13 @@ const StudyActivityChart = lazy(
 const PriorityChart = lazy(
   () => import('@/components/stats/priority-chart')
 );
+
+const badgeCategories: BadgeCategory[] = [
+  'daily',
+  'weekly',
+  'monthly',
+  'overall',
+];
 
 export default function StatsPage() {
   const {tasks, isLoaded: tasksLoaded} = useTasks();
@@ -111,9 +125,21 @@ export default function StatsPage() {
   const badgeStats = useMemo(() => {
     const earnedCount = earnedBadges.size;
     const totalCount = allBadges.length;
-    const progress = totalCount > 0 ? (earnedCount / totalCount) * 100 : 0;
-    return {earnedCount, totalCount, progress};
+    return {earnedCount, totalCount};
   }, [earnedBadges, allBadges]);
+
+  const categorizedBadges = useMemo(() => {
+    const categories: Record<BadgeCategory, Badge[]> = {
+      daily: [],
+      weekly: [],
+      monthly: [],
+      overall: [],
+    };
+    for (const badge of allBadges) {
+      categories[badge.category].push(badge);
+    }
+    return categories;
+  }, [allBadges]);
 
   const barChartData = useMemo(() => {
     const now = new Date();
@@ -326,17 +352,46 @@ export default function StatsPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Badge Collection</CardTitle>
-                  <p className="text-sm text-muted-foreground">
+                  <CardDescription>
                     You've earned {badgeStats.earnedCount} out of{' '}
                     {badgeStats.totalCount} possible badges. Keep it up!
-                  </p>
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {isLoaded ? (
-                    <Progress value={badgeStats.progress} className="h-4" />
-                  ) : (
-                    <Skeleton className="h-4 w-full" />
-                  )}
+                  <Tabs defaultValue="daily" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4">
+                      {badgeCategories.map(category => (
+                        <TabsTrigger
+                          key={category}
+                          value={category}
+                          className="capitalize"
+                        >
+                          {category}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                    {badgeCategories.map(category => (
+                      <TabsContent key={category} value={category}>
+                        {!isLoaded ? (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            {[...Array(5)].map((_, i) => (
+                              <Skeleton key={i} className="h-40 w-full" />
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            {categorizedBadges[category].map(badge => (
+                              <BadgeCard
+                                key={badge.id}
+                                badge={badge}
+                                isEarned={earnedBadges.has(badge.id)}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </TabsContent>
+                    ))}
+                  </Tabs>
                 </CardContent>
               </Card>
             </section>
