@@ -27,42 +27,30 @@ const positivePsychologistFlow = ai.defineFlow(
     outputSchema: PositivePsychologistOutputSchema,
   },
   async (input: PositivePsychologistInput) => {
-    const rawHistory = input.chatHistory || [];
+    // A simplified and robust history processing logic.
+    const recentHistory = (input.chatHistory || []).slice(-10);
+    const history: MessageData[] = [];
+    let hasUserMessage = false;
 
-    // 1. Paranoid filter: Create a sanitized history, removing any malformed or empty messages.
-    // This is the most critical step to prevent crashes from bad data.
-    const sanitizedHistory = rawHistory.filter(msg => {
-      return (
+    // Build a clean history, ensuring we only have valid messages.
+    for (const msg of recentHistory) {
+      if (
         msg &&
-        (msg.role === 'user' || msg.role === 'model') &&
         typeof msg.content === 'string' &&
-        msg.content.trim() !== ''
-      );
-    });
-
-    // 2. Enforce API Rule: The conversation must start with a 'user' message.
-    const firstUserIndex = sanitizedHistory.findIndex(
-      msg => msg.role === 'user'
-    );
-
-    // If no user message exists in the entire sanitized history, we cannot proceed.
-    if (firstUserIndex === -1) {
-      return {response: "I'm ready to listen. What's on your mind?"};
+        msg.content.trim() !== '' &&
+        (msg.role === 'user' || msg.role === 'model')
+      ) {
+        history.push({role: msg.role, parts: [{text: msg.content}]});
+        if (msg.role === 'user') {
+          hasUserMessage = true;
+        }
+      }
     }
 
-    // 3. Slice the array to create the final, valid history for the AI.
-    const validHistory = sanitizedHistory.slice(firstUserIndex);
-
-    // This check is a failsafe, though with the logic above it should not be necessary.
-    if (validHistory.length === 0) {
+    // The API requires at least one user message in the history.
+    if (!hasUserMessage) {
       return {response: "I'm ready to listen. What's on your mind?"};
     }
-
-    // 4. Map the now-guaranteed-safe history to the format Genkit requires.
-    const history: MessageData[] = validHistory.map(msg => ({
-      role: msg.role,
-      parts: [{text: msg.content}],
-    }));
 
     // Use dummy objects to prevent any potential errors from null/undefined context.
     const safeProfile = input.profile || {
