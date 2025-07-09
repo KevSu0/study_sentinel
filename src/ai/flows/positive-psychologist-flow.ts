@@ -27,46 +27,42 @@ const positivePsychologistFlow = ai.defineFlow(
     outputSchema: PositivePsychologistOutputSchema,
   },
   async (input: PositivePsychologistInput) => {
-    // This is the definitive, robust history processing logic.
-    // It builds a clean history from scratch, enforcing all API rules.
-
     const rawHistory = input.chatHistory || [];
-    const cleanHistory: MessageData[] = [];
 
-    // Rule 1: Find the first valid message from a 'user'.
-    const firstUserIndex = rawHistory.findIndex(
-      msg =>
+    // 1. Paranoid filter: Create a sanitized history, removing any malformed or empty messages.
+    // This is the most critical step to prevent crashes from bad data.
+    const sanitizedHistory = rawHistory.filter(msg => {
+      return (
         msg &&
-        msg.role === 'user' &&
+        (msg.role === 'user' || msg.role === 'model') &&
         typeof msg.content === 'string' &&
         msg.content.trim() !== ''
+      );
+    });
+
+    // 2. Enforce API Rule: The conversation must start with a 'user' message.
+    const firstUserIndex = sanitizedHistory.findIndex(
+      msg => msg.role === 'user'
     );
 
-    // If no user message exists, we cannot start a conversation.
+    // If no user message exists in the entire sanitized history, we cannot proceed.
     if (firstUserIndex === -1) {
       return {response: "I'm ready to listen. What's on your mind?"};
     }
 
-    // Rule 2: Iterate from the first user message and build a valid history.
-    for (let i = firstUserIndex; i < rawHistory.length; i++) {
-      const msg = rawHistory[i];
+    // 3. Slice the array to create the final, valid history for the AI.
+    const validHistory = sanitizedHistory.slice(firstUserIndex);
 
-      // Skip any message that is null, malformed, or has empty content.
-      if (
-        !msg ||
-        (msg.role !== 'user' && msg.role !== 'model') ||
-        typeof msg.content !== 'string' ||
-        msg.content.trim() === ''
-      ) {
-        continue;
-      }
-
-      // The message is valid, add it to our clean history.
-      cleanHistory.push({
-        role: msg.role,
-        parts: [{text: msg.content}],
-      });
+    // This check is a failsafe, though with the logic above it should not be necessary.
+    if (validHistory.length === 0) {
+      return {response: "I'm ready to listen. What's on your mind?"};
     }
+
+    // 4. Map the now-guaranteed-safe history to the format Genkit requires.
+    const history: MessageData[] = validHistory.map(msg => ({
+      role: msg.role,
+      parts: [{text: msg.content}],
+    }));
 
     // Use dummy objects to prevent any potential errors from null/undefined context.
     const safeProfile = input.profile || {
@@ -129,7 +125,7 @@ ${summaryContext}
     try {
       const response = await ai.generate({
         model: 'googleai/gemini-1.5-flash-latest',
-        history: cleanHistory,
+        history: history,
         system: systemPrompt,
       });
 
