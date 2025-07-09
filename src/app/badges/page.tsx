@@ -32,7 +32,7 @@ export default function BadgesPage() {
   return (
     <div className="flex flex-col h-full">
       <header className="p-4 border-b">
-        <h1 className="text-2xl font-bold text-primary">Your Badges</h1>
+        <h1 className="text-3xl font-bold text-primary">Your Badges</h1>
         <p className="text-muted-foreground">
           Celebrate your achievements and milestones.
         </p>

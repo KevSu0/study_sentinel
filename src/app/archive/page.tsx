@@ -24,7 +24,7 @@ export default function ArchivePage() {
   return (
     <div className="flex flex-col h-full">
       <header className="p-4 border-b">
-        <h1 className="text-2xl font-bold text-primary">Archived Tasks</h1>
+        <h1 className="text-3xl font-bold text-primary">Archived Tasks</h1>
         <p className="text-muted-foreground">
           A record of your completed and stored tasks.
         </p>

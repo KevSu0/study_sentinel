@@ -303,7 +303,7 @@ export default function DashboardPage() {
       <header className="p-4 border-b">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <h1 className="text-2xl font-bold text-primary">
+            <h1 className="text-3xl font-bold text-primary">
               Today's Dashboard
             </h1>
             <p className="text-muted-foreground">

@@ -76,7 +76,7 @@ export default function AllTasksPage() {
     <div className="flex flex-col h-full">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border-b gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-primary">All Tasks</h1>
+          <h1 className="text-3xl font-bold text-primary">All Tasks</h1>
           <p className="text-muted-foreground">
             View and manage all your study tasks.
           </p>

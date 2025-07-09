@@ -266,7 +266,7 @@ export default function StatsPage() {
   return (
     <div className="flex flex-col h-full">
       <header className="p-4 border-b">
-        <h1 className="text-2xl font-bold text-primary">
+        <h1 className="text-3xl font-bold text-primary">
           Your Progress & Stats
         </h1>
         <p className="text-muted-foreground">
