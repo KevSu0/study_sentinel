@@ -27,7 +27,7 @@ const positivePsychologistFlow = ai.defineFlow(
     outputSchema: PositivePsychologistOutputSchema,
   },
   async (input: PositivePsychologistInput) => {
-    const {profile, dailySummary, history} = input;
+    const {profile, dailySummary} = input;
 
     const profileContext = profile
       ? `
@@ -78,23 +78,19 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    // Manually and explicitly build a clean history to prevent any crashes.
-    const genkitHistory: MessageData[] = [];
-    if (Array.isArray(history)) {
-      for (const message of history) {
-        // This check ensures the message and its properties are valid before use.
-        if (
-          message &&
-          (message.role === 'user' || message.role === 'model') &&
-          typeof message.content === 'string'
-        ) {
-          genkitHistory.push({
+    // Belt-and-suspenders: Zod validation at the flow's input should already guarantee
+    // a clean history. This mapping provides a final, robust layer of safety.
+    const genkitHistory: MessageData[] = input.history
+      .map(message => {
+        if (message && message.role && typeof message.content === 'string') {
+          return {
             role: message.role,
             parts: [{text: message.content}],
-          });
+          };
         }
-      }
-    }
+        return null;
+      })
+      .filter((message): message is MessageData => message !== null);
 
     // The Gemini API requires the history to start with a 'user' message.
     if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {

@@ -20,10 +20,11 @@ const initialMessage: ChatMessage = {
 const isValidMessage = (msg: any): msg is ChatMessage => {
   return (
     msg &&
+    typeof msg === 'object' && // Ensure it's an object
+    !Array.isArray(msg) && // Ensure it's not an array
     typeof msg.role === 'string' &&
     (msg.role === 'user' || msg.role === 'model') &&
-    typeof msg.content === 'string' &&
-    msg.content.trim() !== ''
+    typeof msg.content === 'string'
   );
 };
 
@@ -35,11 +36,34 @@ export function useChatHistory() {
     try {
       const savedHistory = localStorage.getItem(CHAT_HISTORY_KEY);
       if (savedHistory) {
-        const parsedHistory = JSON.parse(savedHistory);
+        let parsedHistory;
+        try {
+          parsedHistory = JSON.parse(savedHistory);
+        } catch {
+          // If JSON is invalid, reset.
+          localStorage.removeItem(CHAT_HISTORY_KEY);
+          setInternalMessages([initialMessage]);
+          setIsLoaded(true);
+          return;
+        }
 
-        const cleanHistory = Array.isArray(parsedHistory)
-          ? parsedHistory.filter(isValidMessage)
-          : [];
+        if (!Array.isArray(parsedHistory)) {
+          // If stored data is not an array, reset.
+          localStorage.removeItem(CHAT_HISTORY_KEY);
+          setInternalMessages([initialMessage]);
+          setIsLoaded(true);
+          return;
+        }
+
+        const cleanHistory = parsedHistory.filter(isValidMessage);
+
+        // If the cleaning process removed any items, update localStorage
+        if (cleanHistory.length !== parsedHistory.length) {
+          localStorage.setItem(
+            CHAT_HISTORY_KEY,
+            JSON.stringify(cleanHistory)
+          );
+        }
 
         if (cleanHistory.length > 0) {
           setInternalMessages(cleanHistory);
