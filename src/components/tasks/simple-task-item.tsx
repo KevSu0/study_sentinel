@@ -1,4 +1,4 @@
-import React, { memo, useState, useEffect, Suspense, lazy } from 'react';
+import React, {memo, useState, useEffect, Suspense, lazy, useMemo} from 'react';
 import {
   MoreVertical,
   Timer,
@@ -7,21 +7,22 @@ import {
   SendToBack,
   ArchiveRestore,
 } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Button } from '@/components/ui/button';
+import {Checkbox} from '@/components/ui/checkbox';
+import {Button} from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
-import type { StudyTask } from '@/lib/types';
-import { useConfetti } from '@/components/providers/confetti-provider';
-import { useToast } from '@/hooks/use-toast';
+import {cn} from '@/lib/utils';
+import type {StudyTask} from '@/lib/types';
+import {useConfetti} from '@/components/providers/confetti-provider';
+import {useToast} from '@/hooks/use-toast';
+import {format} from 'date-fns';
 
 const TimerDialog = lazy(() =>
-  import('./timer-dialog').then(module => ({ default: module.TimerDialog }))
+  import('./timer-dialog').then(module => ({default: module.TimerDialog}))
 );
 
 interface SimpleTaskItemProps {
@@ -44,20 +45,22 @@ export const SimpleTaskItem = memo(function SimpleTaskItem({
   onEdit,
 }: SimpleTaskItemProps) {
   const isCompleted = task.status === 'completed';
-  const { fire } = useConfetti();
-  const { toast } = useToast();
+  const {fire} = useConfetti();
+  const {toast} = useToast();
   const [isTimerOpen, setTimerOpen] = useState(false);
   const [isTimerActive, setIsTimerActive] = useState(false);
+  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+  const isOverdue = !isCompleted && task.date < todayStr;
 
   useEffect(() => {
     const checkTimerStatus = () => {
       const savedTimerRaw = localStorage.getItem(TIMER_STORAGE_KEY);
       if (savedTimerRaw) {
         try {
-            const savedTimer = JSON.parse(savedTimerRaw);
-            setIsTimerActive(savedTimer.taskId === task.id);
+          const savedTimer = JSON.parse(savedTimerRaw);
+          setIsTimerActive(savedTimer.taskId === task.id);
         } catch {
-            setIsTimerActive(false);
+          setIsTimerActive(false);
         }
       } else {
         setIsTimerActive(false);
@@ -83,64 +86,79 @@ export const SimpleTaskItem = memo(function SimpleTaskItem({
         description: `You've earned ${task.points} points!`,
       });
     }
-    onUpdate({ ...task, status: newStatus });
+    onUpdate({...task, status: newStatus});
   };
-  
+
   const handleTimerComplete = () => {
-    onUpdate({ ...task, status: 'completed' });
+    onUpdate({...task, status: 'completed'});
   };
 
   if (task.status === 'archived') {
     return (
-       <div className="flex items-center p-2 border-b">
-          <p className="flex-1 text-muted-foreground line-through">{task.title}</p>
-          <Button variant="ghost" size="sm" onClick={() => onUnarchive(task.id)}>
-              <ArchiveRestore className="h-4 w-4 mr-2" /> Unarchive
-          </Button>
+      <div className="flex items-center p-2 border-b">
+        <p className="flex-1 text-muted-foreground line-through">
+          {task.title}
+        </p>
+        <Button variant="ghost" size="sm" onClick={() => onUnarchive(task.id)}>
+          <ArchiveRestore className="h-4 w-4 mr-2" /> Unarchive
+        </Button>
       </div>
     );
   }
 
   return (
     <>
-      <div className="flex items-center gap-4 p-3 border rounded-lg transition-colors hover:bg-muted/50">
+      <div
+        className={cn(
+          'flex items-center gap-4 p-3 border rounded-lg transition-colors hover:bg-muted/50',
+          isOverdue && 'border-destructive/50 bg-destructive/5'
+        )}
+      >
         <Checkbox
           id={`task-${task.id}`}
           checked={isCompleted}
           onCheckedChange={handleToggleComplete}
-          aria-label={`Mark task ${task.title} as ${isCompleted ? 'incomplete' : 'complete'}`}
+          aria-label={`Mark task ${task.title} as ${
+            isCompleted ? 'incomplete' : 'complete'
+          }`}
+          className={cn(
+            isCompleted &&
+              'data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600'
+          )}
         />
         <div className="flex-1 grid gap-1">
           <label
             htmlFor={`task-${task.id}`}
             className={cn(
               'font-medium cursor-pointer',
-              isCompleted && 'line-through text-muted-foreground'
+              isCompleted && 'line-through text-muted-foreground',
+              isOverdue && 'text-destructive'
             )}
           >
             {task.title}
           </label>
           <p className="text-sm text-muted-foreground">
-            {task.duration} min &bull; {task.points} pts &bull; {task.priority} priority
+            {task.duration} min &bull; {task.points} pts &bull; {task.priority}{' '}
+            priority
           </p>
         </div>
         <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setTimerOpen(true)}
-              disabled={isCompleted}
-              className="hidden sm:flex"
-            >
-              {isTimerActive && (
-                <span className="relative flex h-3 w-3 mr-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-accent"></span>
-                </span>
-              )}
-              <Timer className="mr-2 h-4 w-4" />
-              {isTimerActive ? 'View' : 'Timer'}
-            </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setTimerOpen(true)}
+            disabled={isCompleted}
+            className="hidden sm:flex"
+          >
+            {isTimerActive && (
+              <span className="relative flex h-3 w-3 mr-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-accent"></span>
+              </span>
+            )}
+            <Timer className="mr-2 h-4 w-4" />
+            {isTimerActive ? 'View' : 'Timer'}
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -148,11 +166,18 @@ export const SimpleTaskItem = memo(function SimpleTaskItem({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => onEdit(task)} disabled={isCompleted}>
+              <DropdownMenuItem
+                onSelect={() => onEdit(task)}
+                disabled={isCompleted}
+              >
                 <Pencil className="mr-2 h-4 w-4" />
                 <span>Edit</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setTimerOpen(true)} disabled={isCompleted} className="sm:hidden">
+              <DropdownMenuItem
+                onSelect={() => setTimerOpen(true)}
+                disabled={isCompleted}
+                className="sm:hidden"
+              >
                 <Timer className="mr-2 h-4 w-4" />
                 <span>{isTimerActive ? 'View Timer' : 'Start Timer'}</span>
               </DropdownMenuItem>
@@ -160,7 +185,10 @@ export const SimpleTaskItem = memo(function SimpleTaskItem({
                 <SendToBack className="mr-2 h-4 w-4" />
                 <span>Push to Next Day</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => onArchive(task.id)} className="text-destructive">
+              <DropdownMenuItem
+                onSelect={() => onArchive(task.id)}
+                className="text-destructive"
+              >
                 <Archive className="mr-2 h-4 w-4" />
                 <span>Archive</span>
               </DropdownMenuItem>
