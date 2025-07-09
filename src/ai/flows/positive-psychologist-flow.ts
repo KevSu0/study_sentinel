@@ -29,46 +29,36 @@ const positivePsychologistFlow = ai.defineFlow(
   async (input: PositivePsychologistInput) => {
     const {profile, dailySummary, history} = input;
 
-    // Definitive, Failsafe Sanitization with an explicit loop.
-    // This creates a clean, validated history before any other logic runs.
-    const genkitHistory: MessageData[] = [];
-    if (Array.isArray(history)) {
-      for (const msg of history) {
-        // Explicitly check every condition for every message.
-        if (
-          msg &&
-          typeof msg === 'object' &&
-          (msg.role === 'user' || msg.role === 'model') &&
-          typeof msg.content === 'string' &&
-          msg.content.trim() !== ''
-        ) {
-          // Only if all conditions are met, push to the clean history.
-          genkitHistory.push({
-            role: msg.role,
-            parts: [{text: msg.content}],
-          });
-        } else {
-          // This allows debugging of corrupted data without crashing the app.
-          console.warn('Skipping corrupted message in chat history:', msg);
-        }
-      }
-    }
+    // A robust, functional approach to sanitize history.
+    // 1. Filter out any message that is null, not an object, or missing critical fields.
+    const cleanHistory = (history || []).filter(
+      msg =>
+        msg &&
+        typeof msg === 'object' &&
+        typeof msg.role === 'string' &&
+        typeof msg.content === 'string' &&
+        msg.content.trim() !== ''
+    );
 
+    // 2. Map the clean history to the format Genkit expects.
+    let genkitHistory: MessageData[] = cleanHistory.map(msg => ({
+      role: msg.role as 'user' | 'model',
+      parts: [{text: msg.content}],
+    }));
 
     // The Gemini API requires the history to start with a 'user' message.
     if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {
       genkitHistory.shift();
     }
 
-    // Add a final check to prevent sending an empty/invalid history.
-    // If our sanitized history is empty at this point, it means the original
-    // history was empty, corrupt, or contained only an initial model message.
-    // In all cases, we should start fresh.
+    // If, after cleaning, the history is empty, start the conversation.
     if (genkitHistory.length === 0) {
+      // If there was no valid user message to start the conversation, send a default greeting.
+      // This handles cases of empty or fully corrupt initial history.
       return {response: "I'm ready to listen. What's on your mind?"};
     }
 
-    // Now that history is clean, build the system prompt.
+    // Now that history is guaranteed to be clean, build the system prompt.
     const profileContext = profile
       ? `
 **User Profile:**

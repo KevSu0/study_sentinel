@@ -16,11 +16,11 @@ const initialMessage: ChatMessage = {
     "Hello! I'm your personal motivation coach. How can I help you on your journey today?",
 };
 
+// Simplified and direct validation function
 const isValidMessage = (msg: any): msg is ChatMessage => {
   return (
-    !!msg &&
+    msg &&
     typeof msg === 'object' &&
-    !Array.isArray(msg) &&
     (msg.role === 'user' || msg.role === 'model') &&
     typeof msg.content === 'string'
   );
@@ -36,26 +36,21 @@ export function useChatHistory() {
       if (savedHistory) {
         const parsed = JSON.parse(savedHistory);
         if (Array.isArray(parsed)) {
-          // Use a robust reduce to filter and map simultaneously, creating a guaranteed-clean array.
-          const cleanHistory = parsed.reduce((acc: ChatMessage[], msg: any) => {
-            if (isValidMessage(msg)) {
-              acc.push({ role: msg.role, content: msg.content });
-            }
-            return acc;
-          }, []);
+          // Filter the parsed array to ensure all messages are valid
+          const cleanHistory = parsed.filter(isValidMessage);
 
           if (cleanHistory.length > 0) {
             setInternalMessages(cleanHistory);
           } else {
-            // If the saved history was entirely corrupt, start fresh.
+            // If saved history was entirely corrupt, start fresh
             setInternalMessages([initialMessage]);
           }
         } else {
-           // If saved data is not an array, it's corrupt. Start fresh.
+          // If saved data is not an array, it's corrupt. Start fresh.
           setInternalMessages([initialMessage]);
         }
       } else {
-         // No history found, start fresh.
+        // No history found, start fresh.
         setInternalMessages([initialMessage]);
       }
     } catch (error) {
@@ -70,7 +65,10 @@ export function useChatHistory() {
   useEffect(() => {
     if (isLoaded) {
       try {
-        const historyToSave = messages.slice(-MAX_HISTORY_LENGTH);
+        // Ensure we only save valid messages
+        const historyToSave = messages
+          .filter(isValidMessage)
+          .slice(-MAX_HISTORY_LENGTH);
         localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(historyToSave));
       } catch (error) {
         console.error('Failed to save chat history', error);
@@ -79,15 +77,18 @@ export function useChatHistory() {
   }, [messages, isLoaded]);
 
   const addMessage = useCallback((message: ChatMessage) => {
+    // Validate the message before adding it to state
     if (!isValidMessage(message)) {
       console.error(
-        'CRITICAL: Attempted to add invalid message. Operation aborted.',
+        'Attempted to add invalid message. Operation aborted.',
         message
       );
       return;
     }
     setInternalMessages(prevMessages => {
-      return [...prevMessages, message].slice(-MAX_HISTORY_LENGTH);
+      // Double-check previous messages just in case, before adding the new one
+      const cleanPrevMessages = prevMessages.filter(isValidMessage);
+      return [...cleanPrevMessages, message].slice(-MAX_HISTORY_LENGTH);
     });
   }, []);
 
