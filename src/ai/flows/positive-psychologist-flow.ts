@@ -30,26 +30,25 @@ const positivePsychologistFlow = ai.defineFlow(
     const {profile, dailySummary, history} = input;
 
     // This is the definitive, failsafe implementation.
-    // It assumes the incoming history can be corrupted and cleans it defensively.
-    const genkitHistory: MessageData[] = (history || [])
-      .map(msg => {
-        // Explicitly check for a valid message structure.
+    // It iterates through the history and safely handles any corrupted messages.
+    const genkitHistory: MessageData[] = [];
+    if (Array.isArray(history)) {
+      for (const msg of history) {
+        // This structure ensures we only process valid messages and skip any
+        // null, undefined, or malformed entries in the history array.
         if (
           msg &&
           typeof msg.role === 'string' &&
           typeof msg.content === 'string' &&
           msg.content.trim() !== ''
         ) {
-          // If valid, return it in the format Genkit expects.
-          return {
+          genkitHistory.push({
             role: msg.role as 'user' | 'model',
             parts: [{text: msg.content}],
-          };
+          });
         }
-        // If invalid (null, undefined, malformed), return null.
-        return null;
-      })
-      .filter((msg): msg is MessageData => msg !== null); // Filter out all the nulls.
+      }
+    }
 
     // The Gemini API requires the history to start with a 'user' message.
     if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {
