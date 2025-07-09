@@ -7,9 +7,11 @@ import {Skeleton} from '@/components/ui/skeleton';
 import {Sparkles, Lightbulb} from 'lucide-react';
 import {getDailySummary} from '@/lib/actions';
 import {useLogger} from '@/hooks/use-logger';
+import {useProfile} from '@/hooks/use-profile';
 
 export default function DailyBriefingPage() {
   const {getPreviousDayLogs, isLoaded: loggerLoaded} = useLogger();
+  const {profile, isLoaded: profileLoaded} = useProfile();
   const [dailySummary, setDailySummary] = useState<{
     evaluation: string;
     motivationalParagraph: string;
@@ -18,7 +20,7 @@ export default function DailyBriefingPage() {
 
   useEffect(() => {
     const fetchDailySummary = async () => {
-      if (!loggerLoaded) return;
+      if (!loggerLoaded || !profileLoaded) return;
 
       const DAILY_SUMMARY_KEY = 'dailySummaryLastShown';
       const lastShownDate = localStorage.getItem(DAILY_SUMMARY_KEY);
@@ -42,7 +44,7 @@ export default function DailyBriefingPage() {
       const yesterdaysLogs = getPreviousDayLogs();
 
       if (yesterdaysLogs.length > 0) {
-        const summary = await getDailySummary({logs: yesterdaysLogs});
+        const summary = await getDailySummary({logs: yesterdaysLogs, profile});
         if (summary && !('error' in summary)) {
           const summaryData = summary as any;
           setDailySummary(summaryData);
@@ -58,7 +60,7 @@ export default function DailyBriefingPage() {
     };
 
     fetchDailySummary();
-  }, [loggerLoaded, getPreviousDayLogs]);
+  }, [loggerLoaded, profileLoaded, getPreviousDayLogs, profile]);
 
   return (
     <div className="flex flex-col h-full">

@@ -27,10 +27,10 @@ import {
   Archive,
   Sparkles,
   ScrollText,
+  User,
 } from 'lucide-react';
 import {ConfettiProvider} from './providers/confetti-provider';
 import {SplashScreen} from '@/components/splash-screen';
-import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
 import {GlobalTimerBar} from './tasks/global-timer-bar';
 
 function AppLayout({children}: {children: ReactNode}) {
@@ -82,15 +82,16 @@ function AppLayout({children}: {children: ReactNode}) {
         <SidebarFooter className="p-2">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Account" onClick={handleMenuClick}>
-                <Avatar className="size-7">
-                  <AvatarImage
-                    src="https://placehold.co/40x40.png"
-                    data-ai-hint="user profile"
-                  />
-                  <AvatarFallback>U</AvatarFallback>
-                </Avatar>
-                <span>Account</span>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === '/profile'}
+                tooltip="Profile"
+                onClick={handleMenuClick}
+              >
+                <Link href="/profile">
+                  <User />
+                  <span>Profile</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

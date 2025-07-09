@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview Generates a daily motivational summary based on the previous day's activity log.
+ * @fileOverview Generates a daily motivational summary based on the previous day's activity log and user profile.
  *
  * - generateDailySummary - A function that analyzes yesterday's logs and provides a motivational summary.
  * - DailySummaryInput - The input type for the generateDailySummary function.
@@ -20,12 +20,36 @@ const LogEventSchema = z.object({
     .describe('A payload containing event-specific data.'),
 });
 
+// Define Zod schema for the user's profile
+const UserProfileSchema = z.object({
+  name: z.string().optional().describe("The user's name."),
+  passion: z
+    .string()
+    .optional()
+    .describe('The subjects the user is passionate about.'),
+  dream: z
+    .string()
+    .optional()
+    .describe("The user's long-term dream or goal."),
+  education: z
+    .string()
+    .optional()
+    .describe("The user's current education qualification."),
+  reasonForUsing: z
+    .string()
+    .optional()
+    .describe('Why the user is using this application.'),
+});
+
 const DailySummaryInputSchema = z.object({
   logs: z
     .array(LogEventSchema)
     .describe(
       "An array of user activity logs from the previous day (4 AM to 4 AM)."
     ),
+  profile: UserProfileSchema.describe(
+    "The user's profile information."
+  ).optional(),
 });
 export type DailySummaryInput = z.infer<typeof DailySummaryInputSchema>;
 
@@ -53,11 +77,29 @@ const prompt = ai.definePrompt({
   name: 'generateDailySummaryPrompt',
   input: {schema: DailySummaryInputSchema},
   output: {schema: DailySummaryOutputSchema},
-  prompt: `You are an extremely strict but fair study supervisor and productivity coach for a highly dedicated student aiming to study 12 hours every day. Your feedback must be firm, motivating, and always pushing the student towards excellence.
+  prompt: `You are an extremely strict but fair study supervisor and productivity coach. Your feedback must be firm, motivating, and always pushing the student towards excellence.
 
 Today is a new day. Your task is to analyze the student's performance from yesterday based on their detailed activity log and provide them with a motivational message for the day ahead.
 
-Here is the student's activity log from yesterday:
+**Student Profile:**
+{{#if profile.name}}
+- **Name:** {{profile.name}}
+{{/if}}
+{{#if profile.passion}}
+- **Passion:** {{profile.passion}}
+{{/if}}
+{{#if profile.dream}}
+- **Dream Goal:** {{profile.dream}}
+{{/if}}
+{{#if profile.education}}
+- **Currently Studying:** {{profile.education}}
+{{/if}}
+{{#if profile.reasonForUsing}}
+- **Stated Reason for Using App:** {{profile.reasonForUsing}}
+{{/if}}
+**Crucially, you must weave the user's profile information (their name, passion, dream) into your response to make it deeply personal and impactful.**
+
+**Student's Activity Log from Yesterday:**
 {{#if logs}}
 {{#each logs}}
 - [{{timestamp}}] Event: {{type}} - Details: {{JSONstringify payload}}
@@ -66,9 +108,9 @@ Here is the student's activity log from yesterday:
 The student had no recorded activity yesterday.
 {{/if}}
 
-Based on this detailed log, your response MUST be in two parts:
-1.  **Evaluation**: Provide a detailed evaluation of their performance. Calculate the total study time from completed tasks (if any). Analyze their patterns: When did they start? Did they complete what they started? Did they get distracted (look for TIMER_STOP events and their reasons)? Were they productive? Be critical but constructive. If they did well, acknowledge it, but challenge them to do even better. If they fell short, point out where things went wrong and be firm.
-2.  **Motivational Paragraph**: Write a powerful, motivating paragraph for the upcoming day. Use insights from your evaluation to make it personal and impactful. If they were distracted, give them a strategy to stay focused. If they were consistent, inspire them to maintain their momentum. Remind them that every action contributes to their 12-hour/day goal. Do not be generic.
+Based on this detailed log and the user's profile, your response MUST be in two parts:
+1.  **Evaluation**: Provide a detailed evaluation of their performance. Calculate the total study time from completed tasks (if any). Analyze their patterns: When did they start? Did they complete what they started? Did they get distracted (look for TIMER_STOP events and their reasons)? Were they productive? Be critical but constructive. If they did well, acknowledge it, but challenge them to do even better.
+2.  **Motivational Paragraph**: Write a powerful, motivating paragraph for the upcoming day. Use insights from your evaluation and connect them to the user's stated **dream** and **passion**. If they were distracted, give them a strategy to stay focused, framing it as a necessary step towards their goal. If they were consistent, inspire them to maintain their momentum. Remind them that every action contributes to their 12-hour/day goal and their ultimate dream. Do not be generic. Address the user by name if they provided one.
 `,
   // A custom Handlebars helper to stringify the payload object
   custom: {

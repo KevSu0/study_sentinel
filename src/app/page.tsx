@@ -22,6 +22,7 @@ import {BadgeCard} from '@/components/badges/badge-card';
 import Link from 'next/link';
 import {getDailySummary} from '@/lib/actions';
 import {useLogger} from '@/hooks/use-logger';
+import {useProfile} from '@/hooks/use-profile';
 
 const TaskDialog = dynamic(
   () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),
@@ -252,6 +253,7 @@ export default function DashboardPage() {
   } = useTasks();
   const {allBadges, earnedBadges, isLoaded: badgesLoaded} = useBadges();
   const {getPreviousDayLogs, isLoaded: loggerLoaded} = useLogger();
+  const {profile, isLoaded: profileLoaded} = useProfile();
 
   const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
   const [dailySummary, setDailySummary] = useState<{
@@ -265,7 +267,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchDailySummary = async () => {
       // Wait for all data to be loaded
-      if (!tasksLoaded || !loggerLoaded) return;
+      if (!tasksLoaded || !loggerLoaded || !profileLoaded) return;
 
       const DAILY_SUMMARY_KEY = 'dailySummaryLastShown';
       const lastShownDate = localStorage.getItem(DAILY_SUMMARY_KEY);
@@ -288,7 +290,7 @@ export default function DashboardPage() {
 
       // Only call AI if there were logs
       if (yesterdaysLogs.length > 0) {
-        const summary = await getDailySummary({logs: yesterdaysLogs});
+        const summary = await getDailySummary({logs: yesterdaysLogs, profile});
         if (summary && !('error' in summary)) {
           setDailySummary(summary as any);
           localStorage.setItem(DAILY_SUMMARY_KEY, sessionDateStr);
@@ -298,7 +300,7 @@ export default function DashboardPage() {
     };
 
     fetchDailySummary();
-  }, [tasksLoaded, loggerLoaded, getPreviousDayLogs]);
+  }, [tasksLoaded, loggerLoaded, profileLoaded, getPreviousDayLogs, profile]);
 
   const openEditTaskDialog = (task: StudyTask) => {
     setEditingTask(task);
@@ -308,7 +310,7 @@ export default function DashboardPage() {
     setEditingTask(null);
   };
 
-  const isLoaded = tasksLoaded && badgesLoaded && loggerLoaded;
+  const isLoaded = tasksLoaded && badgesLoaded && loggerLoaded && profileLoaded;
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
 
   const {
