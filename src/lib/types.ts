@@ -51,7 +51,7 @@ export type LogEvent = {
 export const PositivePsychologistInputSchema = z.object({
   profile: z.any().optional(),
   dailySummary: z.any().optional(),
-  history: z.array(
+  chatHistory: z.array(
     z.object({
       role: z.enum(['user', 'model']),
       content: z.string(),

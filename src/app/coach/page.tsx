@@ -158,7 +158,7 @@ export default function CoachPage() {
 
     try {
       const result = await getChatbotResponse({
-        history: updatedHistory.slice(-10),
+        chatHistory: updatedHistory.slice(-10),
         profile,
         dailySummary: dailySummary || undefined,
       });

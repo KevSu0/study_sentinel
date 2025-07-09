@@ -29,8 +29,8 @@ const positivePsychologistFlow = ai.defineFlow(
   async (input: PositivePsychologistInput) => {
     // Create a new, guaranteed-clean history by explicitly checking each message.
     const genkitHistory: MessageData[] = [];
-    if (input.history && Array.isArray(input.history)) {
-      for (const msg of input.history) {
+    if (input.chatHistory && Array.isArray(input.chatHistory)) {
+      for (const msg of input.chatHistory) {
         // This is the most robust check: ensure the message object exists,
         // it has a valid role, and its content is a non-empty string.
         if (
@@ -49,7 +49,6 @@ const positivePsychologistFlow = ai.defineFlow(
 
     // CRITICAL FIX: If, after cleaning, the history is empty for any reason,
     // do not call the AI. Return a safe, default response instead.
-    // This was the root cause of the crash.
     if (genkitHistory.length === 0) {
       return {response: "I'm ready to listen. What's on your mind?"};
     }
