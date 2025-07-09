@@ -30,7 +30,6 @@ import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
 import {AnalysisDialog} from './analysis-dialog';
 import {cn} from '@/lib/utils';
-import {useGamification} from '@/hooks/use-gamification';
 import {useToast} from '@/hooks/use-toast';
 import type {StudyTask, TaskStatus, TaskPriority} from '@/lib/types';
 import {format, parseISO} from 'date-fns';
@@ -65,7 +64,6 @@ const priorityConfig: Record<
 
 export function TaskCard({task, onUpdate, onDelete, onEdit}: TaskCardProps) {
   const [isAnalysisOpen, setAnalysisOpen] = useState(false);
-  const {addPoints, subtractPoints} = useGamification();
   const {toast} = useToast();
 
   const handleStatusChange = (newStatus: TaskStatus) => {
@@ -73,13 +71,10 @@ export function TaskCard({task, onUpdate, onDelete, onEdit}: TaskCardProps) {
     if (newStatus === oldStatus) return;
 
     if (newStatus === 'completed' && oldStatus !== 'completed') {
-      addPoints(task.points);
       toast({
         title: 'Task Completed!',
-        description: `You've earned ${task.points} points! Keep it up!`,
+        description: `You've earned ${task.points} points for this task!`,
       });
-    } else if (oldStatus === 'completed' && newStatus !== 'completed') {
-      subtractPoints(task.points);
     }
     onUpdate({...task, status: newStatus});
   };
@@ -100,8 +95,7 @@ export function TaskCard({task, onUpdate, onDelete, onEdit}: TaskCardProps) {
         className={cn(
           'transition-all duration-300 flex flex-col border-l-4',
           task.status !== 'completed' &&
-            new Date(task.date) < new Date() &&
-            !isToday(new Date(task.date))
+            task.date < format(new Date(), 'yyyy-MM-dd')
             ? 'border-destructive/70'
             : task.status === 'completed'
             ? 'bg-card/60 dark:bg-card/80 border-accent'
@@ -228,14 +222,5 @@ export function TaskCard({task, onUpdate, onDelete, onEdit}: TaskCardProps) {
         />
       )}
     </>
-  );
-}
-
-function isToday(someDate: Date) {
-  const today = new Date();
-  return (
-    someDate.getDate() == today.getDate() &&
-    someDate.getMonth() == today.getMonth() &&
-    someDate.getFullYear() == today.getFullYear()
   );
 }

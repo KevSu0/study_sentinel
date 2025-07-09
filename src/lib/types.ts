@@ -1,3 +1,5 @@
+import type {LucideIcon} from 'lucide-react';
+
 export type TaskStatus = 'todo' | 'in_progress' | 'completed';
 export type TaskPriority = 'low' | 'medium' | 'high';
 
@@ -17,4 +19,15 @@ export type StudyTask = {
     analysis: string;
     error?: string;
   };
+};
+
+export type BadgeCategory = 'daily' | 'weekly' | 'monthly' | 'overall';
+
+export type Badge = {
+  id: string;
+  name: string;
+  description: string;
+  category: BadgeCategory;
+  Icon: LucideIcon;
+  checker: (completedTasks: StudyTask[]) => boolean;
 };
