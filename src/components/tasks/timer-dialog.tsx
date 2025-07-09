@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import {Button} from '@/components/ui/button';
-import {Pause, Play, CheckCircle} from 'lucide-react';
+import {Pause, Play, CheckCircle, XCircle} from 'lucide-react';
 import type {StudyTask} from '@/lib/types';
 import {cn} from '@/lib/utils';
 import {useConfetti} from '@/components/providers/confetti-provider';
@@ -79,6 +79,10 @@ export function TimerDialog({
     onOpenChange(false);
   };
 
+  const handleStop = () => {
+    onOpenChange(false);
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -112,11 +116,7 @@ export function TimerDialog({
         <DialogFooter className="flex-col sm:flex-row sm:justify-center gap-2">
           {!isFinished ? (
             <>
-              <Button
-                size="lg"
-                onClick={() => setIsPaused(!isPaused)}
-                className="flex-1"
-              >
+              <Button size="lg" onClick={() => setIsPaused(!isPaused)}>
                 {isPaused ? (
                   <Play className="mr-2" />
                 ) : (
@@ -124,14 +124,18 @@ export function TimerDialog({
                 )}
                 {isPaused ? 'Start' : 'Pause'}
               </Button>
+              <Button size="lg" variant="outline" onClick={handleStop}>
+                <XCircle className="mr-2" />
+                Stop
+              </Button>
               <Button
                 size="lg"
                 variant="outline"
                 onClick={handleComplete}
-                className="flex-1"
+                className="border-accent text-accent hover:bg-accent/10 hover:text-accent"
               >
                 <CheckCircle className="mr-2" />
-                Stop & Complete
+                Complete
               </Button>
             </>
           ) : (
