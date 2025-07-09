@@ -2,7 +2,7 @@
 
 import React, {useState, useMemo, useEffect} from 'react';
 import dynamic from 'next/dynamic';
-import {format} from 'date-fns';
+import {format, parseISO} from 'date-fns';
 import {Button} from '@/components/ui/button';
 import {
   PlusCircle,
@@ -259,7 +259,7 @@ export default function DashboardPage() {
     isLoaded: tasksLoaded,
   } = useTasks();
   const {allBadges, earnedBadges, isLoaded: badgesLoaded} = useBadges();
-  const {getPreviousDayLogs, isLoaded: loggerLoaded} = useLogger();
+  const {getPreviousDayLogs, getAllLogs, isLoaded: loggerLoaded} = useLogger();
   const {profile, isLoaded: profileLoaded} = useProfile();
   const {viewMode, setViewMode, isLoaded: viewModeLoaded} = useViewMode();
   const {routines, isLoaded: routinesLoaded} = useRoutines();
@@ -343,7 +343,16 @@ export default function DashboardPage() {
       t => t.status === 'todo' || t.status === 'in_progress'
     );
     const completed = todays.filter(t => t.status === 'completed');
-    const points = completed.reduce((sum, task) => sum + task.points, 0);
+    let points = completed.reduce((sum, task) => sum + task.points, 0);
+    
+    // Add points from routines
+    const todaysRoutineLogs = getAllLogs().filter(l => 
+        l.type === 'ROUTINE_SESSION_COMPLETE' &&
+        format(parseISO(l.timestamp), 'yyyy-MM-dd') === todayStr
+    );
+    const routinePoints = todaysRoutineLogs.reduce((sum, log) => sum + (log.payload.points || 0), 0);
+    points += routinePoints;
+
     const badges = allBadges.filter(
       badge =>
         earnedBadges.has(badge.id) &&
@@ -360,7 +369,7 @@ export default function DashboardPage() {
       todaysBadges: badges,
       todaysRoutines,
     };
-  }, [tasks, todayStr, allBadges, earnedBadges, routines]);
+  }, [tasks, todayStr, allBadges, earnedBadges, routines, getAllLogs]);
 
   const dailyQuote = useMemo(() => {
     const now = new Date();

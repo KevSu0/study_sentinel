@@ -20,6 +20,7 @@ import {
   Flame,
   Award,
   Activity,
+  Star,
 } from 'lucide-react';
 import {useTasks} from '@/hooks/use-tasks';
 import {useBadges} from '@/hooks/useBadges';
@@ -60,6 +61,7 @@ export default function StatsPage() {
       duration: number; // minutes
       type: 'task' | 'routine';
       title: string;
+      points: number;
       priority?: TaskPriority;
     }[] = [];
 
@@ -72,6 +74,7 @@ export default function StatsPage() {
           duration: t.duration,
           type: 'task' as const,
           title: t.title,
+          points: t.points,
           priority: t.priority,
         }))
     );
@@ -86,6 +89,7 @@ export default function StatsPage() {
         duration: Math.round(l.payload.duration / 60), // convert seconds to minutes
         type: 'routine' as const,
         title: l.payload.title,
+        points: l.payload.points || 0,
       }))
     );
 
@@ -136,6 +140,10 @@ export default function StatsPage() {
       0
     );
     const totalHours = (totalMinutes / 60).toFixed(1);
+    const totalPoints = filteredWork.reduce(
+      (sum, work) => sum + work.points,
+      0
+    );
 
     // Completion rate is specific to tasks that can be planned.
     const completionRate =
@@ -150,6 +158,7 @@ export default function StatsPage() {
 
     return {
       totalHours,
+      totalPoints,
       completedCount: filteredWork.length,
       completionRate,
       avgSessionDuration,
@@ -293,6 +302,12 @@ export default function StatsPage() {
 
   const statCards = useMemo(
     () => [
+      {
+        title: `Points Earned (${getTitleCase(timeRange)})`,
+        value: timeRangeStats.totalPoints,
+        unit: 'pts',
+        Icon: Star,
+      },
       {
         title: `Time (${getTitleCase(timeRange)})`,
         value: timeRangeStats.totalHours,

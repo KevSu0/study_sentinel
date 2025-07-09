@@ -30,11 +30,11 @@ export type BadgeCategory = 'daily' | 'weekly' | 'monthly' | 'overall';
 export type Badge = {
   id: string;
   name: string;
-  description:string;
+  description: string;
   motivationalMessage: string;
   category: BadgeCategory;
   Icon: LucideIcon;
-  checker: (completedTasks: StudyTask[]) => boolean;
+  checker: (data: {completedTasks: StudyTask[]; logs: LogEvent[]}) => boolean;
 };
 
 export type LogEventType =

@@ -1,6 +1,7 @@
 'use client';
 import {useState, useEffect, useCallback} from 'react';
 import {useTasks} from './use-tasks';
+import {useLogger} from './use-logger';
 import {useToast} from './use-toast';
 import {ALL_BADGES} from '@/lib/badges';
 import type {Badge} from '@/lib/types';
@@ -11,6 +12,7 @@ const BADGES_KEY = 'studySentinelEarnedBadges_v2'; // v2 to handle new data stru
 
 export function useBadges() {
   const {tasks, isLoaded: tasksLoaded} = useTasks();
+  const {getAllLogs, isLoaded: loggerLoaded} = useLogger();
   const {toast} = useToast();
   const {fire} = useConfetti();
   const [earnedBadges, setEarnedBadges] = useState<Map<string, string>>(
@@ -64,15 +66,15 @@ export function useBadges() {
   );
 
   useEffect(() => {
-    if (!tasksLoaded || !isLoaded) return;
+    if (!tasksLoaded || !isLoaded || !loggerLoaded) return;
 
     const completedTasks = tasks.filter(task => task.status === 'completed');
-    if (completedTasks.length === 0) return;
+    const allLogs = getAllLogs();
 
     for (const badge of ALL_BADGES) {
       if (!earnedBadges.has(badge.id)) {
         try {
-          if (badge.checker(completedTasks)) {
+          if (badge.checker({completedTasks, logs: allLogs})) {
             awardBadge(badge);
           }
         } catch (error) {
@@ -80,11 +82,19 @@ export function useBadges() {
         }
       }
     }
-  }, [tasks, tasksLoaded, isLoaded, earnedBadges, awardBadge]);
+  }, [
+    tasks,
+    tasksLoaded,
+    isLoaded,
+    loggerLoaded,
+    earnedBadges,
+    awardBadge,
+    getAllLogs,
+  ]);
 
   return {
     allBadges: ALL_BADGES,
     earnedBadges,
-    isLoaded: isLoaded && tasksLoaded,
+    isLoaded: isLoaded && tasksLoaded && loggerLoaded,
   };
 }

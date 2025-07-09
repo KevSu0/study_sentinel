@@ -1,8 +1,9 @@
-import type {Badge, StudyTask} from '@/lib/types';
+import type {Badge, StudyTask, LogEvent} from '@/lib/types';
 import {
   Award,
   Book,
   Brain,
+  BrainCircuit,
   Calendar,
   Coffee,
   Crown,
@@ -10,6 +11,8 @@ import {
   Gem,
   Medal,
   Moon,
+  PlayCircle,
+  Repeat,
   Rocket,
   Sparkles,
   Star,
@@ -45,6 +48,54 @@ const getTotalDuration = (tasks: StudyTask[]) =>
   tasks.reduce((sum, task) => sum + task.duration, 0);
 
 export const ALL_BADGES: readonly Badge[] = [
+  // --- Routine Badges ---
+  {
+    id: 'routine-rookie',
+    name: 'Routine Rookie',
+    description: 'Complete your first timed routine session.',
+    motivationalMessage:
+      'You started your first routine! Building consistent habits is the key to long-term success. Keep it up!',
+    category: 'overall',
+    Icon: PlayCircle,
+    checker: ({logs}) =>
+      logs.some(l => l.type === 'ROUTINE_SESSION_COMPLETE'),
+  },
+  {
+    id: 'deep-focus',
+    name: 'Deep Focus',
+    description: 'Log a single uninterrupted routine session of over an hour.',
+    motivationalMessage:
+      'An hour of pure focus! You tapped into a state of deep work. That is where real progress happens. Incredible!',
+    category: 'daily',
+    Icon: BrainCircuit,
+    checker: ({logs}) =>
+      logs.some(
+        l => l.type === 'ROUTINE_SESSION_COMPLETE' && l.payload.duration >= 3600
+      ),
+  },
+  {
+    id: 'routine-rampage',
+    name: 'Routine Rampage',
+    description: 'Complete 5 timed routine sessions in a single week.',
+    motivationalMessage:
+      'Five routines in a week! You are building a powerful rhythm. Consistency is your superpower!',
+    category: 'weekly',
+    Icon: Repeat,
+    checker: ({logs}) => {
+      const routineLogs = logs.filter(
+        l => l.type === 'ROUTINE_SESSION_COMPLETE'
+      );
+      const weeks: Record<string, number> = {};
+      for (const log of routineLogs) {
+        const date = parseISO(log.timestamp);
+        const weekStart = startOfWeek(date, {weekStartsOn: 1}).toISOString();
+        if (!weeks[weekStart]) weeks[weekStart] = 0;
+        weeks[weekStart]++;
+      }
+      return Object.values(weeks).some(count => count >= 5);
+    },
+  },
+
   // --- Daily Badges ---
   {
     id: 'daily-dedication',
@@ -54,8 +105,8 @@ export const ALL_BADGES: readonly Badge[] = [
       "Two hours of focused study! That's discipline in action. Imagine what you can do tomorrow. Keep building the momentum!",
     category: 'daily',
     Icon: Zap,
-    checker: (tasks: StudyTask[]) => {
-      const grouped = groupTasksByDay(tasks);
+    checker: ({completedTasks}) => {
+      const grouped = groupTasksByDay(completedTasks);
       return Object.values(grouped).some(
         dayTasks => getTotalDuration(dayTasks) >= 120
       );
@@ -69,8 +120,8 @@ export const ALL_BADGES: readonly Badge[] = [
       'Four hours in a day! You are pushing your limits and it shows. This dedication is what separates the good from the great.',
     category: 'daily',
     Icon: Rocket,
-    checker: (tasks: StudyTask[]) => {
-      const grouped = groupTasksByDay(tasks);
+    checker: ({completedTasks}) => {
+      const grouped = groupTasksByDay(completedTasks);
       return Object.values(grouped).some(
         dayTasks => getTotalDuration(dayTasks) >= 240
       );
@@ -84,8 +135,8 @@ export const ALL_BADGES: readonly Badge[] = [
       'Six hours of solid study! You are in the elite zone now. Your brain is a muscle, and today it got a phenomenal workout.',
     category: 'daily',
     Icon: Crown,
-    checker: (tasks: StudyTask[]) => {
-      const grouped = groupTasksByDay(tasks);
+    checker: ({completedTasks}) => {
+      const grouped = groupTasksByDay(completedTasks);
       return Object.values(grouped).some(
         dayTasks => getTotalDuration(dayTasks) >= 360
       );
@@ -99,8 +150,8 @@ export const ALL_BADGES: readonly Badge[] = [
       "Eight hours! That's a full workday dedicated to your growth. Your future self will thank you for this incredible effort.",
     category: 'daily',
     Icon: Dumbbell,
-    checker: (tasks: StudyTask[]) => {
-      const grouped = groupTasksByDay(tasks);
+    checker: ({completedTasks}) => {
+      const grouped = groupTasksByDay(completedTasks);
       return Object.values(grouped).some(
         dayTasks => getTotalDuration(dayTasks) >= 480
       );
@@ -114,8 +165,8 @@ export const ALL_BADGES: readonly Badge[] = [
       "An incredible 10 hours of studying! You've demonstrated the stamina of a marathoner. Rest well, you've earned it.",
     category: 'daily',
     Icon: Medal,
-    checker: (tasks: StudyTask[]) => {
-      const grouped = groupTasksByDay(tasks);
+    checker: ({completedTasks}) => {
+      const grouped = groupTasksByDay(completedTasks);
       return Object.values(grouped).some(
         dayTasks => getTotalDuration(dayTasks) >= 600
       );
@@ -129,8 +180,8 @@ export const ALL_BADGES: readonly Badge[] = [
       'Twelve hours. You have achieved the pinnacle of daily study. This is legendary focus. You are unstoppable!',
     category: 'daily',
     Icon: Gem,
-    checker: (tasks: StudyTask[]) => {
-      const grouped = groupTasksByDay(tasks);
+    checker: ({completedTasks}) => {
+      const grouped = groupTasksByDay(completedTasks);
       return Object.values(grouped).some(
         dayTasks => getTotalDuration(dayTasks) >= 720
       );
@@ -144,8 +195,8 @@ export const ALL_BADGES: readonly Badge[] = [
       'The early bird gets the worm! Starting your day with productivity sets a powerful tone. Well done for seizing the morning.',
     category: 'daily',
     Icon: Sunrise,
-    checker: (tasks: StudyTask[]) =>
-      tasks.some(task => parseInt(task.time.split(':')[0]) < 9),
+    checker: ({completedTasks}) =>
+      completedTasks.some(task => parseInt(task.time.split(':')[0]) < 9),
   },
   {
     id: 'night-owl',
@@ -155,8 +206,8 @@ export const ALL_BADGES: readonly Badge[] = [
       'Burning the midnight oil! Your dedication shines brightly even when the sun is down. Keep up the great work.',
     category: 'daily',
     Icon: Moon,
-    checker: (tasks: StudyTask[]) =>
-      tasks.some(task => parseInt(task.time.split(':')[0]) >= 21),
+    checker: ({completedTasks}) =>
+      completedTasks.some(task => parseInt(task.time.split(':')[0]) >= 21),
   },
 
   // --- Weekly Badges ---
@@ -168,9 +219,9 @@ export const ALL_BADGES: readonly Badge[] = [
       'A full week of consistent effort! This is how habits are forged and greatness is built. You are on the right path.',
     category: 'weekly',
     Icon: Calendar,
-    checker: (tasks: StudyTask[]) => {
+    checker: ({completedTasks}) => {
       // Get unique dates and sort them
-      const uniqueDates = [...new Set(tasks.map(t => t.date))].sort();
+      const uniqueDates = [...new Set(completedTasks.map(t => t.date))].sort();
 
       if (uniqueDates.length < 7) {
         return false;
@@ -205,9 +256,9 @@ export const ALL_BADGES: readonly Badge[] = [
       'No days off! You used your weekend to get ahead. This commitment is your secret weapon. Amazing job!',
     category: 'weekly',
     Icon: Sparkles,
-    checker: (tasks: StudyTask[]) => {
+    checker: ({completedTasks}) => {
       const weekends: Record<string, number> = {};
-      for (const task of tasks) {
+      for (const task of completedTasks) {
         const date = parseISO(task.date);
         const day = date.getDay();
         if (day === 0 || day === 6) {
@@ -231,9 +282,9 @@ export const ALL_BADGES: readonly Badge[] = [
       "Over 40 hours this month! That's a huge investment in yourself. Every minute is a step towards your dream. Phenomenal!",
     category: 'monthly',
     Icon: Trophy,
-    checker: (tasks: StudyTask[]) => {
+    checker: ({completedTasks}) => {
       const months: Record<string, number> = {};
-      for (const task of tasks) {
+      for (const task of completedTasks) {
         const date = parseISO(task.date);
         const monthStart = startOfMonth(date).toISOString();
         if (!months[monthStart]) months[monthStart] = 0;
@@ -250,9 +301,9 @@ export const ALL_BADGES: readonly Badge[] = [
       'A perfect month! Studying every single day is an incredible feat of discipline and consistency. You are an inspiration!',
     category: 'monthly',
     Icon: Star,
-    checker: (tasks: StudyTask[]) => {
+    checker: ({completedTasks}) => {
       const studyDaysByMonth: Record<string, Set<string>> = {};
-      for (const task of tasks) {
+      for (const task of completedTasks) {
           const date = parseISO(task.date);
           const monthKey = startOfMonth(date).toISOString();
           if (!studyDaysByMonth[monthKey]) {
@@ -281,7 +332,7 @@ export const ALL_BADGES: readonly Badge[] = [
       "The journey of a thousand miles begins with a single step. You've taken yours. Keep going!",
     category: 'overall',
     Icon: Award,
-    checker: (tasks: StudyTask[]) => tasks.length >= 1,
+    checker: ({completedTasks}) => completedTasks.length >= 1,
   },
   {
     id: 'task-apprentice',
@@ -291,7 +342,7 @@ export const ALL_BADGES: readonly Badge[] = [
       "10 tasks down! You're getting the hang of this. Every completed task is a victory. On to the next one!",
     category: 'overall',
     Icon: Book,
-    checker: (tasks: StudyTask[]) => tasks.length >= 10,
+    checker: ({completedTasks}) => completedTasks.length >= 10,
   },
   {
     id: 'task-master',
@@ -301,7 +352,7 @@ export const ALL_BADGES: readonly Badge[] = [
       '50 tasks completed! You are no longer an apprentice; you are a master of your routine. Your knowledge is compounding!',
     category: 'overall',
     Icon: Brain,
-    checker: (tasks: StudyTask[]) => tasks.length >= 50,
+    checker: ({completedTasks}) => completedTasks.length >= 50,
   },
   {
     id: 'committed-learner',
@@ -311,6 +362,6 @@ export const ALL_BADGES: readonly Badge[] = [
       '100 tasks conquered! This is a testament to your unwavering commitment. You are building an incredible foundation for success.',
     category: 'overall',
     Icon: Trophy,
-    checker: (tasks: StudyTask[]) => tasks.length >= 100,
+    checker: ({completedTasks}) => completedTasks.length >= 100,
   },
 ];

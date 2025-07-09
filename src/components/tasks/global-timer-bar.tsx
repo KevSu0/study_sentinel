@@ -150,14 +150,19 @@ export function GlobalTimerBar() {
       finalDuration += (Date.now() - savedTimer.startTime);
     }
     
+    const durationInSeconds = Math.round(finalDuration / 1000);
+    const durationInMinutes = Math.floor(durationInSeconds / 60);
+    const points = Math.floor(durationInMinutes / 10);
+
     addLog('ROUTINE_SESSION_COMPLETE', {
         routineId: activeRoutine.id,
         title: activeRoutine.title,
-        duration: Math.round(finalDuration / 1000)
+        duration: durationInSeconds,
+        points,
     });
     toast({
         title: "Routine Stopped",
-        description: `You logged ${formatTime(Math.round(finalDuration / 1000))} of productive time.`
+        description: `You logged ${formatTime(durationInSeconds)} and earned ${points} points.`
     });
     clearRoutineTimer();
   }, [activeRoutine, addLog, clearRoutineTimer, toast]);
