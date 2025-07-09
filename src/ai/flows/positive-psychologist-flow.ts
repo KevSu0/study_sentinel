@@ -54,23 +54,33 @@ const positivePsychologistFlow = ai.defineFlow(
 
     const {profile, dailySummary} = input;
 
-    const profileContext = profile
-      ? `
-**User Profile:**
-- Name: ${profile?.name || 'Not provided'}
-- Passion: ${profile?.passion || 'Not provided'}
-- Dream: ${profile?.dream || 'Not provided'}
-- Education: ${profile?.education || 'Not provided'}
-`
-      : '**User Profile:** Not provided.';
+    // Use dummy objects to prevent any potential errors from null/undefined context.
+    // This makes the string interpolation below completely safe.
+    const safeProfile = profile || {
+      name: 'User',
+      passion: 'learning and growing',
+      dream: 'achieving their full potential',
+      education: 'their current studies',
+    };
+    const safeSummary = dailySummary || {
+      evaluation: 'No activity was logged for the previous day.',
+      motivationalParagraph:
+        'Every day is a new opportunity to make progress. Focus on your goals for today!',
+    };
 
-    const summaryContext = dailySummary
-      ? `
+    const profileContext = `
+**User Profile:**
+- Name: ${safeProfile.name || 'Not provided'}
+- Passion: ${safeProfile.passion || 'Not provided'}
+- Dream: ${safeProfile.dream || 'Not provided'}
+- Education: ${safeProfile.education || 'Not provided'}
+`;
+
+    const summaryContext = `
 **Latest Daily Briefing:**
-- Evaluation: ${dailySummary?.evaluation}
-- Motivation: ${dailySummary?.motivationalParagraph}
-`
-      : '**Latest Daily Briefing:** Not available.';
+- Evaluation: ${safeSummary.evaluation}
+- Motivation: ${safeSummary.motivationalParagraph}
+`;
 
     const systemPrompt = `You are "KuKe's Motivation Coach," an empathetic and supportive AI companion grounded in the principles of positive psychology. Your core purpose is to empower the user on their academic journey. You are always ready to help, listen, and provide clear, structured guidance.
 
