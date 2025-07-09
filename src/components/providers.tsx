@@ -21,34 +21,32 @@ export function Providers({children}: {children: ReactNode}) {
   const pathname = usePathname();
 
   return (
-    <SidebarProvider>
-      <div className="bg-background">
-        <Sidebar>
-          <SidebarHeader className="p-4">
-            <Link href="/" aria-label="Back to Home">
-              <Logo />
-            </Link>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === '/'}
-                  tooltip="Dashboard"
-                >
-                  <Link href="/">
-                    <LayoutDashboard />
-                    <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarContent>
-        </Sidebar>
-        <SidebarInset>{children}</SidebarInset>
-        <Toaster />
-      </div>
+    <SidebarProvider className="bg-background">
+      <Sidebar>
+        <SidebarHeader className="p-4">
+          <Link href="/" aria-label="Back to Home">
+            <Logo />
+          </Link>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === '/'}
+                tooltip="Dashboard"
+              >
+                <Link href="/" className="flex items-center gap-2">
+                  <LayoutDashboard />
+                  <span>Dashboard</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarContent>
+      </Sidebar>
+      <SidebarInset>{children}</SidebarInset>
+      <Toaster />
     </SidebarProvider>
   );
 }
