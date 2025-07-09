@@ -174,11 +174,10 @@ export default function CoachPage() {
           content: result.response,
         });
       } else {
+        const errorMessage = (result as any)?.error || "Sorry, I couldn't get a response. Please try again.";
         addMessage({
           role: 'model',
-          content:
-            (result as any)?.error ||
-            "Sorry, I couldn't get a response. Please try again.",
+          content: `An error occurred: ${errorMessage}`,
         });
       }
     } catch (error) {

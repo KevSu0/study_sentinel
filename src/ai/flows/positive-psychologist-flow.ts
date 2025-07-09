@@ -14,6 +14,18 @@ import {
 } from '@/lib/types';
 import {MessageData} from 'genkit/ai';
 
+// This is a robust type guard to ensure a message is valid.
+const isValidHistoryMessage = (
+  message: any
+): message is {role: 'user' | 'model'; content: string} => {
+  return (
+    message &&
+    typeof message === 'object' &&
+    (message.role === 'user' || message.role === 'model') &&
+    typeof message.content === 'string'
+  );
+};
+
 export async function getChatbotResponse(
   input: PositivePsychologistInput
 ): Promise<PositivePsychologistOutput> {
@@ -27,7 +39,7 @@ const positivePsychologistFlow = ai.defineFlow(
     outputSchema: PositivePsychologistOutputSchema,
   },
   async (input: PositivePsychologistInput) => {
-    const {profile, dailySummary} = input;
+    const {profile, dailySummary, history} = input;
 
     const profileContext = profile
       ? `
@@ -78,19 +90,19 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    // Belt-and-suspenders: Zod validation at the flow's input should already guarantee
-    // a clean history. This mapping provides a final, robust layer of safety.
-    const genkitHistory: MessageData[] = input.history
-      .map(message => {
-        if (message && message.role && typeof message.content === 'string') {
-          return {
+    // FINAL, BULLETPROOF VALIDATION:
+    // This loop guarantees that only valid messages reach the AI.
+    const genkitHistory: MessageData[] = [];
+    if (Array.isArray(history)) {
+      for (const message of history) {
+        if (isValidHistoryMessage(message)) {
+          genkitHistory.push({
             role: message.role,
             parts: [{text: message.content}],
-          };
+          });
         }
-        return null;
-      })
-      .filter((message): message is MessageData => message !== null);
+      }
+    }
 
     // The Gemini API requires the history to start with a 'user' message.
     if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {

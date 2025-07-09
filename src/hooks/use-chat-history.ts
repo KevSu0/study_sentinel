@@ -20,8 +20,8 @@ const initialMessage: ChatMessage = {
 const isValidMessage = (msg: any): msg is ChatMessage => {
   return (
     msg &&
-    typeof msg === 'object' && // Ensure it's an object
-    !Array.isArray(msg) && // Ensure it's not an array
+    typeof msg === 'object' &&
+    !Array.isArray(msg) &&
     typeof msg.role === 'string' &&
     (msg.role === 'user' || msg.role === 'model') &&
     typeof msg.content === 'string'
@@ -40,35 +40,39 @@ export function useChatHistory() {
         try {
           parsedHistory = JSON.parse(savedHistory);
         } catch {
-          // If JSON is invalid, reset.
           localStorage.removeItem(CHAT_HISTORY_KEY);
           setInternalMessages([initialMessage]);
           setIsLoaded(true);
           return;
         }
 
-        if (!Array.isArray(parsedHistory)) {
+        if (Array.isArray(parsedHistory)) {
+          // Use reduce to build a new, guaranteed-clean array.
+          // This explicitly handles sparse arrays or null/undefined items.
+          const cleanHistory = parsedHistory.reduce(
+            (acc: ChatMessage[], msg: any) => {
+              if (isValidMessage(msg)) {
+                acc.push(msg);
+              }
+              return acc;
+            },
+            []
+          );
+
+          if (cleanHistory.length !== parsedHistory.length) {
+            // If anything was cleaned, update localStorage immediately with the clean version.
+            localStorage.setItem(
+              CHAT_HISTORY_KEY,
+              JSON.stringify(cleanHistory)
+            );
+          }
+
+          setInternalMessages(
+            cleanHistory.length > 0 ? cleanHistory : [initialMessage]
+          );
+        } else {
           // If stored data is not an array, reset.
           localStorage.removeItem(CHAT_HISTORY_KEY);
-          setInternalMessages([initialMessage]);
-          setIsLoaded(true);
-          return;
-        }
-
-        const cleanHistory = parsedHistory.filter(isValidMessage);
-
-        // If the cleaning process removed any items, update localStorage
-        if (cleanHistory.length !== parsedHistory.length) {
-          localStorage.setItem(
-            CHAT_HISTORY_KEY,
-            JSON.stringify(cleanHistory)
-          );
-        }
-
-        if (cleanHistory.length > 0) {
-          setInternalMessages(cleanHistory);
-        } else {
-          // If all messages were invalid, reset to initial.
           setInternalMessages([initialMessage]);
         }
       } else {
@@ -84,9 +88,12 @@ export function useChatHistory() {
   }, []);
 
   const addMessage = useCallback((message: ChatMessage) => {
-    // Validate message before adding
+    // Re-validate here to be absolutely sure we're not adding bad data.
     if (!isValidMessage(message)) {
-      console.error('Attempted to add invalid message:', message);
+      console.error(
+        'CRITICAL: Attempted to add invalid message. Operation aborted.',
+        message
+      );
       return;
     }
 
