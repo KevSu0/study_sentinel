@@ -16,6 +16,15 @@ export type StudyTask = {
   priority: TaskPriority;
 };
 
+export type Routine = {
+  id: string;
+  title: string;
+  description?: string;
+  days: number[]; // 0 = Sunday, 1 = Monday, etc.
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
+};
+
 export type BadgeCategory = 'daily' | 'weekly' | 'monthly' | 'overall';
 
 export type Badge = {
@@ -39,7 +48,8 @@ export type LogEventType =
   | 'TIMER_START'
   | 'TIMER_PAUSE'
   | 'TIMER_COMPLETE'
-  | 'TIMER_STOP';
+  | 'TIMER_STOP'
+  | 'ROUTINE_SESSION_COMPLETE';
 
 export type LogEvent = {
   id: string;

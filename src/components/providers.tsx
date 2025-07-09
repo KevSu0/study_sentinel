@@ -29,6 +29,7 @@ import {
   Sparkles,
   ScrollText,
   User,
+  CalendarDays,
 } from 'lucide-react';
 import {ConfettiProvider} from './providers/confetti-provider';
 import {SplashScreen} from '@/components/splash-screen';
@@ -53,6 +54,7 @@ function AppLayout({children}: {children: ReactNode}) {
     {href: '/', label: 'Dashboard', icon: LayoutDashboard},
     {href: '/briefing', label: 'Daily Briefing', icon: Sparkles},
     {href: '/tasks', label: 'All Tasks', icon: ListChecks},
+    {href: '/timetable', label: 'Timetable', icon: CalendarDays},
     {href: '/stats', label: 'Stats', icon: TrendingUp},
     {href: '/badges', label: 'Badges', icon: Award},
     {href: '/archive', label: 'Archived Tasks', icon: Archive},
