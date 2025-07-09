@@ -151,21 +151,31 @@ export const ALL_BADGES: readonly Badge[] = [
     category: 'weekly',
     Icon: Calendar,
     checker: (tasks: StudyTask[]) => {
-      if (tasks.length < 7) return false;
-      const dates = [
-        ...new Set(tasks.map(t => parseISO(t.date).getTime())),
-      ].sort();
-      for (let i = 0; i < dates.length - 6; i++) {
-        let isConsecutive = true;
+      // Get unique dates and sort them
+      const uniqueDates = [...new Set(tasks.map(t => t.date))].sort();
+
+      if (uniqueDates.length < 7) {
+        return false;
+      }
+
+      const parsedDates = uniqueDates.map(d => parseISO(d));
+
+      // Check for a 7-day consecutive streak
+      for (let i = 0; i <= parsedDates.length - 7; i++) {
+        let consecutive = true;
         for (let j = 0; j < 6; j++) {
-          const diff = differenceInDays(dates[i + j + 1], dates[i + j]);
-          if (diff !== 1) {
-            isConsecutive = false;
+          const day1 = parsedDates[i + j];
+          const day2 = parsedDates[i + j + 1];
+          if (differenceInDays(day2, day1) !== 1) {
+            consecutive = false;
             break;
           }
         }
-        if (isConsecutive) return true;
+        if (consecutive) {
+          return true;
+        }
       }
+
       return false;
     },
   },
@@ -182,7 +192,8 @@ export const ALL_BADGES: readonly Badge[] = [
         const day = date.getDay();
         if (day === 0 || day === 6) {
           // Sunday or Saturday
-          const weekStart = startOfWeek(date).toISOString();
+          // Group by the start of the week, with Monday as day 1
+          const weekStart = startOfWeek(date, {weekStartsOn: 1}).toISOString();
           if (!weekends[weekStart]) weekends[weekStart] = 0;
           weekends[weekStart] += task.duration;
         }
