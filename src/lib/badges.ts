@@ -6,6 +6,9 @@ import {
   Calendar,
   Coffee,
   Crown,
+  Dumbbell,
+  Gem,
+  Medal,
   Moon,
   Rocket,
   Sparkles,
@@ -79,6 +82,45 @@ export const ALL_BADGES: readonly Badge[] = [
       const grouped = groupTasksByDay(tasks);
       return Object.values(grouped).some(
         dayTasks => getTotalDuration(dayTasks) >= 360
+      );
+    },
+  },
+  {
+    id: 'academic-athlete',
+    name: 'Academic Athlete',
+    description: 'Study for at least 8 hours in a single day. True endurance!',
+    category: 'daily',
+    Icon: Dumbbell,
+    checker: (tasks: StudyTask[]) => {
+      const grouped = groupTasksByDay(tasks);
+      return Object.values(grouped).some(
+        dayTasks => getTotalDuration(dayTasks) >= 480
+      );
+    },
+  },
+  {
+    id: 'study-marathoner',
+    name: 'Study Marathoner',
+    description: 'Study for at least 10 hours in a single day. Absolutely epic!',
+    category: 'daily',
+    Icon: Medal,
+    checker: (tasks: StudyTask[]) => {
+      const grouped = groupTasksByDay(tasks);
+      return Object.values(grouped).some(
+        dayTasks => getTotalDuration(dayTasks) >= 600
+      );
+    },
+  },
+  {
+    id: 'sentinel-scholar',
+    name: 'Sentinel Scholar',
+    description: 'Study for 12 hours in a single day. You are a legend!',
+    category: 'daily',
+    Icon: Gem,
+    checker: (tasks: StudyTask[]) => {
+      const grouped = groupTasksByDay(tasks);
+      return Object.values(grouped).some(
+        dayTasks => getTotalDuration(dayTasks) >= 720
       );
     },
   },

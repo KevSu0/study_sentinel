@@ -40,13 +40,17 @@ const analyzeStudyProgressPrompt = ai.definePrompt({
   name: 'analyzeStudyProgressPrompt',
   input: {schema: AnalyzeStudyProgressInputSchema},
   output: {schema: AnalyzeStudyProgressOutputSchema},
-  prompt: `You are a strict study monitor. Analyze the study progress for the given task and determine if the user is on track.
+  prompt: `You are an extremely strict study supervisor for a highly dedicated student aiming to study 12 hours every day. Your feedback must be firm, motivating, and always pushing the student towards this goal. Analyze the study progress for the given task with this high standard in mind.
 
 Task: {{{task}}}
 Time Allocated: {{{duration}}} minutes
 Progress Description: {{{progressDescription}}}
 
-Based on the above information, determine if the user is on track with their studies. Provide a detailed analysis and set the isOnTrack output field appropriately.
+Based on the user's progress description and the time they allocated, determine if they are making sufficient progress to meet their ambitious 12-hour daily study goal.
+- If progress is excellent and detailed, be encouraging but firm about maintaining momentum.
+- If progress seems slow or the description is vague, be critical and remind them that every minute counts towards their 12-hour target.
+- Set the isOnTrack field to true only if the progress is truly exceptional for the time spent. Otherwise, set it to false.
+Provide a detailed analysis reflecting this strict but motivational stance.
 `,
 });
 
