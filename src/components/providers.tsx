@@ -9,9 +9,12 @@ import {
   SidebarInset,
   SidebarHeader,
   SidebarContent,
+  SidebarFooter,
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarTrigger,
+  SidebarRail,
 } from '@/components/ui/sidebar';
 import {Toaster} from '@/components/ui/toaster';
 import {Logo} from '@/components/logo';
@@ -24,6 +27,7 @@ import {
 } from 'lucide-react';
 import {ConfettiProvider} from './providers/confetti-provider';
 import {SplashScreen} from '@/components/splash-screen';
+import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
 
 export function Providers({children}: {children: ReactNode}) {
   const pathname = usePathname();
@@ -41,81 +45,61 @@ export function Providers({children}: {children: ReactNode}) {
     return <SplashScreen />;
   }
 
+  const menuItems = [
+    {href: '/', label: 'Dashboard', icon: LayoutDashboard},
+    {href: '/tasks', label: 'All Tasks', icon: ListChecks},
+    {href: '/archive', label: 'Archived Tasks', icon: Archive},
+    {href: '/badges', label: 'Badges', icon: Award},
+    {href: '/stats', label: 'Stats', icon: TrendingUp},
+  ];
+
   return (
     <ConfettiProvider>
       <SidebarProvider>
         <Sidebar>
+          <SidebarRail />
           <SidebarHeader className="p-4">
-            <Link href="/" aria-label="Back to Home">
-              <Logo />
-            </Link>
+            <Logo />
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
+              {menuItems.map(item => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.href}
+                    tooltip={item.label}
+                  >
+                    <Link href={item.href} className="flex items-center gap-2">
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarContent>
+          <SidebarFooter className="p-2">
+            <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === '/'}
-                  tooltip="Dashboard"
-                >
-                  <Link href="/" className="flex items-center gap-2">
-                    <LayoutDashboard />
-                    <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === '/tasks'}
-                  tooltip="All Tasks"
-                >
-                  <Link href="/tasks" className="flex items-center gap-2">
-                    <ListChecks />
-                    <span>All Tasks</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === '/archive'}
-                  tooltip="Archived Tasks"
-                >
-                  <Link href="/archive" className="flex items-center gap-2">
-                    <Archive />
-                    <span>Archived Tasks</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === '/badges'}
-                  tooltip="Badges"
-                >
-                  <Link href="/badges" className="flex items-center gap-2">
-                    <Award />
-                    <span>Badges</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === '/stats'}
-                  tooltip="Stats"
-                >
-                  <Link href="/stats" className="flex items-center gap-2">
-                    <TrendingUp />
-                    <span>Stats</span>
-                  </Link>
+                <SidebarMenuButton tooltip="Account">
+                  <Avatar className="size-7">
+                    <AvatarImage src="https://placehold.co/40x40.png" data-ai-hint="user profile"/>
+                    <AvatarFallback>U</AvatarFallback>
+                  </Avatar>
+                  <span>Account</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
-          </SidebarContent>
+          </SidebarFooter>
         </Sidebar>
-        <SidebarInset>{children}</SidebarInset>
+        <SidebarInset>
+          <div className="p-4 border-b flex items-center justify-between md:hidden sticky top-0 bg-background z-10">
+            <Logo />
+            <SidebarTrigger />
+          </div>
+          {children}
+        </SidebarInset>
         <Toaster />
       </SidebarProvider>
     </ConfettiProvider>
