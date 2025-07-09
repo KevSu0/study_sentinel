@@ -4,20 +4,26 @@ import {useTasks} from './use-tasks';
 import {useToast} from './use-toast';
 import {ALL_BADGES} from '@/lib/badges';
 import type {Badge} from '@/lib/types';
+import {format} from 'date-fns';
+import {useConfetti} from '@/components/providers/confetti-provider';
 
-const BADGES_KEY = 'studySentinelEarnedBadges';
+const BADGES_KEY = 'studySentinelEarnedBadges_v2'; // v2 to handle new data structure
 
 export function useBadges() {
   const {tasks, isLoaded: tasksLoaded} = useTasks();
   const {toast} = useToast();
-  const [earnedBadges, setEarnedBadges] = useState<Set<string>>(new Set());
+  const {fire} = useConfetti();
+  const [earnedBadges, setEarnedBadges] = useState<Map<string, string>>(
+    new Map()
+  );
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     try {
       const savedBadges = localStorage.getItem(BADGES_KEY);
       if (savedBadges) {
-        setEarnedBadges(new Set(JSON.parse(savedBadges)));
+        // New format is an array of [key, value] pairs
+        setEarnedBadges(new Map(JSON.parse(savedBadges)));
       }
     } catch (error) {
       console.error('Failed to parse badges from localStorage', error);
@@ -29,32 +35,32 @@ export function useBadges() {
 
   const awardBadge = useCallback(
     (badge: Badge) => {
-      // Use functional update to ensure we have the latest state
       setEarnedBadges(prev => {
         if (prev.has(badge.id)) {
           return prev; // Already earned, no change
         }
 
-        const newEarnedBadges = new Set(prev);
-        newEarnedBadges.add(badge.id);
+        const newEarnedBadges = new Map(prev);
+        newEarnedBadges.set(badge.id, format(new Date(), 'yyyy-MM-dd'));
 
         localStorage.setItem(
           BADGES_KEY,
-          JSON.stringify(Array.from(newEarnedBadges))
+          JSON.stringify(Array.from(newEarnedBadges.entries()))
         );
-        
+
+        fire(); // Trigger confetti!
+
         setTimeout(() => {
           toast({
             title: 'Badge Unlocked! 🎉',
             description: `You've earned the "${badge.name}" badge.`,
           });
-        }, 0);
-
+        }, 500);
 
         return newEarnedBadges;
       });
     },
-    [toast]
+    [toast, fire]
   );
 
   useEffect(() => {
