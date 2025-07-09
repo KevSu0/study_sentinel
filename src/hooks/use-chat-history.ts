@@ -16,6 +16,12 @@ const initialMessage: ChatMessage = {
     "Hello! I'm your personal motivation coach. How can I help you on your journey today?",
 };
 
+// A validation function to ensure a message is in the correct format
+const isValidMessage = (msg: any): msg is ChatMessage => {
+    return msg && typeof msg.role === 'string' && typeof msg.content === 'string';
+};
+
+
 export function useChatHistory() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -27,12 +33,7 @@ export function useChatHistory() {
         const parsedHistory = JSON.parse(savedHistory);
         if (Array.isArray(parsedHistory) && parsedHistory.length > 0) {
           // Robustly filter for valid message objects to prevent crashes
-          const cleanHistory: ChatMessage[] = parsedHistory.filter(
-            (msg: any): msg is ChatMessage =>
-              msg &&
-              typeof msg.role === 'string' &&
-              typeof msg.content === 'string'
-          );
+          const cleanHistory = parsedHistory.filter(isValidMessage);
 
           if (cleanHistory.length > 0) {
             setMessages(cleanHistory);
@@ -57,6 +58,12 @@ export function useChatHistory() {
   }, []);
 
   const addMessage = useCallback((newMessage: ChatMessage) => {
+    // Aggressive validation guard: Do not allow invalid messages into the state.
+    if (!isValidMessage(newMessage)) {
+        console.error("useChatHistory: Attempted to add invalid message. The message was discarded.", newMessage);
+        return;
+    }
+
     setMessages(prevMessages => {
       let updatedMessages = [...prevMessages, newMessage];
 
