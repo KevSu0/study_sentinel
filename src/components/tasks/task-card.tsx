@@ -21,6 +21,7 @@ import {
   PlayCircle,
   CheckCircle2,
   ChevronDown,
+  RotateCcw,
 } from 'lucide-react';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
@@ -111,10 +112,15 @@ export const TaskCard = memo(function TaskCard({task, onUpdate, onDelete, onEdit
         );
       case 'completed':
         return (
-           <div className="flex items-center justify-center text-sm font-medium text-accent h-9 px-3 rounded-md border border-accent bg-accent/10">
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Completed
-           </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => handleStatusChange('in_progress')}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Undo Complete
+          </Button>
         );
       default:
         return null;
