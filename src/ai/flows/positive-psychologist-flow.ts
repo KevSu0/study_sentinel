@@ -78,30 +78,31 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    // HYPER-DEFENSIVE VALIDATION
-    // This loop isolates each message in a try/catch to prevent a single corrupted
-    // message from crashing the entire request.
+    // Final, definitive server-side validation.
+    // This creates a new, guaranteed-clean array to send to the AI.
     const genkitHistory: MessageData[] = [];
     if (Array.isArray(history)) {
       for (const message of history) {
-        try {
-          if (
-            message &&
-            typeof message.role === 'string' &&
-            (message.role === 'user' || message.role === 'model') &&
-            typeof message.content === 'string'
-          ) {
-            genkitHistory.push({
-              role: message.role,
-              parts: [{text: message.content}],
-            });
-          }
-        } catch (e) {
-          // Log the error but continue processing other messages.
+        // Step 1: Ensure message is a non-null object before destructuring.
+        if (!message || typeof message !== 'object') {
+          console.error('Skipping corrupted (non-object) message:', message);
+          continue;
+        }
+
+        // Step 2: Ensure role and content are of the correct type.
+        const {role, content} = message;
+        if (
+          (role === 'user' || role === 'model') &&
+          typeof content === 'string'
+        ) {
+          genkitHistory.push({
+            role: role,
+            parts: [{text: content}],
+          });
+        } else {
           console.error(
-            'A corrupted chat message was detected and skipped on the server:',
-            message,
-            e
+            'Skipping corrupted (invalid fields) message:',
+            message
           );
         }
       }

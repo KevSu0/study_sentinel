@@ -16,87 +16,56 @@ const initialMessage: ChatMessage = {
     "Hello! I'm your personal motivation coach. How can I help you on your journey today?",
 };
 
-// A robust validation function to ensure a message is in the correct format
+// A simple, direct validation function.
 const isValidMessage = (msg: any): msg is ChatMessage => {
-  if (!msg || typeof msg !== 'object' || Array.isArray(msg)) {
-    return false;
-  }
-  if (
-    typeof msg.role !== 'string' ||
-    (msg.role !== 'user' && msg.role !== 'model')
-  ) {
-    return false;
-  }
-  if (typeof msg.content !== 'string') {
-    return false;
-  }
-  return true;
+  return (
+    !!msg &&
+    typeof msg === 'object' &&
+    !Array.isArray(msg) &&
+    (msg.role === 'user' || msg.role === 'model') &&
+    typeof msg.content === 'string'
+  );
 };
 
 export function useChatHistory() {
   const [messages, setInternalMessages] = useState<ChatMessage[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // This effect runs only once on component mount to load and clean data from localStorage.
   useEffect(() => {
+    let loadedMessages: ChatMessage[] = [initialMessage];
     try {
       const savedHistory = localStorage.getItem(CHAT_HISTORY_KEY);
       if (savedHistory) {
-        let parsedHistory;
-        try {
-          parsedHistory = JSON.parse(savedHistory);
-        } catch {
-          localStorage.removeItem(CHAT_HISTORY_KEY);
-          setInternalMessages([initialMessage]);
-          setIsLoaded(true);
-          return;
-        }
-
+        const parsedHistory = JSON.parse(savedHistory);
         if (Array.isArray(parsedHistory)) {
-          // HYPER-DEFENSIVE VALIDATION
-          // This loop isolates each message in a try/catch to prevent a single corrupted
-          // message from breaking the loading process.
-          const validatedHistory: ChatMessage[] = [];
-          for (const msg of parsedHistory) {
-            try {
-              if (isValidMessage(msg)) {
-                validatedHistory.push(msg);
-              }
-            } catch (e) {
-              console.error(
-                'A corrupted chat message was detected and skipped during load:',
-                msg,
-                e
-              );
-            }
+          // Filter the array aggressively, keeping only valid messages.
+          const cleanHistory = parsedHistory.filter(isValidMessage);
+          if (cleanHistory.length > 0) {
+            loadedMessages = cleanHistory;
           }
-
-          if (validatedHistory.length !== parsedHistory.length) {
-            // If anything was cleaned, update localStorage immediately with the clean version.
-            localStorage.setItem(
-              CHAT_HISTORY_KEY,
-              JSON.stringify(validatedHistory)
-            );
-          }
-
-          setInternalMessages(
-            validatedHistory.length > 0 ? validatedHistory : [initialMessage]
-          );
-        } else {
-          // If stored data is not an array, reset.
-          localStorage.removeItem(CHAT_HISTORY_KEY);
-          setInternalMessages([initialMessage]);
         }
-      } else {
-        setInternalMessages([initialMessage]);
       }
     } catch (error) {
       console.error('Failed to load or parse chat history, resetting.', error);
-      localStorage.removeItem(CHAT_HISTORY_KEY);
-      setInternalMessages([initialMessage]);
-    } finally {
-      setIsLoaded(true);
+      // Ensure we start fresh if parsing fails.
+      loadedMessages = [initialMessage];
     }
+    setInternalMessages(loadedMessages);
+    setIsLoaded(true);
   }, []);
+
+  // This effect runs whenever messages change to save the clean state back to localStorage.
+  useEffect(() => {
+    if (isLoaded) {
+      try {
+        const historyToSave = messages.slice(-MAX_HISTORY_LENGTH);
+        localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(historyToSave));
+      } catch (error) {
+        console.error('Failed to save chat history', error);
+      }
+    }
+  }, [messages, isLoaded]);
 
   const addMessage = useCallback((message: ChatMessage) => {
     // Re-validate here to be absolutely sure we're not adding bad data.
@@ -107,25 +76,13 @@ export function useChatHistory() {
       );
       return;
     }
-
     setInternalMessages(prevMessages => {
-      const newMessages = [...prevMessages, message].slice(-MAX_HISTORY_LENGTH);
-      try {
-        localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(newMessages));
-      } catch (error) {
-        console.error('Failed to save chat history', error);
-      }
-      return newMessages;
+      return [...prevMessages, message].slice(-MAX_HISTORY_LENGTH);
     });
   }, []);
 
   const clearMessages = useCallback(() => {
-    try {
-      localStorage.removeItem(CHAT_HISTORY_KEY);
-      setInternalMessages([initialMessage]);
-    } catch (error) {
-      console.error('Failed to clear chat history', error);
-    }
+    setInternalMessages([initialMessage]);
   }, []);
 
   return {messages, addMessage, clearMessages, isLoaded};
