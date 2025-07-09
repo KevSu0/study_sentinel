@@ -210,7 +210,7 @@ export default function DashboardPage() {
                         onUpdate={updateTask}
                         onArchive={archiveTask}
                         onUnarchive={unarchiveTask}
-                        onPushToNextDay={pushToNextDay}
+                        onPushToNextDay={pushTaskToNextDay}
                         onEdit={() => {}}
                       />
                     </section>
@@ -225,7 +225,7 @@ export default function DashboardPage() {
                         onUpdate={updateTask}
                         onArchive={archiveTask}
                         onUnarchive={unarchiveTask}
-                        onPushToNextDay={pushToNextDay}
+                        onPushToNextDay={pushTaskToNextDay}
                         onEdit={() => {}}
                       />
                     </section>
