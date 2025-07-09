@@ -267,7 +267,6 @@ export default function DashboardPage() {
   const {
     logs,
     getPreviousDayLogs,
-    getAllLogs,
     isLoaded: loggerLoaded,
   } = useLogger();
   const {profile, isLoaded: profileLoaded} = useProfile();
@@ -357,10 +356,8 @@ export default function DashboardPage() {
     let points = completed.reduce((sum, task) => sum + task.points, 0);
 
     // Add points from routines
-    const todaysRoutineLogs = getAllLogs().filter(
-      l =>
-        l.type === 'ROUTINE_SESSION_COMPLETE' &&
-        format(parseISO(l.timestamp), 'yyyy-MM-dd') === todayStr
+    const todaysRoutineLogs = logs.filter(
+      l => l.type === 'ROUTINE_SESSION_COMPLETE'
     );
     const routinePoints = todaysRoutineLogs.reduce(
       (sum, log) => sum + (log.payload.points || 0),
@@ -390,7 +387,7 @@ export default function DashboardPage() {
       todaysRoutines,
       todaysCompletedRoutines: sortedCompletedRoutines,
     };
-  }, [tasks, todayStr, allBadges, earnedBadges, routines, getAllLogs, logs]);
+  }, [tasks, todayStr, allBadges, earnedBadges, routines, logs]);
 
   const dailyQuote = useMemo(() => {
     const now = new Date();
