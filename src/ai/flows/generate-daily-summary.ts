@@ -113,7 +113,7 @@ The student had no recorded activity yesterday.
 
 1.  **Evaluation**: Based *only on the activity log*, provide a detailed evaluation of their performance. Calculate the total study time from completed tasks. Analyze their patterns: When did they start? Did they complete what they started? Did they get distracted (look for TIMER_STOP events and their reasons)? Were they productive? Be critical but constructive. If they did well, acknowledge it, but challenge them to do even better.
 
-2.  **Motivational Paragraph**: This is where you connect the "what" with the "why". Write a powerful, motivating paragraph for the upcoming day. Use insights from your evaluation and *explicitly connect them to the student's stated dream and passion from their profile*. If they were distracted, frame a strategy to stay focused as a necessary step towards their goal. If they were consistent, inspire them to maintain momentum. Address the user by name if they provided one. Your motivation must be deeply personal and directly reference their profile information.
+2.  **Motivational Paragraph**: This is where you connect the "what" with the "why". Write a powerful, motivating paragraph for the upcoming day. Use insights from your evaluation and *explicitly connect them to the student's stated dream, passion, and education from their profile*. If they were distracted, frame a strategy to stay focused as a necessary step towards their goal. If they were consistent, inspire them to maintain momentum. Address the user by name if they provided one. Your motivation must be deeply personal and directly reference their profile information.
 `,
   // A custom Handlebars helper to stringify the payload object
   custom: {
