@@ -71,22 +71,28 @@ const generateDurationOptions = () => {
   return options;
 };
 
+const generateTimeOptions = () => {
+  const options: {value: string; label: string}[] = [];
+  for (let i = 0; i < 24 * 4; i++) {
+    const hours = Math.floor(i / 4);
+    const minutes = (i % 4) * 15;
+    const date = new Date(2000, 0, 1, hours, minutes);
+    options.push({
+      value: format(date, 'HH:mm'),
+      label: format(date, 'p'), // e.g., "1:00 PM"
+    });
+  }
+  return options;
+};
+
 const durationOptions = generateDurationOptions();
+const timeOptions = generateTimeOptions();
 
 const priorityOptions: {value: TaskPriority; label: string}[] = [
   {value: 'low', label: 'Low'},
   {value: 'medium', label: 'Medium'},
   {value: 'high', label: 'High'},
 ];
-
-const timeOptions = Array.from({length: 24 * 4}, (_, i) => {
-  const hours = Math.floor(i / 4);
-  const minutes = (i % 4) * 15;
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(
-    2,
-    '0'
-  )}`;
-});
 
 const priorityMultipliers: Record<TaskPriority, number> = {
   low: 1,
@@ -243,9 +249,9 @@ export function TaskDialog({
                       <SelectValue placeholder="Select time" />
                     </SelectTrigger>
                     <SelectContent>
-                      {timeOptions.map(time => (
-                        <SelectItem key={time} value={time}>
-                          {time}
+                      {timeOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
                         </SelectItem>
                       ))}
                     </SelectContent>

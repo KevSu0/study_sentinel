@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/card';
 import {
   Clock,
+  Timer as TimerIcon,
   BrainCircuit,
   CheckCircle,
   XCircle,
@@ -30,7 +31,7 @@ import {Button} from '@/components/ui/button';
 import {cn} from '@/lib/utils';
 import {useToast} from '@/hooks/use-toast';
 import type {StudyTask, TaskStatus, TaskPriority} from '@/lib/types';
-import {format, parseISO} from 'date-fns';
+import {format, parseISO, parse} from 'date-fns';
 import {
   Collapsible,
   CollapsibleContent,
@@ -45,6 +46,9 @@ import {
 
 const AnalysisDialog = lazy(() =>
   import('./analysis-dialog').then(module => ({default: module.AnalysisDialog}))
+);
+const TimerDialog = lazy(() =>
+  import('./timer-dialog').then(module => ({default: module.TimerDialog}))
 );
 
 interface TaskCardProps {
@@ -86,6 +90,7 @@ export const TaskCard = memo(function TaskCard({
   onEdit,
 }: TaskCardProps) {
   const [isAnalysisDialogOpen, setAnalysisDialogOpen] = useState(false);
+  const [isTimerOpen, setTimerOpen] = useState(false);
   const {toast} = useToast();
 
   const handleStatusChange = (newStatus: TaskStatus) => {
@@ -101,6 +106,10 @@ export const TaskCard = memo(function TaskCard({
     onUpdate({...task, status: newStatus});
   };
 
+  const handleTimerComplete = () => {
+    handleStatusChange('completed');
+  };
+
   const handleAnalysisComplete = (analysis: StudyTask['analysis']) => {
     onUpdate({
       ...task,
@@ -110,6 +119,7 @@ export const TaskCard = memo(function TaskCard({
   };
 
   const formattedDate = format(parseISO(task.date), 'MMM d, yyyy');
+  const formattedTime = format(parse(task.time, 'HH:mm', new Date()), 'p');
 
   if (task.status === 'archived') {
     return (
@@ -192,8 +202,8 @@ export const TaskCard = memo(function TaskCard({
                   <Calendar className="h-4 w-4" /> {formattedDate}
                 </span>
                 <span className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" /> {task.time} ({task.duration}{' '}
-                  min)
+                  <Clock className="h-4 w-4" /> {formattedTime} ({task.duration}
+                  {' '}min)
                 </span>
               </div>
             </div>
@@ -264,6 +274,15 @@ export const TaskCard = memo(function TaskCard({
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setTimerOpen(true)}
+              disabled={task.status === 'completed'}
+            >
+              <TimerIcon className="mr-2 h-4 w-4" />
+              Start Timer
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setAnalysisDialogOpen(true)}
               disabled={task.status === 'completed'}
             >
@@ -302,6 +321,16 @@ export const TaskCard = memo(function TaskCard({
           </div>
         </CardFooter>
       </Card>
+      {isTimerOpen && (
+        <Suspense fallback={null}>
+          <TimerDialog
+            task={task}
+            isOpen={isTimerOpen}
+            onOpenChange={setTimerOpen}
+            onComplete={handleTimerComplete}
+          />
+        </Suspense>
+      )}
       {isAnalysisDialogOpen && (
         <Suspense fallback={null}>
           <AnalysisDialog
