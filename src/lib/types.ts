@@ -1,4 +1,5 @@
 import type {LucideIcon} from 'lucide-react';
+import {z} from 'zod';
 
 export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'archived';
 export type TaskPriority = 'low' | 'medium' | 'high';
@@ -46,3 +47,24 @@ export type LogEvent = {
   type: LogEventType;
   payload: Record<string, any>;
 };
+
+export const PositivePsychologistInputSchema = z.object({
+  profile: z.any().optional(),
+  dailySummary: z.any().optional(),
+  history: z.array(
+    z.object({
+      role: z.enum(['user', 'model']),
+      content: z.string(),
+    })
+  ),
+});
+export type PositivePsychologistInput = z.infer<
+  typeof PositivePsychologistInputSchema
+>;
+
+export const PositivePsychologistOutputSchema = z.object({
+  response: z.string(),
+});
+export type PositivePsychologistOutput = z.infer<
+  typeof PositivePsychologistOutputSchema
+>;

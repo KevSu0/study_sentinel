@@ -4,11 +4,11 @@ import {
   generateDailySummary,
   type DailySummaryInput,
 } from '@/ai/flows/generate-daily-summary';
+import {getChatbotResponse as getChatbotResponseFlow} from '@/ai/flows/positive-psychologist-flow';
 import {
-  getChatbotResponse as getChatbotResponseFlow,
   type PositivePsychologistInput,
   PositivePsychologistInputSchema,
-} from '@/ai/flows/positive-psychologist-flow';
+} from '@/lib/types';
 
 export async function getDailySummary(input: DailySummaryInput) {
   try {

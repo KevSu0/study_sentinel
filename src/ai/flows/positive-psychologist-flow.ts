@@ -8,29 +8,27 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {
+  PositivePsychologistInput,
+  PositivePsychologistInputSchema,
+  PositivePsychologistOutput,
+  PositivePsychologistOutputSchema,
+} from '@/lib/types';
 import {MessageData} from 'genkit/ai';
 
-export const PositivePsychologistInputSchema = z.object({
-  profile: z.any().optional(),
-  dailySummary: z.any().optional(),
-  history: z.array(
-    z.object({
-      role: z.enum(['user', 'model']),
-      content: z.string(),
-    })
-  ),
-});
-export type PositivePsychologistInput = z.infer<
-  typeof PositivePsychologistInputSchema
->;
-
-const PositivePsychologistOutputSchema = z.object({
-  response: z.string(),
-});
-export type PositivePsychologistOutput = z.infer<
-  typeof PositivePsychologistOutputSchema
->;
+// A type guard to ensure a message is valid
+const isValidMessage = (
+  msg: any
+): msg is {role: 'user' | 'model'; content: string} => {
+  return (
+    msg &&
+    typeof msg === 'object' &&
+    'role' in msg &&
+    (msg.role === 'user' || msg.role === 'model') &&
+    'content' in msg &&
+    typeof msg.content === 'string'
+  );
+};
 
 export async function getChatbotResponse(
   input: PositivePsychologistInput
@@ -102,24 +100,22 @@ ${summaryContext}
 `;
 
     // Convert the incoming history to the format Genkit expects.
-    // The data is pre-validated by the server action, so we can trust it here.
-    const genkitHistory: MessageData[] = history.map(h => ({
-      role: h.role,
-      parts: [{text: h.content}],
-    }));
+    const genkitHistory: MessageData[] = [];
+    for (const h of history) {
+      if (isValidMessage(h)) {
+        genkitHistory.push({role: h.role, parts: [{text: h.content}]});
+      }
+    }
 
     // The Gemini API requires the history to start with a 'user' message.
-    // If our history starts with the model's greeting, remove it for the API call.
     if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {
       genkitHistory.shift();
     }
-    
+
     if (genkitHistory.length === 0) {
-      return { response: "I'm ready to listen. What's on your mind?" };
+      return {response: "I'm ready to listen. What's on your mind?"};
     }
 
-    // Generate a response using the full conversation history.
-    // The model understands the last message in the history is the one to respond to.
     const response = await ai.generate({
       model: 'googleai/gemini-2.5-flash-lite-preview-06-17',
       history: genkitHistory,
