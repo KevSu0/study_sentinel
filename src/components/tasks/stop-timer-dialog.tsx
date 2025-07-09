@@ -55,17 +55,25 @@ export function StopTimerDialog({
               better advice.
             </DialogDescription>
           </DialogHeader>
-          <div className="my-4 space-y-4">
-            <RadioGroup onValueChange={setSelectedValue} value={selectedValue}>
+          <div className="my-4">
+            <RadioGroup
+              onValueChange={setSelectedValue}
+              value={selectedValue}
+              className="space-y-2"
+            >
               {reasons.map(reason => (
-                <div key={reason} className="flex items-center space-x-2">
+                <Label
+                  key={reason}
+                  htmlFor={reason}
+                  className="flex items-center gap-3 cursor-pointer rounded-md border p-3 transition-colors hover:bg-accent/50 has-[:checked]:bg-accent has-[:checked]:border-primary"
+                >
                   <RadioGroupItem value={reason} id={reason} />
-                  <Label htmlFor={reason}>{reason}</Label>
-                </div>
+                  {reason}
+                </Label>
               ))}
             </RadioGroup>
             {selectedValue === 'Other' && (
-              <div>
+              <div className="mt-4">
                 <Label htmlFor="stop-reason" className="sr-only">
                   Other reason
                 </Label>
