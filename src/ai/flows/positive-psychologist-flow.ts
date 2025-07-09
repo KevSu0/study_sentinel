@@ -52,10 +52,6 @@ const positivePsychologistFlow = ai.defineFlow(
       return {response: 'Hello! How can I help you today?'};
     }
 
-    // Extract the prompt (last message) and the conversation history
-    const promptMessage = history[history.length - 1];
-    const conversationHistory = history.slice(0, -1);
-
     // Construct the system prompt with context
     const profileContext = profile
       ? `
@@ -104,10 +100,9 @@ ${summaryContext}
 - Keep your responses concise yet comprehensive.
 - Ask clarifying questions when needed to better understand the user's request.
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
-- You have the last 10 messages for context. Use them to maintain a coherent conversation.
 `;
 
-    const genkitHistory: MessageData[] = conversationHistory.map(h => ({
+    const genkitHistory: MessageData[] = history.map(h => ({
       role: h.role,
       parts: [{text: h.content}],
     }));
@@ -115,7 +110,6 @@ ${summaryContext}
     // Using ai.generate for chat history support
     const response = await ai.generate({
       model: 'googleai/gemini-2.0-flash',
-      prompt: promptMessage.content,
       history: genkitHistory,
       system: systemPrompt,
     });
