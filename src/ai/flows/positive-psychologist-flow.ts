@@ -28,9 +28,8 @@ const positivePsychologistFlow = ai.defineFlow(
   },
   async (input: PositivePsychologistInput) => {
     // This is the definitive fix. The Gemini API requires that conversation
-    // history MUST start with a 'user' role. My previous validation logic
-    // was only checking for data corruption, not this crucial semantic rule.
-
+    // history MUST start with a 'user' role.
+    
     // 1. Create a clean list of messages, filtering out any invalid,
     // null, or empty entries.
     const cleanHistory: {role: 'user' | 'model'; content: string}[] = (
