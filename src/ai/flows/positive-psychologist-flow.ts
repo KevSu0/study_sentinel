@@ -27,23 +27,30 @@ const positivePsychologistFlow = ai.defineFlow(
     outputSchema: PositivePsychologistOutputSchema,
   },
   async (input: PositivePsychologistInput) => {
-    // Defensively filter the history to remove any malformed or empty messages.
-    // This ensures every message is a valid object with non-empty content.
-    const cleanHistory = input.history.filter(
-      msg => msg && msg.role && typeof msg.content === 'string' && msg.content.trim() !== ''
-    );
+    // Create a new, guaranteed-clean history by explicitly checking each message.
+    // This is more robust than chaining .filter().map() and guards against malformed data.
+    const genkitHistory: MessageData[] = [];
+    if (input.history && Array.isArray(input.history)) {
+      for (const msg of input.history) {
+        if (
+          msg &&
+          (msg.role === 'user' || msg.role === 'model') &&
+          typeof msg.content === 'string' &&
+          msg.content.trim() !== ''
+        ) {
+          genkitHistory.push({
+            role: msg.role,
+            parts: [{text: msg.content}],
+          });
+        }
+      }
+    }
 
     // If, after cleaning, the history is empty, return a default response
     // to prevent sending an invalid request to the AI.
-    if (cleanHistory.length === 0) {
+    if (genkitHistory.length === 0) {
       return {response: "I'm ready to listen. What's on your mind?"};
     }
-
-    // Map the sanitized history directly to the format Genkit requires.
-    const genkitHistory: MessageData[] = cleanHistory.map(msg => ({
-      role: msg.role,
-      parts: [{text: msg.content}],
-    }));
 
     const {profile, dailySummary} = input;
 
