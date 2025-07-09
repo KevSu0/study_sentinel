@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
+import {useState, useEffect, type ReactNode} from 'react';
 import {
   Sidebar,
   SidebarProvider,
@@ -21,11 +22,24 @@ import {
   Award,
   Archive,
 } from 'lucide-react';
-import type {ReactNode} from 'react';
 import {ConfettiProvider} from './providers/confetti-provider';
+import {SplashScreen} from '@/components/splash-screen';
 
 export function Providers({children}: {children: ReactNode}) {
   const pathname = usePathname();
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (showSplash) {
+    return <SplashScreen />;
+  }
 
   return (
     <ConfettiProvider>
