@@ -47,7 +47,7 @@ const positivePsychologistFlow = ai.defineFlow(
   async input => {
     const {profile, dailySummary, history} = input;
 
-    if (!history || history.length === 0) {
+    if (!history || history.length <= 1) {
       return {response: 'Hello! How can I help you today?'};
     }
 
@@ -100,22 +100,32 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    if (history.length === 0) {
-      return {response: 'Hello! How can I help you today?'};
+    // The history from the client includes the initial model greeting.
+    // We slice(1) to remove it, ensuring the history always starts with a user message.
+    const conversation = history.slice(1);
+
+    // The last message in the history is the user's current prompt.
+    const lastMessage = conversation.pop();
+
+    if (!lastMessage || lastMessage.role !== 'user') {
+      return {
+        response:
+          "I'm sorry, something went wrong. Could you try sending your message again?",
+      };
     }
 
-    // The Genkit/Gemini history must be an alternating sequence of user/model roles, starting with a user message.
-    // Our full history starts with the model's greeting. So we slice(1) to remove it.
-    // We also use the full history now, as the prompt is included as the last message.
-    const genkitHistory: MessageData[] = history.slice(1).map(h => ({
+    const userPrompt = lastMessage.content;
+
+    // The rest of the conversation is the history for the model.
+    const genkitHistory: MessageData[] = conversation.map(h => ({
       role: h.role,
       parts: [{text: h.content}],
     }));
 
     const response = await ai.generate({
       model: 'googleai/gemini-2.0-flash',
-      prompt: 'Continue the conversation.', // The actual prompt is the last item in the history.
-      history: genkitHistory,
+      prompt: userPrompt, // The actual prompt is the user's latest message.
+      history: genkitHistory, // The preceding conversation.
       system: systemPrompt,
     });
 
