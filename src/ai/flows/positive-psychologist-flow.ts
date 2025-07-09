@@ -55,6 +55,7 @@ const positivePsychologistFlow = ai.defineFlow(
     }
 
     // If, after cleaning, the history is empty, there's no valid user message to respond to.
+    // This prevents sending an empty history to the API, which would cause an error.
     if (genkitHistory.length === 0) {
       return {response: "I'm ready to listen. What's on your mind?"};
     }
