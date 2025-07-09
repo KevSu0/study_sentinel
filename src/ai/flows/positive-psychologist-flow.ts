@@ -28,10 +28,11 @@ const positivePsychologistFlow = ai.defineFlow(
   },
   async (input: PositivePsychologistInput) => {
     // Create a new, guaranteed-clean history by explicitly checking each message.
-    // This is more robust than chaining .filter().map() and guards against malformed data.
     const genkitHistory: MessageData[] = [];
     if (input.history && Array.isArray(input.history)) {
       for (const msg of input.history) {
+        // This is the most robust check: ensure the message object exists,
+        // it has a valid role, and its content is a non-empty string.
         if (
           msg &&
           (msg.role === 'user' || msg.role === 'model') &&
@@ -46,8 +47,9 @@ const positivePsychologistFlow = ai.defineFlow(
       }
     }
 
-    // If, after cleaning, the history is empty, return a default response
-    // to prevent sending an invalid request to the AI.
+    // CRITICAL FIX: If, after cleaning, the history is empty for any reason,
+    // do not call the AI. Return a safe, default response instead.
+    // This was the root cause of the crash.
     if (genkitHistory.length === 0) {
       return {response: "I'm ready to listen. What's on your mind?"};
     }
@@ -55,7 +57,6 @@ const positivePsychologistFlow = ai.defineFlow(
     const {profile, dailySummary} = input;
 
     // Use dummy objects to prevent any potential errors from null/undefined context.
-    // This makes the string interpolation below completely safe.
     const safeProfile = profile || {
       name: 'User',
       passion: 'learning and growing',
