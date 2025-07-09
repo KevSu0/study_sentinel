@@ -52,11 +52,21 @@ export function useChatHistory() {
         }
 
         if (Array.isArray(parsedHistory)) {
-          // Explicitly build a new, guaranteed-clean array.
+          // HYPER-DEFENSIVE VALIDATION
+          // This loop isolates each message in a try/catch to prevent a single corrupted
+          // message from breaking the loading process.
           const validatedHistory: ChatMessage[] = [];
           for (const msg of parsedHistory) {
-            if (isValidMessage(msg)) {
-              validatedHistory.push(msg);
+            try {
+              if (isValidMessage(msg)) {
+                validatedHistory.push(msg);
+              }
+            } catch (e) {
+              console.error(
+                'A corrupted chat message was detected and skipped during load:',
+                msg,
+                e
+              );
             }
           }
 

@@ -78,25 +78,32 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    // FINAL, BULLETPROOF VALIDATION
-    // This explicit loop is the most robust way to prevent corrupted data from crashing the AI.
+    // HYPER-DEFENSIVE VALIDATION
+    // This loop isolates each message in a try/catch to prevent a single corrupted
+    // message from crashing the entire request.
     const genkitHistory: MessageData[] = [];
     if (Array.isArray(history)) {
       for (const message of history) {
-        // 1. Check if message is a valid object with the correct properties and types.
-        if (
-          message &&
-          typeof message.role === 'string' &&
-          (message.role === 'user' || message.role === 'model') &&
-          typeof message.content === 'string'
-        ) {
-          // 2. If it's valid, add it to the clean history.
-          genkitHistory.push({
-            role: message.role,
-            parts: [{text: message.content}],
-          });
+        try {
+          if (
+            message &&
+            typeof message.role === 'string' &&
+            (message.role === 'user' || message.role === 'model') &&
+            typeof message.content === 'string'
+          ) {
+            genkitHistory.push({
+              role: message.role,
+              parts: [{text: message.content}],
+            });
+          }
+        } catch (e) {
+          // Log the error but continue processing other messages.
+          console.error(
+            'A corrupted chat message was detected and skipped on the server:',
+            message,
+            e
+          );
         }
-        // 3. If it's not valid, it's simply skipped, preventing a crash.
       }
     }
 
