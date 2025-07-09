@@ -2,9 +2,16 @@
 import React, {useState, useMemo} from 'react';
 import dynamic from 'next/dynamic';
 import {Button} from '@/components/ui/button';
-import {PlusCircle, X, Calendar as CalendarIcon} from 'lucide-react';
+import {
+  PlusCircle,
+  X,
+  Calendar as CalendarIcon,
+  LayoutGrid,
+  List,
+} from 'lucide-react';
 import {useTasks} from '@/hooks/use-tasks';
 import {TaskList} from '@/components/tasks/task-list';
+import {SimpleTaskList} from '@/components/tasks/simple-task-list';
 import {EmptyState} from '@/components/tasks/empty-state';
 import {Skeleton} from '@/components/ui/skeleton';
 import {Tabs, TabsList, TabsTrigger} from '@/components/ui/tabs';
@@ -13,6 +20,7 @@ import type {StudyTask} from '@/lib/types';
 import {format} from 'date-fns';
 import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
 import {cn} from '@/lib/utils';
+import {useViewMode} from '@/hooks/use-view-mode';
 
 const TaskDialog = dynamic(
   () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),
@@ -29,8 +37,9 @@ export default function AllTasksPage() {
     archiveTask,
     unarchiveTask,
     pushTaskToNextDay,
-    isLoaded,
+    isLoaded: tasksLoaded,
   } = useTasks();
+  const {viewMode, setViewMode, isLoaded: viewModeLoaded} = useViewMode();
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
   const [filter, setFilter] = useState<TaskFilter>('all');
@@ -38,6 +47,7 @@ export default function AllTasksPage() {
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
 
   const isTaskFormOpen = isAddDialogOpen || !!editingTask;
+  const isLoaded = tasksLoaded && viewModeLoaded;
 
   const openAddTaskDialog = () => {
     setEditingTask(null);
@@ -71,6 +81,21 @@ export default function AllTasksPage() {
   }, [tasks, filter, selectedDate]);
 
   const hasFilters = filter !== 'all' || !!selectedDate;
+
+  const renderTaskList = () => {
+    const props = {
+      tasks: filteredTasks,
+      onUpdate: updateTask,
+      onArchive: archiveTask,
+      onUnarchive: unarchiveTask,
+      onPushToNextDay: pushTaskToNextDay,
+      onEdit: openEditTaskDialog,
+    };
+    if (viewMode === 'card') {
+      return <TaskList {...props} />;
+    }
+    return <SimpleTaskList {...props} />;
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -108,7 +133,7 @@ export default function AllTasksPage() {
               <Button
                 variant="outline"
                 className={cn(
-                  'w-full justify-start text-left font-normal sm:w-[280px]',
+                  'w-full justify-start text-left font-normal sm:w-auto',
                   !selectedDate && 'text-muted-foreground'
                 )}
               >
@@ -143,9 +168,32 @@ export default function AllTasksPage() {
               className="w-full sm:w-auto"
             >
               <X className="mr-2 h-4 w-4" />
-              Clear Filters
+              Clear
             </Button>
           )}
+
+          <div className="flex-1" />
+
+          <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
+            <Button
+              variant={viewMode === 'card' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-8 px-2.5"
+              onClick={() => setViewMode('card')}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              <span className="sr-only">Card View</span>
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-8 px-2.5"
+              onClick={() => setViewMode('list')}
+            >
+              <List className="h-4 w-4" />
+              <span className="sr-only">List View</span>
+            </Button>
+          </div>
         </div>
 
         {/* Task List Section */}
@@ -157,14 +205,7 @@ export default function AllTasksPage() {
               <Skeleton className="h-28 w-full" />
             </div>
           ) : filteredTasks.length > 0 ? (
-            <TaskList
-              tasks={filteredTasks}
-              onUpdate={updateTask}
-              onArchive={archiveTask}
-              onUnarchive={unarchiveTask}
-              onPushToNextDay={pushTaskToNextDay}
-              onEdit={openEditTaskDialog}
-            />
+            renderTaskList()
           ) : (
             <div className="flex items-center justify-center h-full pt-16">
               <EmptyState

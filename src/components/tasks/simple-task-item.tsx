@@ -1,0 +1,183 @@
+import React, { memo, useState, useEffect, Suspense, lazy } from 'react';
+import {
+  MoreVertical,
+  Timer,
+  Pencil,
+  Archive,
+  SendToBack,
+  ArchiveRestore,
+} from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import type { StudyTask } from '@/lib/types';
+import { useConfetti } from '@/components/providers/confetti-provider';
+import { useToast } from '@/hooks/use-toast';
+
+const TimerDialog = lazy(() =>
+  import('./timer-dialog').then(module => ({ default: module.TimerDialog }))
+);
+
+interface SimpleTaskItemProps {
+  task: StudyTask;
+  onUpdate: (task: StudyTask) => void;
+  onArchive: (taskId: string) => void;
+  onUnarchive: (taskId: string) => void;
+  onPushToNextDay: (taskId: string) => void;
+  onEdit: (task: StudyTask) => void;
+}
+
+const TIMER_STORAGE_KEY = 'studySentinelActiveTimer';
+
+export const SimpleTaskItem = memo(function SimpleTaskItem({
+  task,
+  onUpdate,
+  onArchive,
+  onUnarchive,
+  onPushToNextDay,
+  onEdit,
+}: SimpleTaskItemProps) {
+  const isCompleted = task.status === 'completed';
+  const { fire } = useConfetti();
+  const { toast } = useToast();
+  const [isTimerOpen, setTimerOpen] = useState(false);
+  const [isTimerActive, setIsTimerActive] = useState(false);
+
+  useEffect(() => {
+    const checkTimerStatus = () => {
+      const savedTimerRaw = localStorage.getItem(TIMER_STORAGE_KEY);
+      if (savedTimerRaw) {
+        try {
+            const savedTimer = JSON.parse(savedTimerRaw);
+            setIsTimerActive(savedTimer.taskId === task.id);
+        } catch {
+            setIsTimerActive(false);
+        }
+      } else {
+        setIsTimerActive(false);
+      }
+    };
+
+    checkTimerStatus();
+    const interval = setInterval(checkTimerStatus, 2000);
+    window.addEventListener('storage', checkTimerStatus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', checkTimerStatus);
+    };
+  }, [task.id]);
+
+  const handleToggleComplete = () => {
+    const newStatus = isCompleted ? 'todo' : 'completed';
+    if (newStatus === 'completed') {
+      fire();
+      toast({
+        title: 'Task Completed!',
+        description: `You've earned ${task.points} points!`,
+      });
+    }
+    onUpdate({ ...task, status: newStatus });
+  };
+  
+  const handleTimerComplete = () => {
+    onUpdate({ ...task, status: 'completed' });
+  };
+
+  if (task.status === 'archived') {
+    return (
+       <div className="flex items-center p-2 border-b">
+          <p className="flex-1 text-muted-foreground line-through">{task.title}</p>
+          <Button variant="ghost" size="sm" onClick={() => onUnarchive(task.id)}>
+              <ArchiveRestore className="h-4 w-4 mr-2" /> Unarchive
+          </Button>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="flex items-center gap-4 p-3 border rounded-lg transition-colors hover:bg-muted/50">
+        <Checkbox
+          id={`task-${task.id}`}
+          checked={isCompleted}
+          onCheckedChange={handleToggleComplete}
+          aria-label={`Mark task ${task.title} as ${isCompleted ? 'incomplete' : 'complete'}`}
+        />
+        <div className="flex-1 grid gap-1">
+          <label
+            htmlFor={`task-${task.id}`}
+            className={cn(
+              'font-medium cursor-pointer',
+              isCompleted && 'line-through text-muted-foreground'
+            )}
+          >
+            {task.title}
+          </label>
+          <p className="text-sm text-muted-foreground">
+            {task.duration} min &bull; {task.points} pts &bull; {task.priority} priority
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setTimerOpen(true)}
+              disabled={isCompleted}
+              className="hidden sm:flex"
+            >
+              {isTimerActive && (
+                <span className="relative flex h-3 w-3 mr-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-accent"></span>
+                </span>
+              )}
+              <Timer className="mr-2 h-4 w-4" />
+              {isTimerActive ? 'View' : 'Timer'}
+            </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => onEdit(task)} disabled={isCompleted}>
+                <Pencil className="mr-2 h-4 w-4" />
+                <span>Edit</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setTimerOpen(true)} disabled={isCompleted} className="sm:hidden">
+                <Timer className="mr-2 h-4 w-4" />
+                <span>{isTimerActive ? 'View Timer' : 'Start Timer'}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onPushToNextDay(task.id)}>
+                <SendToBack className="mr-2 h-4 w-4" />
+                <span>Push to Next Day</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => onArchive(task.id)} className="text-destructive">
+                <Archive className="mr-2 h-4 w-4" />
+                <span>Archive</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+      {isTimerOpen && (
+        <Suspense fallback={null}>
+          <TimerDialog
+            task={task}
+            isOpen={isTimerOpen}
+            onOpenChange={setTimerOpen}
+            onComplete={handleTimerComplete}
+          />
+        </Suspense>
+      )}
+    </>
+  );
+});

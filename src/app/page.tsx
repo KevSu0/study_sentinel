@@ -10,9 +10,12 @@ import {
   Award as BadgeIcon,
   Lightbulb,
   Sparkles,
+  LayoutGrid,
+  List,
 } from 'lucide-react';
 import {useTasks} from '@/hooks/use-tasks';
 import {TaskList} from '@/components/tasks/task-list';
+import {SimpleTaskList} from '@/components/tasks/simple-task-list';
 import {EmptyState} from '@/components/tasks/empty-state';
 import {Skeleton} from '@/components/ui/skeleton';
 import {type StudyTask} from '@/lib/types';
@@ -23,6 +26,8 @@ import Link from 'next/link';
 import {getDailySummary} from '@/lib/actions';
 import {useLogger} from '@/hooks/use-logger';
 import {useProfile} from '@/hooks/use-profile';
+import {useViewMode} from '@/hooks/use-view-mode';
+import {cn} from '@/lib/utils';
 
 const TaskDialog = dynamic(
   () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),
@@ -254,6 +259,7 @@ export default function DashboardPage() {
   const {allBadges, earnedBadges, isLoaded: badgesLoaded} = useBadges();
   const {getPreviousDayLogs, isLoaded: loggerLoaded} = useLogger();
   const {profile, isLoaded: profileLoaded} = useProfile();
+  const {viewMode, setViewMode, isLoaded: viewModeLoaded} = useViewMode();
 
   const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
   const [dailySummary, setDailySummary] = useState<{
@@ -310,7 +316,8 @@ export default function DashboardPage() {
     setEditingTask(null);
   };
 
-  const isLoaded = tasksLoaded && badgesLoaded && loggerLoaded && profileLoaded;
+  const isLoaded =
+    tasksLoaded && badgesLoaded && loggerLoaded && profileLoaded && viewModeLoaded;
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
 
   const {
@@ -352,6 +359,23 @@ export default function DashboardPage() {
     return motivationalQuotes[dayOfYear % motivationalQuotes.length];
   }, []);
 
+  const renderTaskList = (tasksToRender: StudyTask[]) => {
+    const props = {
+      tasks: tasksToRender,
+      onUpdate: updateTask,
+      onArchive: archiveTask,
+      onUnarchive: unarchiveTask,
+      onPushToNextDay: pushTaskToNextDay,
+      onEdit: openEditTaskDialog,
+    };
+
+    return viewMode === 'card' ? (
+      <TaskList {...props} />
+    ) : (
+      <SimpleTaskList {...props} />
+    );
+  };
+
   return (
     <div className="flex flex-col h-full">
       <header className="p-4 border-b">
@@ -364,12 +388,34 @@ export default function DashboardPage() {
               Your achievements for {format(new Date(), 'MMMM d, yyyy')}.
             </p>
           </div>
-          <Button asChild className="w-full sm:w-auto">
-            <Link href="/tasks">
-              <PlusCircle />
-              Manage Tasks
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-1 rounded-lg bg-muted p-1">
+              <Button
+                variant={viewMode === 'card' ? 'secondary' : 'ghost'}
+                size="sm"
+                className="h-8 px-2.5"
+                onClick={() => setViewMode('card')}
+              >
+                <LayoutGrid className="h-4 w-4" />
+                <span className="sr-only">Card View</span>
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                size="sm"
+                className="h-8 px-2.5"
+                onClick={() => setViewMode('list')}
+              >
+                <List className="h-4 w-4" />
+                <span className="sr-only">List View</span>
+              </Button>
+            </div>
+            <Button asChild className="w-full sm:w-auto">
+              <Link href="/tasks">
+                <PlusCircle />
+                Manage Tasks
+              </Link>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -479,14 +525,7 @@ export default function DashboardPage() {
                       <h2 className="text-xl font-semibold text-primary mb-3">
                         Today's Plan
                       </h2>
-                      <TaskList
-                        tasks={pendingTasks}
-                        onUpdate={updateTask}
-                        onArchive={archiveTask}
-                        onUnarchive={unarchiveTask}
-                        onPushToNextDay={pushTaskToNextDay}
-                        onEdit={openEditTaskDialog}
-                      />
+                      {renderTaskList(pendingTasks)}
                     </section>
                   )}
                   {todaysCompletedTasks.length > 0 && (
@@ -494,14 +533,7 @@ export default function DashboardPage() {
                       <h2 className="text-xl font-semibold text-primary mb-3">
                         Completed Today
                       </h2>
-                      <TaskList
-                        tasks={todaysCompletedTasks}
-                        onUpdate={updateTask}
-                        onArchive={archiveTask}
-                        onUnarchive={unarchiveTask}
-                        onPushToNextDay={pushTaskToNextDay}
-                        onEdit={openEditTaskDialog}
-                      />
+                      {renderTaskList(todaysCompletedTasks)}
                     </section>
                   )}
                 </>
