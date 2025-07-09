@@ -364,7 +364,7 @@ export default function DashboardPage() {
           </div>
           <Button asChild className="w-full sm:w-auto">
             <Link href="/tasks">
-              <PlusCircle className="mr-2" />
+              <PlusCircle />
               Manage Tasks
             </Link>
           </Button>
@@ -425,31 +425,28 @@ export default function DashboardPage() {
               </Card>
             )}
 
-            <section>
+            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Card>
-                <CardHeader>
-                  <CardTitle>Today's Stats</CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Points Earned Today
+                  </CardTitle>
+                  <Star className="h-4 w-4 text-yellow-400" />
                 </CardHeader>
-                <CardContent className="grid sm:grid-cols-2 gap-8">
-                  <div className="flex items-center gap-4">
-                    <Star className="h-10 w-10 text-yellow-400" />
-                    <div>
-                      <p className="text-2xl font-bold">{pointsToday}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Points Earned
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <BadgeIcon className="h-10 w-10 text-accent" />
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {todaysBadges.length}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Badges Unlocked
-                      </p>
-                    </div>
+                <CardContent>
+                  <div className="text-2xl font-bold">{pointsToday}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Badges Unlocked Today
+                  </CardTitle>
+                  <BadgeIcon className="h-4 w-4 text-accent" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {todaysBadges.length}
                   </div>
                 </CardContent>
               </Card>
@@ -516,7 +513,7 @@ export default function DashboardPage() {
                   >
                     <Button asChild className="mt-6">
                       <Link href="/tasks">
-                        <PlusCircle className="mr-2" /> Plan Your Day
+                        <PlusCircle /> Plan Your Day
                       </Link>
                     </Button>
                   </EmptyState>

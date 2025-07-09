@@ -173,9 +173,9 @@ export function GlobalTimerBar() {
           <div className="flex items-center gap-3 overflow-hidden">
             <Timer className="h-6 w-6 shrink-0" />
             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 overflow-hidden">
-              <p className="font-semibold truncate">{activeTask.title}</p>
+              <p className="font-semibold text-base truncate">{activeTask.title}</p>
               <div className="flex items-baseline gap-2">
-                <p className="font-mono tracking-wider text-lg">
+                <p className="font-mono tracking-wider text-xl">
                   {formatTime(timeRemaining)}
                 </p>
                 {isPaused && (
@@ -189,27 +189,30 @@ export function GlobalTimerBar() {
               size="sm"
               variant="ghost"
               onClick={handleTogglePause}
-              className="hover:bg-white/20"
+              className="hover:bg-white/20 px-2 sm:px-3"
             >
-              {isPaused ? (
-                <Play className="mr-2 h-4 w-4" />
-              ) : (
-                <Pause className="mr-2 h-4 w-4" />
-              )}
-              <span>{isPaused ? 'Resume' : 'Pause'}</span>
+              {isPaused ? <Play /> : <Pause />}
+              <span className="hidden sm:inline">
+                {isPaused ? 'Resume' : 'Pause'}
+              </span>
             </Button>
             <Button
               size="sm"
               variant="secondary"
               onClick={handleMarkComplete}
-              className="bg-green-500 hover:bg-green-600 text-white"
+              className="bg-green-500 hover:bg-green-600 text-white px-2 sm:px-3"
             >
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Complete
+              <CheckCircle />
+              <span className="hidden sm:inline">Complete</span>
             </Button>
-            <Button size="sm" variant="destructive" onClick={handleStop}>
-              <XCircle className="mr-2 h-4 w-4" />
-              Stop
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={handleStop}
+              className="px-2 sm:px-3"
+            >
+              <XCircle />
+              <span className="hidden sm:inline">Stop</span>
             </Button>
           </div>
         </div>
