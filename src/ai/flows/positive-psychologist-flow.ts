@@ -27,32 +27,41 @@ const positivePsychologistFlow = ai.defineFlow(
     outputSchema: PositivePsychologistOutputSchema,
   },
   async (input: PositivePsychologistInput) => {
-    // Step 1: Filter the incoming history to remove any malformed messages.
-    const validHistory = (input?.history || []).filter(
-      msg =>
-        msg &&
-        typeof msg.role === 'string' &&
-        typeof msg.content === 'string' &&
-        msg.content.trim() !== ''
-    );
-
-    // Step 2: Convert the clean history to the format Genkit requires.
-    let genkitHistory: MessageData[] = validHistory.map(msg => ({
-      role: msg.role as 'user' | 'model',
-      parts: [{text: msg.content}],
-    }));
-
-    // Step 3: The Gemini API requires the history to start with a 'user' message.
-    if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {
-      genkitHistory = genkitHistory.slice(1);
+    // Step 1: Defensively rebuild the history from the input.
+    // This creates a clean, safe version of the history.
+    const rebuiltHistory: MessageData[] = [];
+    if (input?.history && Array.isArray(input.history)) {
+      for (const msg of input.history) {
+        // Explicitly check for all required properties to prevent crashes.
+        if (
+          msg &&
+          typeof msg.role === 'string' &&
+          typeof msg.content === 'string' &&
+          msg.content.trim() !== ''
+        ) {
+          rebuiltHistory.push({
+            role: msg.role as 'user' | 'model',
+            parts: [{text: msg.content}],
+          });
+        }
+      }
     }
 
-    // Step 4: If, after cleaning, the history is empty, return a default response.
+    // Step 2: The Gemini API requires the history to start with a 'user' message.
+    // Find the first user message and slice the history from that point.
+    let genkitHistory: MessageData[] = [];
+    const firstUserIndex = rebuiltHistory.findIndex(msg => msg.role === 'user');
+
+    if (firstUserIndex !== -1) {
+      genkitHistory = rebuiltHistory.slice(firstUserIndex);
+    }
+
+    // Step 3: If, after cleaning, the history is empty or contains no user messages,
+    // return a default response to avoid calling the API with invalid input. This was the root cause of the crash.
     if (genkitHistory.length === 0) {
       return {response: "I'm ready to listen. What's on your mind?"};
     }
 
-    // De-structure profile and dailySummary only after history is handled.
     const {profile, dailySummary} = input;
 
     // Now that history is guaranteed to be clean, build the system prompt.

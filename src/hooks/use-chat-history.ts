@@ -34,14 +34,18 @@ export function useChatHistory() {
   useEffect(() => {
     // This effect runs only once on mount to load from localStorage.
     setIsLoaded(false);
-    let loadedMessages: ChatMessage[] = [];
+    const loadedMessages: ChatMessage[] = [];
     try {
       const savedHistory = localStorage.getItem(CHAT_HISTORY_KEY);
       if (savedHistory) {
         const parsed = JSON.parse(savedHistory);
         if (Array.isArray(parsed)) {
-          // Use filter with the robust type guard to guarantee a clean history array.
-          loadedMessages = parsed.filter(isValidMessage);
+          // Use a defensive loop to rebuild the array, ensuring no corrupted data gets through.
+          for (const msg of parsed) {
+            if (isValidMessage(msg)) {
+              loadedMessages.push(msg);
+            }
+          }
         }
       }
     } catch (error) {
@@ -68,7 +72,10 @@ export function useChatHistory() {
           localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(historyToSave));
         } else {
           // If history somehow becomes empty/invalid, reset to a safe initial state.
-          localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify([initialMessage]));
+          localStorage.setItem(
+            CHAT_HISTORY_KEY,
+            JSON.stringify([initialMessage])
+          );
         }
       } catch (error) {
         console.error('Failed to save chat history', error);
