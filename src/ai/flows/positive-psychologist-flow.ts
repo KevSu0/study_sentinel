@@ -27,31 +27,46 @@ const positivePsychologistFlow = ai.defineFlow(
     outputSchema: PositivePsychologistOutputSchema,
   },
   async (input: PositivePsychologistInput) => {
-    // Create a new, guaranteed-clean history by explicitly checking each message.
-    const genkitHistory: MessageData[] = [];
-    if (input.chatHistory && Array.isArray(input.chatHistory)) {
-      for (const msg of input.chatHistory) {
-        // This is the most robust check: ensure the message object exists,
-        // it has a valid role, and its content is a non-empty string.
-        if (
+    // This is the definitive fix. The Gemini API requires that conversation
+    // history MUST start with a 'user' role. My previous validation logic
+    // was only checking for data corruption, not this crucial semantic rule.
+
+    // 1. Create a clean list of messages, filtering out any invalid,
+    // null, or empty entries.
+    const cleanHistory: {role: 'user' | 'model'; content: string}[] = (
+      input.chatHistory || []
+    ).filter(
+      (
+        msg
+      ): msg is {
+        role: 'user' | 'model';
+        content: string;
+      } =>
+        !!(
           msg &&
           (msg.role === 'user' || msg.role === 'model') &&
           typeof msg.content === 'string' &&
           msg.content.trim() !== ''
-        ) {
-          genkitHistory.push({
-            role: msg.role,
-            parts: [{text: msg.content}],
-          });
-        }
-      }
-    }
+        )
+    );
 
-    // CRITICAL FIX: If, after cleaning, the history is empty for any reason,
-    // do not call the AI. Return a safe, default response instead.
-    if (genkitHistory.length === 0) {
+    // 2. Find the first message from the user.
+    const firstUserIndex = cleanHistory.findIndex(msg => msg.role === 'user');
+
+    // 3. If there are no user messages, we cannot start a conversation with the AI.
+    // Return a safe, default response.
+    if (firstUserIndex === -1) {
       return {response: "I'm ready to listen. What's on your mind?"};
     }
+
+    // 4. Slice the history to ensure it starts with the first user message.
+    const validHistory = cleanHistory.slice(firstUserIndex);
+
+    // 5. Convert the valid history to the format Genkit expects.
+    const genkitHistory: MessageData[] = validHistory.map(msg => ({
+      role: msg.role,
+      parts: [{text: msg.content}],
+    }));
 
     const {profile, dailySummary} = input;
 
