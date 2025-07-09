@@ -1,62 +1,74 @@
 "use client";
 
 import {useState, useEffect, useCallback} from 'react';
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  query,
+  orderBy,
+  onSnapshot,
+} from 'firebase/firestore';
+import {db} from '@/lib/firebase';
 import {type StudyTask} from '@/lib/types';
-import {v4 as uuidv4} from 'uuid';
 
-// uuid is not in package.json, so add a simple fallback
-const generateId = () => {
-    try {
-        return uuidv4();
-    } catch (e) {
-        return Date.now().toString(36) + Math.random().toString(36).substring(2);
-    }
-}
-
-
-const STORAGE_KEY = 'study-sentinel-tasks';
+const tasksCollectionRef = collection(db, 'tasks');
 
 export function useTasks() {
   const [tasks, setTasks] = useState<StudyTask[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    try {
-      const storedTasks = localStorage.getItem(STORAGE_KEY);
-      if (storedTasks) {
-        setTasks(JSON.parse(storedTasks));
-      }
-    } catch (error) {
-      console.error('Failed to load tasks from localStorage', error);
-    }
-    setIsLoaded(true);
+    const q = query(tasksCollectionRef, orderBy('date', 'desc'), orderBy('time', 'asc'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const fetchedTasks = querySnapshot.docs.map(
+            (doc) =>
+            ({
+                ...doc.data(),
+                id: doc.id,
+            } as StudyTask)
+        );
+        setTasks(fetchedTasks);
+        setIsLoaded(true);
+    }, (error) => {
+        console.error('Failed to subscribe to tasks', error);
+        setIsLoaded(true); // also set to true on error so we don't show infinite loader
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (isLoaded) {
+  const addTask = useCallback(
+    async (task: Omit<StudyTask, 'id' | 'status'>) => {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+        const newTaskData = {...task, status: 'todo' as const};
+        await addDoc(tasksCollectionRef, newTaskData);
       } catch (error) {
-        console.error('Failed to save tasks to localStorage', error);
+        console.error('Failed to add task to Firestore', error);
       }
+    },
+    []
+  );
+
+  const updateTask = useCallback(async (updatedTask: StudyTask) => {
+    try {
+      const taskDoc = doc(db, 'tasks', updatedTask.id);
+      const {id, ...taskData} = updatedTask;
+      await updateDoc(taskDoc, taskData);
+    } catch (error) {
+      console.error('Failed to update task in Firestore', error);
     }
-  }, [tasks, isLoaded]);
-
-  const addTask = useCallback((task: Omit<StudyTask, 'id' | 'status'>) => {
-    setTasks(prevTasks => [
-      ...prevTasks,
-      {...task, id: generateId(), status: 'todo'},
-    ]);
   }, []);
 
-  const updateTask = useCallback((updatedTask: StudyTask) => {
-    setTasks(prevTasks =>
-      prevTasks.map(task => (task.id === updatedTask.id ? updatedTask : task))
-    );
-  }, []);
-
-  const deleteTask = useCallback((taskId: string) => {
-    setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+  const deleteTask = useCallback(async (taskId: string) => {
+    try {
+      const taskDoc = doc(db, 'tasks', taskId);
+      await deleteDoc(taskDoc);
+    } catch (error) {
+      console.error('Failed to delete task from Firestore', error);
+    }
   }, []);
 
   return {tasks, addTask, updateTask, deleteTask, isLoaded};
