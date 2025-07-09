@@ -87,7 +87,7 @@ export default function AllTasksPage() {
                   onValueChange={value => setFilter(value as TaskFilter)}
                   className="w-full"
                 >
-                  <TabsList className="grid w-full grid-cols-2">
+                  <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
                     <TabsTrigger value="all">All</TabsTrigger>
                     <TabsTrigger value="todo">To Do</TabsTrigger>
                     <TabsTrigger value="in_progress">In Progress</TabsTrigger>
@@ -121,7 +121,7 @@ export default function AllTasksPage() {
 
           <div className="flex-1">
             {!isLoaded ? (
-              <div className="space-y-4 mt-4">
+              <div className="space-y-4">
                 <Skeleton className="h-28 w-full" />
                 <Skeleton className="h-28 w-full" />
                 <Skeleton className="h-28 w-full" />
@@ -134,7 +134,7 @@ export default function AllTasksPage() {
                 onEdit={openEditTaskDialog}
               />
             ) : (
-              <div className="mt-8">
+              <div className="flex items-center justify-center h-full">
                 <EmptyState
                   onAddTask={openAddTaskDialog}
                   title={`No tasks found`}

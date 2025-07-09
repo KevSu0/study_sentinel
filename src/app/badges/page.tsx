@@ -1,10 +1,10 @@
 'use client';
-import React from 'react';
+import React, {useMemo} from 'react';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
 import {BadgeCard} from '@/components/badges/badge-card';
 import {useBadges} from '@/hooks/useBadges';
 import {Skeleton} from '@/components/ui/skeleton';
-import type {BadgeCategory} from '@/lib/types';
+import type {Badge, BadgeCategory} from '@/lib/types';
 
 const badgeCategories: BadgeCategory[] = [
   'daily',
@@ -15,6 +15,19 @@ const badgeCategories: BadgeCategory[] = [
 
 export default function BadgesPage() {
   const {allBadges, earnedBadges, isLoaded} = useBadges();
+
+  const categorizedBadges = useMemo(() => {
+    const categories: Record<BadgeCategory, Badge[]> = {
+      daily: [],
+      weekly: [],
+      monthly: [],
+      overall: [],
+    };
+    for (const badge of allBadges) {
+      categories[badge.category].push(badge);
+    }
+    return categories;
+  }, [allBadges]);
 
   return (
     <div className="flex flex-col h-full">
@@ -47,15 +60,13 @@ export default function BadgesPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                  {allBadges
-                    .filter(badge => badge.category === category)
-                    .map(badge => (
-                      <BadgeCard
-                        key={badge.id}
-                        badge={badge}
-                        isEarned={earnedBadges.has(badge.id)}
-                      />
-                    ))}
+                  {categorizedBadges[category].map(badge => (
+                    <BadgeCard
+                      key={badge.id}
+                      badge={badge}
+                      isEarned={earnedBadges.has(badge.id)}
+                    />
+                  ))}
                 </div>
               )}
             </TabsContent>

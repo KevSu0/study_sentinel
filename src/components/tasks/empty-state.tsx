@@ -18,9 +18,9 @@ export function EmptyState({
   children,
 }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center p-4 sm:p-8 bg-card rounded-lg shadow-sm border-2 border-dashed">
-      <BookOpenCheck className="h-16 w-16 text-primary mb-4" />
-      <h2 className="text-2xl font-bold">{title}</h2>
+    <div className="flex flex-col items-center justify-center h-full text-center p-4 sm:p-8 bg-card/50 rounded-lg shadow-sm border border-dashed">
+      <BookOpenCheck className="h-16 w-16 text-primary/80 mb-4" />
+      <h2 className="text-xl font-bold">{title}</h2>
       <p className="text-muted-foreground mt-2 max-w-md">
         {message}
       </p>

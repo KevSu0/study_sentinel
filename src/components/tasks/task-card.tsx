@@ -5,7 +5,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
   CardFooter,
 } from '@/components/ui/card';
 import {
@@ -21,6 +20,7 @@ import {
   Pencil,
   PlayCircle,
   CheckCircle2,
+  ChevronDown,
 } from 'lucide-react';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
@@ -28,6 +28,11 @@ import {cn} from '@/lib/utils';
 import {useToast} from '@/hooks/use-toast';
 import type {StudyTask, TaskStatus, TaskPriority} from '@/lib/types';
 import {format, parseISO} from 'date-fns';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 const AnalysisDialog = lazy(() =>
   import('./analysis-dialog').then(module => ({default: module.AnalysisDialog}))
@@ -62,7 +67,7 @@ const priorityConfig: Record<
 };
 
 export const TaskCard = memo(function TaskCard({task, onUpdate, onDelete, onEdit}: TaskCardProps) {
-  const [isAnalysisOpen, setAnalysisOpen] = useState(false);
+  const [isAnalysisDialogOpen, setAnalysisDialogOpen] = useState(false);
   const {toast} = useToast();
 
   const handleStatusChange = (newStatus: TaskStatus) => {
@@ -150,67 +155,56 @@ export const TaskCard = memo(function TaskCard({task, onUpdate, onDelete, onEdit
           </div>
         </CardHeader>
 
-        <CardContent className="flex-grow pb-4">
+        <CardContent className="flex-grow pb-4 space-y-4">
           {task.description && (
-            <p className="text-sm text-foreground/80 mb-4">
+            <p className="text-sm text-foreground/80">
               {task.description}
             </p>
           )}
           {task.analysis && (
-            <div
-              className={cn(
-                'p-3 rounded-md text-sm flex items-start gap-3',
-                task.analysis.error
-                  ? 'bg-destructive/10 text-destructive-foreground'
-                  : task.analysis.isOnTrack
-                  ? 'bg-teal-500/10 text-teal-800'
-                  : 'bg-amber-500/10 text-amber-800',
-                'dark:bg-opacity-20 dark:text-white/80'
-              )}
-            >
-              {task.analysis.error ? (
-                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-              ) : task.analysis.isOnTrack ? (
-                <CheckCircle className="h-5 w-5 shrink-0 mt-0.5 text-teal-500" />
-              ) : (
-                <XCircle className="h-5 w-5 shrink-0 mt-0.5 text-amber-500" />
-              )}
-              <div className="flex-1">
-                <p className="font-semibold">
-                  {task.analysis.error
-                    ? 'Analysis Error'
+            <Collapsible>
+              <div
+                className={cn(
+                  'p-3 rounded-md text-sm flex items-start gap-3',
+                  task.analysis.error
+                    ? 'bg-destructive/10 text-destructive-foreground'
                     : task.analysis.isOnTrack
-                    ? "Monitor: You're on track!"
-                    : 'Monitor: You might be falling behind.'}
-                </p>
-                <p className="mt-1">
-                  {task.analysis.error || task.analysis.analysis}
-                </p>
+                    ? 'bg-teal-500/10 text-teal-800'
+                    : 'bg-amber-500/10 text-amber-800',
+                  'dark:bg-opacity-20 dark:text-white/80'
+                )}
+              >
+                {task.analysis.error ? (
+                  <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                ) : task.analysis.isOnTrack ? (
+                  <CheckCircle className="h-5 w-5 shrink-0 mt-0.5 text-teal-500" />
+                ) : (
+                  <XCircle className="h-5 w-5 shrink-0 mt-0.5 text-amber-500" />
+                )}
+                <div className="flex-1">
+                  <CollapsibleTrigger className="flex justify-between items-center w-full text-left font-semibold [&[data-state=open]>svg]:rotate-180">
+                    <span>
+                      {task.analysis.error
+                        ? 'Analysis Error'
+                        : task.analysis.isOnTrack
+                        ? "Monitor: You're on track!"
+                        : 'Monitor: You might be falling behind.'}
+                    </span>
+                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2 prose prose-sm dark:prose-invert prose-p:my-1">
+                    <p>
+                      {task.analysis.error || task.analysis.analysis}
+                    </p>
+                  </CollapsibleContent>
+                </div>
               </div>
-            </div>
+            </Collapsible>
           )}
         </CardContent>
 
-        <CardFooter className="flex justify-between items-center">
+        <CardFooter className="flex flex-col sm:flex-row gap-4 justify-between items-center">
           <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setAnalysisOpen(true)}
-              disabled={task.status === 'completed'}
-            >
-              <BrainCircuit className="mr-2 h-4 w-4" />
-              Analyze <span className="hidden sm:inline">Progress</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onEdit(task)}
-              disabled={task.status === 'completed'}
-            >
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit
-            </Button>
             <Badge variant="secondary" className="flex items-center gap-1.5">
               <Award className="h-3.5 w-3.5 text-amber-500" /> {task.points} pts
             </Badge>
@@ -222,22 +216,43 @@ export const TaskCard = memo(function TaskCard({task, onUpdate, onDelete, onEdit
               {task.priority}
             </Badge>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onDelete(task.id)}
-            aria-label="Delete task"
-          >
-            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAnalysisDialogOpen(true)}
+              disabled={task.status === 'completed'}
+            >
+              <BrainCircuit className="mr-2 h-4 w-4" />
+              Analyze
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onEdit(task)}
+              disabled={task.status === 'completed'}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onDelete(task.id)}
+              aria-label="Delete task"
+              className='text-muted-foreground hover:text-destructive hover:bg-destructive/10'
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </CardFooter>
       </Card>
-      {isAnalysisOpen && (
+      {isAnalysisDialogOpen && (
         <Suspense fallback={null}>
           <AnalysisDialog
             task={task}
-            isOpen={isAnalysisOpen}
-            onOpenChange={setAnalysisOpen}
+            isOpen={isAnalysisDialogOpen}
+            onOpenChange={setAnalysisDialogOpen}
             onAnalysisComplete={handleAnalysisComplete}
           />
         </Suspense>

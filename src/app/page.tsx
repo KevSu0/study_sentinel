@@ -76,9 +76,9 @@ export default function DashboardPage() {
                 <section>
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-lg">Today's Stats</CardTitle>
+                      <CardTitle>Today's Stats</CardTitle>
                     </CardHeader>
-                    <CardContent className="flex flex-col sm:flex-row gap-8">
+                    <CardContent className="grid sm:grid-cols-2 gap-8">
                       <div className="flex items-center gap-4">
                         <Star className="h-10 w-10 text-yellow-400" />
                         <div>
@@ -135,18 +135,20 @@ export default function DashboardPage() {
                 )}
               </div>
             ) : (
-              <EmptyState
-                onAddTask={() => {}}
-                title="A Fresh Start!"
-                message="No tasks completed or badges earned yet today. Let's get studying!"
-                buttonText="Plan Your Day"
-              >
-                <Button asChild className="mt-6">
-                  <Link href="/tasks">
-                    <PlusCircle className="mr-2" /> Plan Your Day
-                  </Link>
-                </Button>
-              </EmptyState>
+              <div className="flex items-center justify-center h-full">
+                <EmptyState
+                  onAddTask={() => {}}
+                  title="A Fresh Start!"
+                  message="No tasks completed or badges earned yet today. Let's get studying!"
+                  buttonText="Plan Your Day"
+                >
+                  <Button asChild className="mt-6">
+                    <Link href="/tasks">
+                      <PlusCircle className="mr-2" /> Plan Your Day
+                    </Link>
+                  </Button>
+                </EmptyState>
+              </div>
             )}
           </>
         )}

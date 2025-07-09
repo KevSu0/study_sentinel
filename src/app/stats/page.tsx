@@ -36,6 +36,29 @@ export default function StatsPage() {
     
     const isLoaded = tasksLoaded;
 
+    const statCards = [
+        {
+            title: 'Total Study Time',
+            value: totalHoursStudied,
+            unit: 'hours',
+            description: 'Total time spent on completed tasks',
+            Icon: Clock,
+        },
+        {
+            title: 'Completed Tasks',
+            value: completedTasks.length,
+            description: 'Total tasks conquered',
+            Icon: CheckCircle,
+        },
+        {
+            title: 'Completion Rate',
+            value: overallCompletionRate.toFixed(0),
+            unit: '%',
+            description: 'Of all created tasks',
+            Icon: Target,
+        },
+    ];
+
     return (
         <div className="flex flex-col h-full">
             <header className="p-4 border-b">
@@ -44,36 +67,25 @@ export default function StatsPage() {
             </header>
             <main className="flex-1 p-2 sm:p-4 overflow-y-auto space-y-6">
                 <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Study Time</CardTitle>
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                           {isLoaded ? <div className="text-2xl font-bold">{totalHoursStudied} <span className="text-lg font-normal">hours</span></div> : <Skeleton className="h-8 w-3/4" />}
-                           <p className="text-xs text-muted-foreground">Total time spent on completed tasks</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Completed Tasks</CardTitle>
-                            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                           {isLoaded ? <div className="text-2xl font-bold">{completedTasks.length}</div> : <Skeleton className="h-8 w-1/4" />}
-                           <p className="text-xs text-muted-foreground">Total tasks conquered</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
-                            <Target className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                           {isLoaded ? <div className="text-2xl font-bold">{overallCompletionRate.toFixed(0)}%</div> : <Skeleton className="h-8 w-1/2" />}
-                           <p className="text-xs text-muted-foreground">Of all created tasks</p>
-                        </CardContent>
-                    </Card>
+                    {statCards.map(stat => (
+                        <Card key={stat.title}>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                                <stat.Icon className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                               {isLoaded ? (
+                                    <div className="text-2xl font-bold">
+                                        {stat.value}
+                                        {stat.unit && <span className="text-lg font-normal ml-1">{stat.unit}</span>}
+                                    </div>
+                                ) : (
+                                    <Skeleton className="h-8 w-3/4" />
+                                )}
+                               <p className="text-xs text-muted-foreground">{stat.description}</p>
+                            </CardContent>
+                        </Card>
+                    ))}
                 </section>
 
                 <section className="grid gap-4">
