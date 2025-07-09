@@ -1,0 +1,141 @@
+'use server';
+/**
+ * @fileOverview A positive psychology chatbot flow.
+ *
+ * - getChatbotResponse - A function that handles the chatbot conversation.
+ */
+
+import {ai} from '@/ai/genkit';
+import {
+  PositivePsychologistInput,
+  PositivePsychologistInputSchema,
+  PositivePsychologistOutput,
+  PositivePsychologistOutputSchema,
+} from '@/lib/types';
+import {MessageData} from 'genkit/ai';
+
+export async function getChatbotResponse(
+  input: PositivePsychologistInput
+): Promise<PositivePsychologistOutput> {
+  return positivePsychologistFlow(input);
+}
+
+const positivePsychologistFlow = ai.defineFlow(
+  {
+    name: 'positivePsychologistFlow',
+    inputSchema: PositivePsychologistInputSchema,
+    outputSchema: PositivePsychologistOutputSchema,
+  },
+  async (input: PositivePsychologistInput) => {
+    // 1. Use dummy objects to prevent any potential errors from null/undefined context.
+    const safeProfile = input.profile || {
+      name: 'User',
+      passion: 'learning and growing',
+      dream: 'achieving their full potential',
+      education: 'their current studies',
+    };
+    const safeSummary = input.dailySummary || {
+      evaluation: 'No activity was logged for the previous day.',
+      motivationalParagraph:
+        'Every day is a new opportunity to make progress. Focus on your goals for today!',
+    };
+
+    // 2. Build the system prompt with guaranteed-safe data.
+    const profileContext = `
+**User Profile:**
+- Name: ${safeProfile.name || 'Not provided'}
+- Passion: ${safeProfile.passion || 'Not provided'}
+- Dream: ${safeProfile.dream || 'Not provided'}
+- Education: ${safeProfile.education || 'Not provided'}
+`;
+
+    const summaryContext = `
+**Latest Daily Briefing:**
+- Evaluation: ${safeSummary.evaluation}
+- Motivation: ${safeSummary.motivationalParagraph}
+`;
+
+    const systemPrompt = `You are "KuKe's Motivation Coach," an empathetic and supportive AI companion grounded in the principles of positive psychology. Your core purpose is to empower the user on their academic journey. You are always ready to help, listen, and provide clear, structured guidance.
+
+**Your Persona:**
+- **Empathetic & Encouraging:** Always start by acknowledging the user's feelings or situation. Be a source of unwavering support.
+- **Structured & Clear:** Present your advice in a structured manner. Use markdown (like lists, bold text) to make your answers easy to read and act upon.
+- **Action-Oriented:** Focus on providing practical, evidence-based techniques that the user can apply immediately.
+- **Personalized:** Masterfully weave the user's profile information (name, passion, dream) and their recent performance (from the daily briefing) into your conversation to make it deeply personal and relevant.
+
+**Your Core Capabilities - Provide guidance on:**
+1.  **Motivation Techniques:**
+    - Example: Help the user break down large goals into smaller, achievable "micro-goals".
+    - Example: Suggest creating a rewards system for small wins.
+2.  **Effective Learning Strategies:**
+    - Example: Clearly explain techniques like the **Pomodoro Technique** for focus, **Active Recall** for memory, or the **Feynman Technique** for deep understanding.
+3.  **Stress & Anxiety Management:**
+    - Example: Guide the user through a simple breathing exercise.
+    - Example: Teach them how to reframe negative thoughts into constructive ones (Cognitive Reframing).
+4.  **Building a Growth Mindset:**
+    - Help the user see challenges as opportunities for growth and focus on progress, not just perfection.
+
+**Context provided to you:**
+${profileContext}
+${summaryContext}
+
+**Interaction Rules:**
+- Refer to the user by name to create a personal connection.
+- Keep your responses concise yet comprehensive.
+- Ask clarifying questions when needed to better understand the user's request.
+- **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
+`;
+
+    // 3. Meticulously clean and prepare the conversation history.
+    const historyForApi: MessageData[] = [];
+    const sourceHistory = (input.chatHistory || []).slice(-10);
+
+    let canStartAdding = false;
+    for (const msg of sourceHistory) {
+      // Check if the message is valid
+      if (
+        msg &&
+        (msg.role === 'user' || msg.role === 'model') &&
+        typeof msg.content === 'string' &&
+        msg.content.trim() !== ''
+      ) {
+        // The conversation must start with a user message.
+        // We set a flag once we see the first one.
+        if (msg.role === 'user' && !canStartAdding) {
+          canStartAdding = true;
+        }
+
+        // Only add messages to our final history if we've seen the first user message.
+        if (canStartAdding) {
+          historyForApi.push({
+            role: msg.role,
+            parts: [{text: msg.content}],
+          });
+        }
+      }
+    }
+
+    // 4. If our final history is empty, it means no valid user message was found.
+    // In this case, we cannot call the API. Return a default response instead.
+    if (historyForApi.length === 0) {
+      return {response: "I'm ready to listen. What's on your mind?"};
+    }
+
+    // 5. Call the AI with the guaranteed-safe history and prompt.
+    try {
+      const response = await ai.generate({
+        model: 'googleai/gemini-1.5-flash-latest',
+        history: historyForApi,
+        system: systemPrompt,
+      });
+
+      return {response: response.text};
+    } catch (e: any) {
+      console.error('Gemini API call failed:', e);
+      // Re-throw the error with a user-friendly message to be caught by the action.
+      throw new Error(
+        `The AI model failed to respond. Please try again. Details: ${e.message}`
+      );
+    }
+  }
+);
