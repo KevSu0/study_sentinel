@@ -199,19 +199,23 @@ export function ChatWidget() {
 
   return (
     <>
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50">
         <Button
           onClick={() => setIsOpen(!isOpen)}
           size="icon"
-          className="w-16 h-16 rounded-full shadow-lg"
+          className="w-14 h-14 md:w-16 md:h-16 rounded-full shadow-lg"
         >
-          {isOpen ? <X className="h-8 w-8" /> : <Bot className="h-8 w-8" />}
+          {isOpen ? (
+            <X className="h-7 w-7 md:h-8 md:h-8" />
+          ) : (
+            <Bot className="h-7 w-7 md:h-8 md:h-8" />
+          )}
         </Button>
       </div>
 
       {isOpen && (
-        <div className="fixed bottom-24 right-6 z-50 w-full max-w-sm animate-in fade-in-0 slide-in-from-bottom-5">
-          <Card className="h-[600px] flex flex-col shadow-2xl">
+        <div className="fixed bottom-20 md:bottom-24 right-4 md:right-6 z-50 w-[calc(100vw-2rem)] max-w-sm animate-in fade-in-0 slide-in-from-bottom-5">
+          <Card className="h-[70vh] max-h-[600px] flex flex-col shadow-2xl">
             <CardHeader className="flex flex-row items-center justify-between p-4 border-b">
               <CardTitle className="flex items-center gap-2 text-lg">
                 <Bot /> AI Coach
