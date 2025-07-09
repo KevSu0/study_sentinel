@@ -49,7 +49,9 @@ function ChatBubble({role, content}: ChatMessage) {
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
-            p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+            p: ({node, ...props}) => (
+              <p className="mb-2 last:mb-0" {...props} />
+            ),
             ul: ({node, ...props}) => (
               <ul className="my-2 list-disc pl-5" {...props} />
             ),
@@ -134,33 +136,32 @@ export default function CoachPage() {
     if (!inputValue.trim() || isChatLoading || isContextLoading) return;
 
     const userMessage: ChatMessage = {role: 'user', content: inputValue};
-    addMessage(userMessage);
-
-    const newHistory = [...messages, userMessage];
-
     setInputValue('');
     setIsChatLoading(true);
 
-    const result = await getChatbotResponse({
-      history: newHistory.slice(-10),
-      profile,
-      dailySummary: dailySummary || undefined,
-    });
+    // This callback ensures the API call uses the most up-to-date history.
+    addMessage(userMessage, async updatedHistory => {
+      const result = await getChatbotResponse({
+        history: updatedHistory.slice(-10),
+        profile,
+        dailySummary: dailySummary || undefined,
+      });
 
-    if (result && !('error' in result)) {
-      const modelMessage: ChatMessage = {
-        role: 'model',
-        content: result.response,
-      };
-      addMessage(modelMessage);
-    } else {
-      const errorMessage: ChatMessage = {
-        role: 'model',
-        content: "Sorry, I couldn't get a response. Please try again.",
-      };
-      addMessage(errorMessage);
-    }
-    setIsChatLoading(false);
+      if (result && !('error' in result)) {
+        const modelMessage: ChatMessage = {
+          role: 'model',
+          content: result.response,
+        };
+        addMessage(modelMessage);
+      } else {
+        const errorMessage: ChatMessage = {
+          role: 'model',
+          content: "Sorry, I couldn't get a response. Please try again.",
+        };
+        addMessage(errorMessage);
+      }
+      setIsChatLoading(false);
+    });
   };
 
   const allLoaded = historyLoaded && !isContextLoading;

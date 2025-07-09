@@ -36,30 +36,41 @@ export function useChatHistory() {
     }
   }, []);
 
-  const addMessage = useCallback((newMessage: ChatMessage) => {
-    setMessages(prevMessages => {
-      let updatedMessages = [...prevMessages, newMessage];
+  const addMessage = useCallback(
+    (
+      newMessage: ChatMessage,
+      callback?: (updatedHistory: ChatMessage[]) => void
+    ) => {
+      setMessages(prevMessages => {
+        let updatedMessages = [...prevMessages, newMessage];
 
-      // Trim to max length, always keeping the first initial message
-      if (updatedMessages.length > MAX_HISTORY_LENGTH) {
-        const welcomeMessage = updatedMessages[0];
-        const chat = updatedMessages.slice(1);
-        const trimmedChat = chat.slice(chat.length - (MAX_HISTORY_LENGTH - 1));
-        updatedMessages = [welcomeMessage, ...trimmedChat];
-      }
+        // Trim to max length, always keeping the first initial message
+        if (updatedMessages.length > MAX_HISTORY_LENGTH) {
+          const welcomeMessage = updatedMessages[0];
+          const chat = updatedMessages.slice(1);
+          const trimmedChat =
+            chat.slice(chat.length - (MAX_HISTORY_LENGTH - 1));
+          updatedMessages = [welcomeMessage, ...trimmedChat];
+        }
 
-      try {
-        localStorage.setItem(
-          CHAT_HISTORY_KEY,
-          JSON.stringify(updatedMessages)
-        );
-      } catch (error) {
-        console.error('Failed to save chat history', error);
-      }
+        try {
+          localStorage.setItem(
+            CHAT_HISTORY_KEY,
+            JSON.stringify(updatedMessages)
+          );
+        } catch (error) {
+          console.error('Failed to save chat history', error);
+        }
 
-      return updatedMessages;
-    });
-  }, []);
+        if (callback) {
+          callback(updatedMessages);
+        }
+
+        return updatedMessages;
+      });
+    },
+    []
+  );
 
   return {messages, addMessage, isLoaded};
 }
