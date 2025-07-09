@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {useState, useEffect, type ReactNode} from 'react';
+import dynamic from 'next/dynamic';
 import {
   Sidebar,
   SidebarProvider,
@@ -28,11 +29,15 @@ import {
   Sparkles,
   ScrollText,
   User,
-  Bot,
 } from 'lucide-react';
 import {ConfettiProvider} from './providers/confetti-provider';
 import {SplashScreen} from '@/components/splash-screen';
 import {GlobalTimerBar} from './tasks/global-timer-bar';
+
+const ChatWidget = dynamic(
+  () => import('@/components/coach/chat-widget').then(m => m.ChatWidget),
+  {ssr: false}
+);
 
 function AppLayout({children}: {children: ReactNode}) {
   const pathname = usePathname();
@@ -48,7 +53,6 @@ function AppLayout({children}: {children: ReactNode}) {
     {href: '/', label: 'Dashboard', icon: LayoutDashboard},
     {href: '/briefing', label: 'Daily Briefing', icon: Sparkles},
     {href: '/tasks', label: 'All Tasks', icon: ListChecks},
-    {href: '/coach', label: 'AI Coach', icon: Bot},
     {href: '/stats', label: 'Stats', icon: TrendingUp},
     {href: '/badges', label: 'Badges', icon: Award},
     {href: '/archive', label: 'Archived Tasks', icon: Archive},
@@ -106,6 +110,7 @@ function AppLayout({children}: {children: ReactNode}) {
         </div>
         <GlobalTimerBar />
         {children}
+        <ChatWidget />
       </SidebarInset>
       <Toaster />
     </>
