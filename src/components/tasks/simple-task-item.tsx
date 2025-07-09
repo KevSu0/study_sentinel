@@ -83,7 +83,7 @@ export const SimpleTaskItem = memo(function SimpleTaskItem({
       fire();
       toast({
         title: 'Task Completed!',
-        description: `You've earned ${task.points} points!`,
+        description: `You'veearned ${task.points} points!`,
       });
     }
     onUpdate({...task, status: newStatus});
@@ -123,7 +123,7 @@ export const SimpleTaskItem = memo(function SimpleTaskItem({
           }`}
           className={cn(
             isCompleted &&
-              'data-[state=checked]:bg-accent data-[state=checked]:border-accent'
+              'data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600'
           )}
         />
         <div className="flex-1 grid gap-1">
