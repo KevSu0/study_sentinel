@@ -100,21 +100,21 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    const lastMessage = history[history.length - 1];
-    const conversationHistory = history.slice(0, -1);
-
-    if (lastMessage.role !== 'user') {
-      return {response: "I'm waiting for your response. How can I help?"};
+    if (history.length === 0) {
+      return {response: 'Hello! How can I help you today?'};
     }
 
-    const genkitHistory: MessageData[] = conversationHistory.map(h => ({
+    // The Genkit/Gemini history must be an alternating sequence of user/model roles, starting with a user message.
+    // Our full history starts with the model's greeting. So we slice(1) to remove it.
+    // We also use the full history now, as the prompt is included as the last message.
+    const genkitHistory: MessageData[] = history.slice(1).map(h => ({
       role: h.role,
       parts: [{text: h.content}],
     }));
 
     const response = await ai.generate({
       model: 'googleai/gemini-2.0-flash',
-      prompt: lastMessage.content,
+      prompt: 'Continue the conversation.', // The actual prompt is the last item in the history.
       history: genkitHistory,
       system: systemPrompt,
     });

@@ -142,7 +142,7 @@ export default function CoachPage() {
     // This callback ensures the API call uses the most up-to-date history.
     addMessage(userMessage, async updatedHistory => {
       const result = await getChatbotResponse({
-        history: updatedHistory.slice(-10),
+        history: updatedHistory.slice(-10), // Send last 10 messages for context
         profile,
         dailySummary: dailySummary || undefined,
       });
