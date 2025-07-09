@@ -52,8 +52,8 @@ export function useBadges() {
 
         setTimeout(() => {
           toast({
-            title: 'Badge Unlocked! 🎉',
-            description: `You've earned the "${badge.name}" badge.`,
+            title: `Badge Unlocked: ${badge.name}! 🎉`,
+            description: badge.motivationalMessage,
           });
         }, 500);
 

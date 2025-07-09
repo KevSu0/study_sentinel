@@ -27,6 +27,7 @@ export type Badge = {
   id: string;
   name: string;
   description: string;
+  motivationalMessage: string;
   category: BadgeCategory;
   Icon: LucideIcon;
   checker: (completedTasks: StudyTask[]) => boolean;
