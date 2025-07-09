@@ -205,7 +205,7 @@ export function GlobalTimerBar() {
     localStorage.setItem(ROUTINE_TIMER_KEY, JSON.stringify(savedTimer));
   }, [activeRoutine]);
 
-  const handleStopRoutine = useCallback(() => {
+  const handleCompleteRoutine = useCallback(() => {
     const savedTimerRaw = localStorage.getItem(ROUTINE_TIMER_KEY);
     if (!savedTimerRaw || !activeRoutine) return;
 
@@ -225,14 +225,15 @@ export function GlobalTimerBar() {
       duration: durationInSeconds,
       points,
     });
+    fire();
     toast({
-      title: 'Routine Stopped',
+      title: 'Routine Completed!',
       description: `You logged ${formatTime(
         durationInSeconds
       )} and earned ${points} points.`,
     });
     clearRoutineTimer();
-  }, [activeRoutine, addLog, clearRoutineTimer, toast]);
+  }, [activeRoutine, addLog, clearRoutineTimer, toast, fire]);
 
   // Main timer polling effect, now the single source of truth for time progression.
   useEffect(() => {
@@ -435,12 +436,12 @@ export function GlobalTimerBar() {
             </Button>
             <Button
               size="sm"
-              variant="destructive"
-              onClick={handleStopRoutine}
-              className="px-2 sm:px-3"
+              variant="secondary"
+              onClick={handleCompleteRoutine}
+              className="bg-green-500 hover:bg-green-600 text-white px-2 sm:px-3"
             >
-              <XCircle />
-              <span className="hidden sm:inline">Stop</span>
+              <CheckCircle />
+              <span className="hidden sm:inline">Complete</span>
             </Button>
           </div>
         </div>
