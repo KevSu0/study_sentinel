@@ -63,6 +63,173 @@ const motivationalQuotes = [
       "The harder you work for something, the greater you'll feel when you achieve it.",
     author: 'Unknown',
   },
+  {
+    quote: 'The secret to success is to start before you are ready.',
+    author: 'Marie Forleo',
+  },
+  {
+    quote: 'The only place where success comes before work is in the dictionary.',
+    author: 'Vidal Sassoon',
+  },
+  {
+    quote: 'I find that the harder I work, the more luck I seem to have.',
+    author: 'Thomas Jefferson',
+  },
+  {
+    quote:
+      'Success is not final, failure is not fatal: it is the courage to continue that counts.',
+    author: 'Winston Churchill',
+  },
+  {
+    quote: "Don't wish it were easier, wish you were better.",
+    author: 'Jim Rohn',
+  },
+  {
+    quote: 'The way to get started is to quit talking and begin doing.',
+    author: 'Walt Disney',
+  },
+  {
+    quote:
+      'I am not a product of my circumstances. I am a product of my decisions.',
+    author: 'Stephen Covey',
+  },
+  {
+    quote: 'You don’t have to be great to start, but you have to start to be great.',
+    author: 'Zig Ziglar',
+  },
+  {
+    quote: 'Procrastination makes easy things hard, and hard things harder.',
+    author: 'Mason Cooley',
+  },
+  {
+    quote: 'The future depends on what you do today.',
+    author: 'Mahatma Gandhi',
+  },
+  {
+    quote:
+      'Study while others are sleeping; work while others are loafing; prepare while others are playing; and dream while others are wishing.',
+    author: 'William Arthur Ward',
+  },
+  {
+    quote:
+      'The beautiful thing about learning is that no one can take it away from you.',
+    author: 'B.B. King',
+  },
+  {
+    quote: 'An investment in knowledge pays the best interest.',
+    author: 'Benjamin Franklin',
+  },
+  {
+    quote:
+      'The capacity to learn is a gift; the ability to learn is a skill; the willingness to learn is a choice.',
+    author: 'Brian Herbert',
+  },
+  {
+    quote: 'Learning is not a spectator sport.',
+    author: 'D. Blocher',
+  },
+  {
+    quote: 'There are no shortcuts to any place worth going.',
+    author: 'Beverly Sills',
+  },
+  {
+    quote: 'The pain you feel today is the strength you will feel tomorrow.',
+    author: 'Unknown',
+  },
+  {
+    quote: 'It’s not about having time. It’s about making time.',
+    author: 'Unknown',
+  },
+  {
+    quote: 'Discipline is the bridge between goals and accomplishment.',
+    author: 'Jim Rohn',
+  },
+  {
+    quote: 'Strive for progress, not perfection.',
+    author: 'Unknown',
+  },
+  {
+    quote: 'You are capable of more than you know.',
+    author: 'Unknown',
+  },
+  {
+    quote: "Focus on your goal. Don't look in any direction but ahead.",
+    author: 'Unknown',
+  },
+  {
+    quote: 'A little progress each day adds up to big results.',
+    author: 'Satya Nani',
+  },
+  {
+    quote: "It always seems impossible until it's done.",
+    author: 'Nelson Mandela',
+  },
+  {
+    quote: 'Wake up with determination. Go to bed with satisfaction.',
+    author: 'Unknown',
+  },
+  {
+    quote:
+      'The difference between ordinary and extraordinary is that little extra.',
+    author: 'Jimmy Johnson',
+  },
+  {
+    quote: 'The key to success is to focus on goals, not obstacles.',
+    author: 'Unknown',
+  },
+  {
+    quote: 'Your only limit is your mind.',
+    author: 'Unknown',
+  },
+  {
+    quote: 'Doubt kills more dreams than failure ever will.',
+    author: 'Suzy Kassem',
+  },
+  {
+    quote: 'Success doesn’t just find you. You have to go out and get it.',
+    author: 'Unknown',
+  },
+  {
+    quote: 'The secret of your future is hidden in your daily routine.',
+    author: 'Mike Murdock',
+  },
+  {
+    quote: 'If you can dream it, you can do it.',
+    author: 'Walt Disney',
+  },
+  {
+    quote: 'The journey of a thousand miles begins with a single step.',
+    author: 'Lao Tzu',
+  },
+  {
+    quote: "Don't stop when you're tired. Stop when you're done.",
+    author: 'Unknown',
+  },
+  {
+    quote: 'What you do today can improve all your tomorrows.',
+    author: 'Ralph Marston',
+  },
+  {
+    quote: "It's going to be hard, but hard does not mean impossible.",
+    author: 'Unknown',
+  },
+  {
+    quote: 'Success is the child of preparation and determination.',
+    author: 'Unknown',
+  },
+  {
+    quote: 'The best way to predict your future is to create it.',
+    author: 'Abraham Lincoln',
+  },
+  {
+    quote: 'Either you run the day or the day runs you.',
+    author: 'Jim Rohn',
+  },
+  {
+    quote:
+      'Believe in yourself and all that you are. Know that there is something inside you that is greater than any obstacle.',
+    author: 'Christian D. Larson',
+  },
 ];
 
 export default function DashboardPage() {
@@ -123,8 +290,12 @@ export default function DashboardPage() {
   }, [tasks, todayStr, allBadges, earnedBadges]);
 
   const dailyQuote = useMemo(() => {
-    const dayOfMonth = new Date().getDate();
-    return motivationalQuotes[dayOfMonth % motivationalQuotes.length];
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 0);
+    const diff = now.getTime() - startOfYear.getTime();
+    const oneDay = 1000 * 60 * 60 * 24;
+    const dayOfYear = Math.floor(diff / oneDay);
+    return motivationalQuotes[dayOfYear % motivationalQuotes.length];
   }, []);
 
   return (
