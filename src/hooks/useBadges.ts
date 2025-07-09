@@ -42,11 +42,14 @@ export function useBadges() {
           BADGES_KEY,
           JSON.stringify(Array.from(newEarnedBadges))
         );
+        
+        setTimeout(() => {
+          toast({
+            title: 'Badge Unlocked! 🎉',
+            description: `You've earned the "${badge.name}" badge.`,
+          });
+        }, 0);
 
-        toast({
-          title: 'Badge Unlocked! 🎉',
-          description: `You've earned the "${badge.name}" badge.`,
-        });
 
         return newEarnedBadges;
       });
