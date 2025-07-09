@@ -47,8 +47,8 @@ const positivePsychologistFlow = ai.defineFlow(
   async input => {
     const {profile, dailySummary, history} = input;
 
-    // Handle case where history is empty
-    if (!history || history.length === 0) {
+    // Handle case where history is empty or invalid
+    if (!Array.isArray(history) || history.length === 0) {
       return {response: 'Hello! How can I help you today?'};
     }
 
@@ -101,26 +101,29 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    // The history from the client includes the user's latest message.
-    let conversation = history;
-    
-    // The Gemini API requires the history to start with a 'user' message.
-    if (conversation.length > 0 && conversation[0]?.role === 'model') {
-      // If the first message is the model's initial greeting, remove it for the API call.
-      conversation = conversation.slice(1);
+    // This robustly cleans the history, preventing crashes from malformed data.
+    // It iterates through the history and builds a new, guaranteed-clean array.
+    let genkitHistory: MessageData[] = [];
+    if (Array.isArray(history)) {
+        for (const h of history) {
+            // Check if the message is a valid object with the required string properties.
+            if (h && typeof h.role === 'string' && typeof h.content === 'string') {
+                genkitHistory.push({
+                    role: h.role as 'user' | 'model',
+                    parts: [{ text: h.content }],
+                });
+            }
+        }
     }
     
-    // Filter out malformed messages with a robust type guard to prevent crashes.
-    const genkitHistory: MessageData[] = conversation
-      .filter((h): h is { role: 'user' | 'model'; content: string } => 
-        h && typeof h.role === 'string' && typeof h.content === 'string'
-      )
-      .map(h => ({
-        role: h.role,
-        parts: [{text: h.content}],
-      }));
-
-    // Generate a response using the full conversation history.
+    // The Gemini API requires the history to start with a 'user' message.
+    // Perform this check on the newly cleaned history.
+    if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {
+      // If the first message is the model's initial greeting, remove it for the API call.
+      genkitHistory.shift(); // .shift() modifies the array in place
+    }
+    
+    // Generate a response using the full, cleaned conversation history.
     // The model understands the last message in the history is the one to respond to.
     const response = await ai.generate({
       model: 'googleai/gemini-2.5-flash-lite-preview-06-17',
