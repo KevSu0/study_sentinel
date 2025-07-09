@@ -18,13 +18,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  experimental: {
-    serverComponentsExternalPackages: [
-      'handlebars',
-      'dotprompt',
-      '@genkit-ai/core',
-    ],
-  },
+  serverExternalPackages: [
+    'handlebars',
+    'dotprompt',
+    '@genkit-ai/core',
+  ],
 };
 
 export default nextConfig;
