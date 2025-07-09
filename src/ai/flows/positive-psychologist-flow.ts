@@ -27,56 +27,55 @@ const positivePsychologistFlow = ai.defineFlow(
     outputSchema: PositivePsychologistOutputSchema,
   },
   async (input: PositivePsychologistInput) => {
-    // This is the definitive fix. The Gemini API requires that conversation
-    // history MUST start with a 'user' role.
-    
-    // 1. Create a clean list of messages, filtering out any invalid,
-    // null, or empty entries.
-    const cleanHistory: {role: 'user' | 'model'; content: string}[] = (
-      input.chatHistory || []
-    ).filter(
-      (
-        msg
-      ): msg is {
-        role: 'user' | 'model';
-        content: string;
-      } =>
-        !!(
-          msg &&
-          (msg.role === 'user' || msg.role === 'model') &&
-          typeof msg.content === 'string' &&
-          msg.content.trim() !== ''
-        )
+    // This is the definitive, robust history processing logic.
+    // It builds a clean history from scratch, enforcing all API rules.
+
+    const rawHistory = input.chatHistory || [];
+    const cleanHistory: MessageData[] = [];
+
+    // Rule 1: Find the first valid message from a 'user'.
+    const firstUserIndex = rawHistory.findIndex(
+      msg =>
+        msg &&
+        msg.role === 'user' &&
+        typeof msg.content === 'string' &&
+        msg.content.trim() !== ''
     );
 
-    // 2. Find the first message from the user.
-    const firstUserIndex = cleanHistory.findIndex(msg => msg.role === 'user');
-
-    // 3. If there are no user messages, we cannot start a conversation with the AI.
-    // Return a safe, default response.
+    // If no user message exists, we cannot start a conversation.
     if (firstUserIndex === -1) {
       return {response: "I'm ready to listen. What's on your mind?"};
     }
 
-    // 4. Slice the history to ensure it starts with the first user message.
-    const validHistory = cleanHistory.slice(firstUserIndex);
+    // Rule 2: Iterate from the first user message and build a valid history.
+    for (let i = firstUserIndex; i < rawHistory.length; i++) {
+      const msg = rawHistory[i];
 
-    // 5. Convert the valid history to the format Genkit expects.
-    const genkitHistory: MessageData[] = validHistory.map(msg => ({
-      role: msg.role,
-      parts: [{text: msg.content}],
-    }));
+      // Skip any message that is null, malformed, or has empty content.
+      if (
+        !msg ||
+        (msg.role !== 'user' && msg.role !== 'model') ||
+        typeof msg.content !== 'string' ||
+        msg.content.trim() === ''
+      ) {
+        continue;
+      }
 
-    const {profile, dailySummary} = input;
+      // The message is valid, add it to our clean history.
+      cleanHistory.push({
+        role: msg.role,
+        parts: [{text: msg.content}],
+      });
+    }
 
     // Use dummy objects to prevent any potential errors from null/undefined context.
-    const safeProfile = profile || {
+    const safeProfile = input.profile || {
       name: 'User',
       passion: 'learning and growing',
       dream: 'achieving their full potential',
       education: 'their current studies',
     };
-    const safeSummary = dailySummary || {
+    const safeSummary = input.dailySummary || {
       evaluation: 'No activity was logged for the previous day.',
       motivationalParagraph:
         'Every day is a new opportunity to make progress. Focus on your goals for today!',
@@ -127,17 +126,17 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    // A final try/catch for actual API or network errors.
     try {
       const response = await ai.generate({
         model: 'googleai/gemini-1.5-flash-latest',
-        history: genkitHistory,
+        history: cleanHistory,
         system: systemPrompt,
       });
 
       return {response: response.text};
     } catch (e: any) {
       console.error('Gemini API call failed:', e);
+      // Re-throw the error with a user-friendly message to be caught by the action.
       throw new Error(
         `The AI model failed to respond. Please try again. Details: ${e.message}`
       );
