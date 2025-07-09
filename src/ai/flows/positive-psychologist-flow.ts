@@ -14,17 +14,28 @@ import {
 } from '@/lib/types';
 import {MessageData} from 'genkit/ai';
 
+// A robust type guard to ensure a message is a valid object with the required properties.
+// This is the definitive fix to prevent crashes from corrupted history data.
+const isValidMessage = (
+  msg: any
+): msg is {role: 'user' | 'model'; content: string} => {
+  return (
+    msg &&
+    typeof msg === 'object' &&
+    typeof msg.role === 'string' &&
+    typeof msg.content === 'string'
+  );
+};
+
 export async function getChatbotResponse(
   input: PositivePsychologistInput
 ): Promise<PositivePsychologistOutput> {
-  // Call the validated flow. The schema is now enforced by Genkit.
   return positivePsychologistFlow(input);
 }
 
 const positivePsychologistFlow = ai.defineFlow(
   {
     name: 'positivePsychologistFlow',
-    // ENFORCE THE SCHEMA AT THE FLOW LEVEL. This is the key fix.
     inputSchema: PositivePsychologistInputSchema,
     outputSchema: PositivePsychologistOutputSchema,
   },
@@ -80,9 +91,10 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    // Map the validated history to the format Genkit requires.
-    // No need for manual validation here anymore, as the inputSchema handles it.
-    const genkitHistory: MessageData[] = history.map(msg => ({
+    // Final validation step: Filter the history with the robust type guard.
+    const cleanHistory = Array.isArray(history) ? history.filter(isValidMessage) : [];
+    
+    const genkitHistory: MessageData[] = cleanHistory.map(msg => ({
       role: msg.role,
       parts: [{text: msg.content}],
     }));
