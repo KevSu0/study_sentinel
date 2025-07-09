@@ -13,6 +13,8 @@ import {cn} from '@/lib/utils';
 import {Skeleton} from '@/components/ui/skeleton';
 import {format} from 'date-fns';
 import {Card, CardContent, CardFooter} from '@/components/ui/card';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 type ChatMessage = {
   role: 'user' | 'model';
@@ -45,14 +47,15 @@ function ChatBubble({role, content}: ChatMessage) {
           'max-w-sm rounded-lg px-4 py-3 text-sm md:max-w-md',
           isUser
             ? 'bg-primary text-primary-foreground'
-            : 'bg-muted text-muted-foreground'
+            : 'bg-muted text-muted-foreground',
+          // Styling for markdown elements.
+          '[&_p]:mb-2 [&_p:last-of-type]:mb-0',
+          '[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5',
+          '[&_li]:my-1',
+          !isUser && '[&_strong]:text-foreground'
         )}
       >
-        {content.split('\n').map((line, i) => (
-          <p key={i} className="mb-1 last:mb-0">
-            {line}
-          </p>
-        ))}
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
       </div>
       {isUser && (
         <Avatar className="h-8 w-8">
