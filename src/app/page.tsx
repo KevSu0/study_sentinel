@@ -28,6 +28,8 @@ import {useLogger} from '@/hooks/use-logger';
 import {useProfile} from '@/hooks/use-profile';
 import {useViewMode} from '@/hooks/use-view-mode';
 import {cn} from '@/lib/utils';
+import {useRoutines} from '@/hooks/use-routines';
+import {RoutineDashboardCard} from '@/components/timetable/routine-dashboard-card';
 
 const TaskDialog = dynamic(
   () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),
@@ -260,6 +262,7 @@ export default function DashboardPage() {
   const {getPreviousDayLogs, isLoaded: loggerLoaded} = useLogger();
   const {profile, isLoaded: profileLoaded} = useProfile();
   const {viewMode, setViewMode, isLoaded: viewModeLoaded} = useViewMode();
+  const {routines, isLoaded: routinesLoaded} = useRoutines();
 
   const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
   const [dailySummary, setDailySummary] = useState<{
@@ -317,7 +320,12 @@ export default function DashboardPage() {
   };
 
   const isLoaded =
-    tasksLoaded && badgesLoaded && loggerLoaded && profileLoaded && viewModeLoaded;
+    tasksLoaded &&
+    badgesLoaded &&
+    loggerLoaded &&
+    profileLoaded &&
+    viewModeLoaded &&
+    routinesLoaded;
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
 
   const {
@@ -326,6 +334,7 @@ export default function DashboardPage() {
     todaysCompletedTasks,
     pointsToday,
     todaysBadges,
+    todaysRoutines,
   } = useMemo(() => {
     const todays = tasks.filter(
       t => t.date === todayStr && t.status !== 'archived'
@@ -340,6 +349,8 @@ export default function DashboardPage() {
         earnedBadges.has(badge.id) &&
         earnedBadges.get(badge.id) === todayStr
     );
+    const today = new Date().getDay(); // Sunday - 0, Monday - 1, etc.
+    const todaysRoutines = routines.filter(r => r.days.includes(today));
 
     return {
       todaysTasks: todays,
@@ -347,8 +358,9 @@ export default function DashboardPage() {
       todaysCompletedTasks: completed,
       pointsToday: points,
       todaysBadges: badges,
+      todaysRoutines,
     };
-  }, [tasks, todayStr, allBadges, earnedBadges]);
+  }, [tasks, todayStr, allBadges, earnedBadges, routines]);
 
   const dailyQuote = useMemo(() => {
     const now = new Date();
@@ -518,8 +530,23 @@ export default function DashboardPage() {
                 </section>
               )}
 
-              {todaysTasks.length > 0 ? (
+              {todaysTasks.length > 0 || todaysRoutines.length > 0 ? (
                 <>
+                  {todaysRoutines.length > 0 && (
+                    <section>
+                      <h2 className="text-xl font-semibold text-primary mb-3">
+                        Today's Routines
+                      </h2>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {todaysRoutines.map(routine => (
+                          <RoutineDashboardCard
+                            key={routine.id}
+                            routine={routine}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  )}
                   {pendingTasks.length > 0 && (
                     <section>
                       <h2 className="text-xl font-semibold text-primary mb-3">
