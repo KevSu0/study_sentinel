@@ -27,10 +27,10 @@ const positivePsychologistFlow = ai.defineFlow(
     outputSchema: PositivePsychologistOutputSchema,
   },
   async (input: PositivePsychologistInput) => {
-    // Defensively filter the history to remove any malformed messages.
-    // This ensures every message is a valid object with 'role' and 'content'.
+    // Defensively filter the history to remove any malformed or empty messages.
+    // This ensures every message is a valid object with non-empty content.
     const cleanHistory = input.history.filter(
-      msg => msg && msg.role && typeof msg.content === 'string'
+      msg => msg && msg.role && typeof msg.content === 'string' && msg.content.trim() !== ''
     );
 
     // If, after cleaning, the history is empty, return a default response
