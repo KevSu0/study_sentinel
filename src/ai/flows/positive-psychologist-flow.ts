@@ -14,8 +14,8 @@ import type {UserProfile} from '@/hooks/use-profile';
 import type {DailySummaryOutput} from '@/ai/flows/generate-daily-summary';
 
 const PositivePsychologistInputSchema = z.object({
-  profile: z.custom<UserProfile>().optional(),
-  dailySummary: z.custom<DailySummaryOutput>().optional(),
+  profile: z.any().optional(),
+  dailySummary: z.any().optional(),
   history: z.array(
     z.object({
       role: z.enum(['user', 'model']),
