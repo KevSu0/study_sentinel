@@ -3,7 +3,6 @@
 import React, {useState, useEffect, useRef} from 'react';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
-import {ScrollArea} from '@/components/ui/scroll-area';
 import {Avatar, AvatarFallback} from '@/components/ui/avatar';
 import {Bot, User, Send, Trash2, X} from 'lucide-react';
 import {useProfile} from '@/hooks/use-profile';
@@ -57,7 +56,7 @@ function ChatBubble({role, content}: ChatMessage) {
       )}
       <div
         className={cn(
-          'max-w-[90%] rounded-lg px-4 py-3 text-sm',
+          'max-w-[85%] rounded-lg px-4 py-3 text-sm',
           isUser
             ? 'bg-primary text-primary-foreground'
             : 'bg-muted text-muted-foreground'
@@ -256,34 +255,30 @@ export function ChatWidget() {
               </div>
             </CardHeader>
 
-            <CardContent className="flex-1 p-0">
-              <ScrollArea className="h-full p-4">
+            <CardContent className="flex-1 p-4 space-y-6 overflow-y-auto">
+              {!historyLoaded ? (
                 <div className="space-y-6">
-                  {!historyLoaded ? (
-                    <div className="space-y-6">
-                      <Skeleton className="h-16 w-3/4" />
-                      <Skeleton className="h-16 w-3/4 ml-auto" />
-                    </div>
-                  ) : (
-                    messages.map((msg, index) => (
-                      <ChatBubble key={index} {...msg} />
-                    ))
-                  )}
-                  {isChatLoading && (
-                    <div className="flex items-start gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-primary/20">
-                          <Bot className="h-5 w-5 text-primary" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="max-w-sm rounded-lg px-4 py-3 bg-muted">
-                        <Skeleton className="h-4 w-12" />
-                      </div>
-                    </div>
-                  )}
-                  <div ref={messagesEndRef} />
+                  <Skeleton className="h-16 w-3/4" />
+                  <Skeleton className="h-16 w-3/4 ml-auto" />
                 </div>
-              </ScrollArea>
+              ) : (
+                messages.map((msg, index) => (
+                  <ChatBubble key={index} {...msg} />
+                ))
+              )}
+              {isChatLoading && (
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="bg-primary/20">
+                      <Bot className="h-5 w-5 text-primary" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="rounded-lg px-4 py-3 bg-muted">
+                    <Skeleton className="h-4 w-12" />
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
             </CardContent>
 
             <CardFooter className="p-4 border-t">
