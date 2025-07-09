@@ -86,53 +86,39 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    // 3. Meticulously clean and prepare the conversation history.
-    const historyForApi: MessageData[] = [];
-    const sourceHistory = (input.chatHistory || []).slice(-10);
+    // 3. DEBUGGING STEP: Create a minimal history with only the last user message.
+    // This isolates the problem to determine if complex history is the cause.
+    const lastUserMessage = (input.chatHistory || [])
+      .filter(
+        msg =>
+          msg &&
+          msg.role === 'user' &&
+          typeof msg.content === 'string' &&
+          msg.content.trim() !== ''
+      )
+      .pop();
 
-    let canStartAdding = false;
-    for (const msg of sourceHistory) {
-      // Check if the message is valid
-      if (
-        msg &&
-        (msg.role === 'user' || msg.role === 'model') &&
-        typeof msg.content === 'string' &&
-        msg.content.trim() !== ''
-      ) {
-        // The conversation must start with a user message.
-        // We set a flag once we see the first one.
-        if (msg.role === 'user' && !canStartAdding) {
-          canStartAdding = true;
-        }
-
-        // Only add messages to our final history if we've seen the first user message.
-        if (canStartAdding) {
-          historyForApi.push({
-            role: msg.role,
-            parts: [{text: msg.content}],
-          });
-        }
-      }
+    // If there's no valid user message in the input, we can't start a conversation.
+    if (!lastUserMessage) {
+      return {response: "I'm ready to help. What's on your mind?"};
     }
 
-    // 4. If our final history is empty, it means no valid user message was found.
-    // In this case, we cannot call the API. Return a default response instead.
-    if (historyForApi.length === 0) {
-      return {response: "I'm ready to listen. What's on your mind?"};
-    }
+    // Construct a history with ONLY the last valid user message.
+    const minimalHistory: MessageData[] = [
+      {role: 'user', parts: [{text: lastUserMessage.content}]},
+    ];
 
-    // 5. Call the AI with the guaranteed-safe history and prompt.
+    // 4. Call the AI with the simplified, minimal history.
     try {
       const response = await ai.generate({
         model: 'googleai/gemini-1.5-flash-latest',
-        history: historyForApi,
+        history: minimalHistory,
         system: systemPrompt,
       });
 
       return {response: response.text};
     } catch (e: any) {
-      console.error('Gemini API call failed:', e);
-      // Re-throw the error with a user-friendly message to be caught by the action.
+      console.error('Gemini API call failed with minimal history:', e);
       throw new Error(
         `The AI model failed to respond. Please try again. Details: ${e.message}`
       );
