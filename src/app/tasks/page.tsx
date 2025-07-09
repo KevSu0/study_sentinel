@@ -1,16 +1,17 @@
 'use client';
 import React, {useState, useMemo, lazy, Suspense} from 'react';
 import {Button} from '@/components/ui/button';
-import {PlusCircle, X} from 'lucide-react';
+import {PlusCircle, X, Calendar as CalendarIcon} from 'lucide-react';
 import {useTasks} from '@/hooks/use-tasks';
 import {TaskList} from '@/components/tasks/task-list';
 import {EmptyState} from '@/components/tasks/empty-state';
 import {Skeleton} from '@/components/ui/skeleton';
-import {Tabs, TabsList, TabsTrigger, TabsContent} from '@/components/ui/tabs';
-import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
+import {Tabs, TabsList, TabsTrigger} from '@/components/ui/tabs';
 import {Calendar} from '@/components/ui/calendar';
 import type {StudyTask} from '@/lib/types';
 import {format} from 'date-fns';
+import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
+import {cn} from '@/lib/utils';
 
 const TaskDialog = lazy(() =>
   import('@/components/tasks/add-task-dialog').then(m => ({
@@ -34,6 +35,7 @@ export default function AllTasksPage() {
   const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
   const [filter, setFilter] = useState<TaskFilter>('all');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
 
   const isTaskFormOpen = isAddDialogOpen || !!editingTask;
 
@@ -54,7 +56,7 @@ export default function AllTasksPage() {
 
   const filteredTasks = useMemo(() => {
     let activeTasks = tasks.filter(task => task.status !== 'archived');
-    
+
     let tasksByStatus = activeTasks;
     if (filter !== 'all') {
       tasksByStatus = activeTasks.filter(task => task.status === filter);
@@ -67,6 +69,8 @@ export default function AllTasksPage() {
 
     return tasksByStatus;
   }, [tasks, filter, selectedDate]);
+
+  const hasFilters = filter !== 'all' || !!selectedDate;
 
   return (
     <div className="flex flex-col h-full">
@@ -83,78 +87,100 @@ export default function AllTasksPage() {
         </Button>
       </header>
 
-      <main className="flex-1 p-2 sm:p-4 overflow-y-auto">
-        <div className="flex flex-col lg:flex-row gap-6">
-          <aside className="w-full lg:w-auto lg:min-w-[320px]">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Filter Tasks</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Tabs
-                  value={filter}
-                  onValueChange={value => setFilter(value as TaskFilter)}
-                  className="w-full"
-                >
-                  <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
-                    <TabsTrigger value="all">All</TabsTrigger>
-                    <TabsTrigger value="todo">To Do</TabsTrigger>
-                    <TabsTrigger value="in_progress">In Progress</TabsTrigger>
-                    <TabsTrigger value="completed">Completed</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-sm font-medium">By Date</h3>
-                    {selectedDate && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedDate(undefined)}
-                      >
-                        <X className="h-4 w-4 mr-1" />
-                        Clear
-                      </Button>
-                    )}
-                  </div>
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    className="rounded-md border p-0"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </aside>
+      <main className="flex-1 p-2 sm:p-4 overflow-y-auto space-y-6">
+        {/* Filter Bar */}
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <Tabs
+            value={filter}
+            onValueChange={value => setFilter(value as TaskFilter)}
+            className="w-full sm:w-auto"
+          >
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="todo">To Do</TabsTrigger>
+              <TabsTrigger value="in_progress">In Progress</TabsTrigger>
+              <TabsTrigger value="completed">Completed</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-          <div className="flex-1">
-            {!isLoaded ? (
-              <div className="space-y-4">
-                <Skeleton className="h-28 w-full" />
-                <Skeleton className="h-28 w-full" />
-                <Skeleton className="h-28 w-full" />
-              </div>
-            ) : filteredTasks.length > 0 ? (
-              <TaskList
-                tasks={filteredTasks}
-                onUpdate={updateTask}
-                onArchive={archiveTask}
-                onUnarchive={unarchiveTask}
-                onPushToNextDay={pushTaskToNextDay}
-                onEdit={openEditTaskDialog}
+          <Popover open={isDatePickerOpen} onOpenChange={setDatePickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  'w-full justify-start text-left font-normal sm:w-[280px]',
+                  !selectedDate && 'text-muted-foreground'
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? (
+                  format(selectedDate, 'PPP')
+                ) : (
+                  <span>Pick a date</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={date => {
+                  setSelectedDate(date);
+                  setDatePickerOpen(false);
+                }}
+                initialFocus
               />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <EmptyState
-                  onAddTask={openAddTaskDialog}
-                  title={`No tasks found`}
-                  message="Try adjusting your filters or create a new task to get started!"
-                  buttonText="Create Task"
-                />
-              </div>
-            )}
-          </div>
+            </PopoverContent>
+          </Popover>
+
+          {hasFilters && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setFilter('all');
+                setSelectedDate(undefined);
+              }}
+              className="w-full sm:w-auto"
+            >
+              <X className="mr-2 h-4 w-4" />
+              Clear Filters
+            </Button>
+          )}
+        </div>
+
+        {/* Task List Section */}
+        <div className="flex-1">
+          {!isLoaded ? (
+            <div className="space-y-4">
+              <Skeleton className="h-28 w-full" />
+              <Skeleton className="h-28 w-full" />
+              <Skeleton className="h-28 w-full" />
+            </div>
+          ) : filteredTasks.length > 0 ? (
+            <TaskList
+              tasks={filteredTasks}
+              onUpdate={updateTask}
+              onArchive={archiveTask}
+              onUnarchive={unarchiveTask}
+              onPushToNextDay={pushTaskToNextDay}
+              onEdit={openEditTaskDialog}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full pt-16">
+              <EmptyState
+                onAddTask={openAddTaskDialog}
+                title={
+                  hasFilters ? 'No Tasks Match Your Filters' : 'No Tasks Yet'
+                }
+                message={
+                  hasFilters
+                    ? 'Try adjusting or clearing your filters to see more tasks.'
+                    : 'Create a new task to get started on your study journey!'
+                }
+                buttonText="Create First Task"
+              />
+            </div>
+          )}
         </div>
       </main>
 
