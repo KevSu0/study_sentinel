@@ -27,22 +27,27 @@ const positivePsychologistFlow = ai.defineFlow(
     outputSchema: PositivePsychologistOutputSchema,
   },
   async (input: PositivePsychologistInput) => {
-    const {profile, dailySummary, history} = input;
-
-    // This robustly filters out any malformed messages and maps to the required
-    // Genkit format. This is a failsafe against corrupted history data.
-    let genkitHistory: MessageData[] = (history || [])
-      .filter(
-        msg =>
+    // HYPER-DEFENSIVE DATA SANITIZATION
+    const cleanHistory: MessageData[] = [];
+    if (input && Array.isArray(input.history)) {
+      for (const msg of input.history) {
+        // Explicitly check every property before using it.
+        if (
           msg &&
           typeof msg.role === 'string' &&
           typeof msg.content === 'string' &&
-          msg.content.trim() !== ''
-      )
-      .map(msg => ({
-        role: msg.role as 'user' | 'model',
-        parts: [{text: msg.content}],
-      }));
+          msg.content.trim() !== '' &&
+          (msg.role === 'user' || msg.role === 'model')
+        ) {
+          cleanHistory.push({
+            role: msg.role,
+            parts: [{text: msg.content}],
+          });
+        }
+      }
+    }
+
+    let genkitHistory = cleanHistory;
 
     // The Gemini API requires the history to start with a 'user' message.
     if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {
@@ -53,6 +58,9 @@ const positivePsychologistFlow = ai.defineFlow(
     if (genkitHistory.length === 0) {
       return {response: "I'm ready to listen. What's on your mind?"};
     }
+
+    // De-structure profile and dailySummary only after history is handled.
+    const {profile, dailySummary} = input;
 
     // Now that history is guaranteed to be clean, build the system prompt.
     const profileContext = profile

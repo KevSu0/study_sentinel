@@ -32,43 +32,43 @@ export function useChatHistory() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
+    // This effect runs only once on mount to load from localStorage.
+    setIsLoaded(false);
+    let loadedMessages: ChatMessage[] = [];
     try {
       const savedHistory = localStorage.getItem(CHAT_HISTORY_KEY);
       if (savedHistory) {
         const parsed = JSON.parse(savedHistory);
-        // Use filter with a type guard to create a guaranteed-clean history array.
         if (Array.isArray(parsed)) {
-          const cleanHistory = parsed.filter(isValidMessage);
-          setMessages(cleanHistory.length > 0 ? cleanHistory : [initialMessage]);
-        } else {
-          // If the stored value is not an array, reset to the initial state.
-          setMessages([initialMessage]);
+          // Use filter with the robust type guard to guarantee a clean history array.
+          loadedMessages = parsed.filter(isValidMessage);
         }
-      } else {
-        setMessages([initialMessage]);
       }
     } catch (error) {
       console.error('Failed to load or parse chat history, resetting.', error);
+      // If there's any error, we reset localStorage to a clean state.
       localStorage.removeItem(CHAT_HISTORY_KEY);
-      setMessages([initialMessage]);
-    } finally {
-      setIsLoaded(true);
     }
+
+    // Set the state with either the cleaned messages or the initial message.
+    setMessages(loadedMessages.length > 0 ? loadedMessages : [initialMessage]);
+    setIsLoaded(true);
   }, []);
 
   useEffect(() => {
+    // This effect runs whenever 'messages' changes, to save to localStorage.
     if (isLoaded) {
       try {
-        // Filter one last time before saving to ensure data integrity.
+        // Before saving, ensure the data is still clean. This is a final failsafe.
         const historyToSave = messages
           .filter(isValidMessage)
           .slice(-MAX_HISTORY_LENGTH);
-        
-        // Only save if there's something valid to save, otherwise reset to initial.
+
         if (historyToSave.length > 0) {
-           localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(historyToSave));
+          localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(historyToSave));
         } else {
-           localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify([initialMessage]));
+          // If history somehow becomes empty/invalid, reset to a safe initial state.
+          localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify([initialMessage]));
         }
       } catch (error) {
         console.error('Failed to save chat history', error);
@@ -77,9 +77,10 @@ export function useChatHistory() {
   }, [messages, isLoaded]);
 
   const addMessage = useCallback((message: ChatMessage) => {
+    // Validate the message before adding it to the state.
     if (!isValidMessage(message)) {
       console.error(
-        'Attempted to add invalid message. Operation aborted.',
+        'Attempted to add an invalid message to the chat history. Operation aborted.',
         message
       );
       return;
