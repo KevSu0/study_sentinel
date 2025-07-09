@@ -3,9 +3,9 @@ import './globals.css';
 import {Providers} from '@/components/providers';
 
 export const metadata: Metadata = {
-  title: "KuKe's Study guide",
+  title: "KuKe's Motivation",
   description:
-    'Your personal AI-powered study guide to track and conquer your studies.',
+    'Your personal AI-powered motivator to track and conquer your goals.',
 };
 
 export default function RootLayout({
