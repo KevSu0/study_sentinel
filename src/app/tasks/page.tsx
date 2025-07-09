@@ -1,5 +1,6 @@
 'use client';
-import React, {useState, useMemo, lazy, Suspense} from 'react';
+import React, {useState, useMemo} from 'react';
+import dynamic from 'next/dynamic';
 import {Button} from '@/components/ui/button';
 import {PlusCircle, X, Calendar as CalendarIcon} from 'lucide-react';
 import {useTasks} from '@/hooks/use-tasks';
@@ -13,10 +14,9 @@ import {format} from 'date-fns';
 import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
 import {cn} from '@/lib/utils';
 
-const TaskDialog = lazy(() =>
-  import('@/components/tasks/add-task-dialog').then(m => ({
-    default: m.TaskDialog,
-  }))
+const TaskDialog = dynamic(
+  () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),
+  {ssr: false}
 );
 
 type TaskFilter = 'all' | 'todo' | 'in_progress' | 'completed';
@@ -184,15 +184,13 @@ export default function AllTasksPage() {
         </div>
       </main>
 
-      <Suspense fallback={null}>
-        <TaskDialog
-          isOpen={isTaskFormOpen}
-          onOpenChange={open => !open && closeTaskFormDialog()}
-          onAddTask={addTask}
-          onUpdateTask={updateTask}
-          taskToEdit={editingTask}
-        />
-      </Suspense>
+      <TaskDialog
+        isOpen={isTaskFormOpen}
+        onOpenChange={open => !open && closeTaskFormDialog()}
+        onAddTask={addTask}
+        onUpdateTask={updateTask}
+        taskToEdit={editingTask}
+      />
     </div>
   );
 }

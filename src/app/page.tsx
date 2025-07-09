@@ -1,6 +1,7 @@
 'use client';
 
-import React, {useState, useMemo, lazy, Suspense} from 'react';
+import React, {useState, useMemo} from 'react';
+import dynamic from 'next/dynamic';
 import {format} from 'date-fns';
 import {Button} from '@/components/ui/button';
 import {PlusCircle, Star, Award as BadgeIcon, Lightbulb} from 'lucide-react';
@@ -14,10 +15,9 @@ import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {BadgeCard} from '@/components/badges/badge-card';
 import Link from 'next/link';
 
-const TaskDialog = lazy(() =>
-  import('@/components/tasks/add-task-dialog').then(m => ({
-    default: m.TaskDialog,
-  }))
+const TaskDialog = dynamic(
+  () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),
+  {ssr: false}
 );
 
 const motivationalQuotes = [
@@ -443,15 +443,13 @@ export default function DashboardPage() {
           </>
         )}
       </main>
-      <Suspense fallback={null}>
-        <TaskDialog
-          isOpen={isTaskFormOpen}
-          onOpenChange={open => !open && closeTaskFormDialog()}
-          onAddTask={addTask}
-          onUpdateTask={updateTask}
-          taskToEdit={editingTask}
-        />
-      </Suspense>
+      <TaskDialog
+        isOpen={isTaskFormOpen}
+        onOpenChange={open => !open && closeTaskFormDialog()}
+        onAddTask={addTask}
+        onUpdateTask={updateTask}
+        taskToEdit={editingTask}
+      />
     </div>
   );
 }
