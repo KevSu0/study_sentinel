@@ -4,7 +4,7 @@ import {Button} from '@/components/ui/button';
 import {PlusCircle} from 'lucide-react';
 import {useTasks} from '@/hooks/use-tasks';
 import {TaskList} from '@/components/tasks/task-list';
-import {AddTaskDialog} from '@/components/tasks/add-task-dialog';
+import {TaskDialog} from '@/components/tasks/add-task-dialog';
 import {EmptyState} from '@/components/tasks/empty-state';
 import {Skeleton} from '@/components/ui/skeleton';
 import {Tabs, TabsList, TabsTrigger, TabsContent} from '@/components/ui/tabs';
@@ -15,7 +15,25 @@ type TaskFilter = 'all' | 'todo' | 'in_progress' | 'completed';
 export default function AllTasksPage() {
   const {tasks, addTask, updateTask, deleteTask, isLoaded} = useTasks();
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
   const [filter, setFilter] = useState<TaskFilter>('all');
+
+  const isTaskFormOpen = isAddDialogOpen || !!editingTask;
+
+  const openAddTaskDialog = () => {
+    setEditingTask(null);
+    setAddDialogOpen(true);
+  };
+
+  const openEditTaskDialog = (task: StudyTask) => {
+    setAddDialogOpen(false);
+    setEditingTask(task);
+  };
+
+  const closeTaskFormDialog = () => {
+    setAddDialogOpen(false);
+    setEditingTask(null);
+  };
 
   const filteredTasks = useMemo(() => {
     if (filter === 'all') {
@@ -31,7 +49,7 @@ export default function AllTasksPage() {
           <h1 className="text-2xl font-bold text-primary">All Tasks</h1>
           <p className="text-muted-foreground">View and manage all your study tasks.</p>
         </div>
-        <Button onClick={() => setAddDialogOpen(true)} className="w-full sm:w-auto">
+        <Button onClick={openAddTaskDialog} className="w-full sm:w-auto">
           <PlusCircle className="mr-2" />
           Add New Task
         </Button>
@@ -58,12 +76,13 @@ export default function AllTasksPage() {
                         tasks={filteredTasks}
                         onUpdate={updateTask}
                         onDelete={deleteTask}
+                        onEdit={openEditTaskDialog}
                     />
                </TabsContent>
             ) : (
                 <div className="mt-8">
                     <EmptyState 
-                        onAddTask={() => setAddDialogOpen(true)}
+                        onAddTask={openAddTaskDialog}
                         title={`No ${filter !== 'all' ? filter.replace('_', ' ') : ''} tasks`}
                         message="Looks like this section is empty. Create a new task to get started!"
                         buttonText="Create Task"
@@ -73,10 +92,12 @@ export default function AllTasksPage() {
         </Tabs>
       </main>
 
-      <AddTaskDialog
-        isOpen={isAddDialogOpen}
-        onOpenChange={setAddDialogOpen}
+      <TaskDialog
+        isOpen={isTaskFormOpen}
+        onOpenChange={(open) => !open && closeTaskFormDialog()}
         onAddTask={addTask}
+        onUpdateTask={updateTask}
+        taskToEdit={editingTask}
       />
     </div>
   );

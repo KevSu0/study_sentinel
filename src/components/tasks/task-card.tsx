@@ -24,6 +24,7 @@ import {
   Award,
   Calendar,
   Flame,
+  Pencil,
 } from 'lucide-react';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
@@ -38,6 +39,7 @@ interface TaskCardProps {
   task: StudyTask;
   onUpdate: (task: StudyTask) => void;
   onDelete: (taskId: string) => void;
+  onEdit: (task: StudyTask) => void;
 }
 
 const priorityConfig: Record<
@@ -61,7 +63,7 @@ const priorityConfig: Record<
   },
 };
 
-export function TaskCard({task, onUpdate, onDelete}: TaskCardProps) {
+export function TaskCard({task, onUpdate, onDelete, onEdit}: TaskCardProps) {
   const [isAnalysisOpen, setAnalysisOpen] = useState(false);
   const {addPoints, subtractPoints} = useGamification();
   const {toast} = useToast();
@@ -186,6 +188,15 @@ export function TaskCard({task, onUpdate, onDelete}: TaskCardProps) {
             >
               <BrainCircuit className="mr-2 h-4 w-4" />
               Analyze <span className="hidden sm:inline">Progress</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onEdit(task)}
+              disabled={task.status === 'completed'}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
             </Button>
             <Badge variant="secondary" className="flex items-center gap-1.5">
               <Award className="h-3.5 w-3.5 text-amber-500" /> {task.points} pts

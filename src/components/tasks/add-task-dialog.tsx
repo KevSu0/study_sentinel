@@ -22,6 +22,7 @@ import {zodResolver} from '@hookform/resolvers/zod';
 import {z} from 'zod';
 import {format} from 'date-fns';
 import type {StudyTask, TaskPriority} from '@/lib/types';
+import {useEffect} from 'react';
 
 const taskSchema = z.object({
   title: z.string().min(3, 'Task title must be at least 3 characters.'),
@@ -34,20 +35,43 @@ const taskSchema = z.object({
 
 type TaskFormData = z.infer<typeof taskSchema>;
 
-interface AddTaskDialogProps {
+interface TaskDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onAddTask: (task: Omit<StudyTask, 'id' | 'status'>) => void;
+  onUpdateTask: (task: StudyTask) => void;
+  taskToEdit?: StudyTask | null;
 }
 
-const durationOptions = [
-  {value: 15, label: '15 minutes'},
-  {value: 30, label: '30 minutes'},
-  {value: 45, label: '45 minutes'},
-  {value: 60, label: '1 hour'},
-  {value: 90, label: '1.5 hours'},
-  {value: 120, label: '2 hours'},
-];
+const generateDurationOptions = () => {
+  const options: {value: number; label: string}[] = [];
+  const formatLabel = (minutes: number) => {
+    if (minutes < 60) return `${minutes} minutes`;
+    if (minutes % 60 === 0) {
+      const hours = minutes / 60;
+      return `${hours} hour${hours > 1 ? 's' : ''}`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours} hour${hours > 1 ? 's' : ''} ${mins} mins`;
+  };
+
+  // 5 to 120 mins (2h) every 5 mins
+  for (let i = 5; i <= 120; i += 5) {
+    options.push({value: i, label: formatLabel(i)});
+  }
+  // 2h 15m to 240 mins (4h) every 15 mins
+  for (let i = 135; i <= 240; i += 15) {
+    options.push({value: i, label: formatLabel(i)});
+  }
+  // 4h 30m to 480 mins (8h) every 30 mins
+  for (let i = 270; i <= 480; i += 30) {
+    options.push({value: i, label: formatLabel(i)});
+  }
+  return options;
+};
+
+const durationOptions = generateDurationOptions();
 
 const priorityOptions: {value: TaskPriority; label: string}[] = [
   {value: 'low', label: 'Low'},
@@ -67,14 +91,23 @@ const timeOptions = Array.from({length: 24 * 4}, (_, i) => {
 // Simple point system: 1 point per minute of study
 const calculatePoints = (duration: number) => duration;
 
-export function AddTaskDialog({
+export function TaskDialog({
   isOpen,
   onOpenChange,
   onAddTask,
-}: AddTaskDialogProps) {
+  onUpdateTask,
+  taskToEdit,
+}: TaskDialogProps) {
+  const isEditing = !!taskToEdit;
   const now = new Date();
   const roundedMinutes = Math.round(now.getMinutes() / 15) * 15;
-  const roundedDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), roundedMinutes);
+  const roundedDate = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    now.getHours(),
+    roundedMinutes
+  );
   const defaultTime = format(roundedDate, 'HH:mm');
 
   const {
@@ -90,22 +123,48 @@ export function AddTaskDialog({
       time: defaultTime,
       duration: 30,
       priority: 'medium',
+      title: '',
+      description: '',
     },
   });
 
+  useEffect(() => {
+    if (isOpen) {
+      if (isEditing && taskToEdit) {
+        reset({
+          title: taskToEdit.title,
+          description: taskToEdit.description || '',
+          date: taskToEdit.date,
+          time: taskToEdit.time,
+          duration: taskToEdit.duration,
+          priority: taskToEdit.priority,
+        });
+      } else {
+        reset({
+          date: format(new Date(), 'yyyy-MM-dd'),
+          time: defaultTime,
+          duration: 30,
+          priority: 'medium',
+          title: '',
+          description: '',
+        });
+      }
+    }
+  }, [isOpen, isEditing, taskToEdit, reset, defaultTime]);
+
   const onSubmit = (data: TaskFormData) => {
-    onAddTask({
-      ...data,
-      points: calculatePoints(data.duration),
-    });
-    reset({
-      date: format(new Date(), 'yyyy-MM-dd'),
-      time: defaultTime,
-      duration: 30,
-      title: '',
-      description: '',
-      priority: 'medium',
-    });
+    if (isEditing && taskToEdit) {
+      onUpdateTask({
+        ...taskToEdit,
+        ...data,
+        points: calculatePoints(data.duration),
+      });
+    } else {
+      onAddTask({
+        ...data,
+        points: calculatePoints(data.duration),
+      });
+    }
     onOpenChange(false);
   };
 
@@ -113,9 +172,13 @@ export function AddTaskDialog({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>Add a New Study Task</DialogTitle>
+          <DialogTitle>
+            {isEditing ? 'Edit Task' : 'Add a New Study Task'}
+          </DialogTitle>
           <DialogDescription>
-            Plan your study session. A well-planned task is halfway done.
+            {isEditing
+              ? 'Update the details for your study task.'
+              : 'Plan your study session. A well-planned task is halfway done.'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -258,7 +321,9 @@ export function AddTaskDialog({
             >
               Cancel
             </Button>
-            <Button type="submit">Add Task</Button>
+            <Button type="submit">
+              {isEditing ? 'Save Changes' : 'Add Task'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

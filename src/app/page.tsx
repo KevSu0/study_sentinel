@@ -6,19 +6,38 @@ import {Button} from '@/components/ui/button';
 import {PlusCircle, Award, BarChart, Trophy} from 'lucide-react';
 import {useTasks} from '@/hooks/use-tasks';
 import {TaskList} from '@/components/tasks/task-list';
-import {AddTaskDialog} from '@/components/tasks/add-task-dialog';
+import {TaskDialog} from '@/components/tasks/add-task-dialog';
 import {EmptyState} from '@/components/tasks/empty-state';
 import {useToast} from '@/hooks/use-toast';
 import {Skeleton} from '@/components/ui/skeleton';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Progress} from '@/components/ui/progress';
 import {useGamification} from '@/hooks/use-gamification';
+import { type StudyTask } from '@/lib/types';
 
 export default function DashboardPage() {
   const {tasks, addTask, updateTask, deleteTask, isLoaded} = useTasks();
   const { isLoaded: gamificationLoaded, score, level, levelProgress, pointsToNextLevel } = useGamification();
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
   const {toast} = useToast();
+  
+  const isTaskFormOpen = isAddDialogOpen || !!editingTask;
+
+  const openAddTaskDialog = () => {
+    setEditingTask(null);
+    setAddDialogOpen(true);
+  };
+  
+  const openEditTaskDialog = (task: StudyTask) => {
+    setAddDialogOpen(false);
+    setEditingTask(task);
+  };
+
+  const closeTaskFormDialog = () => {
+    setAddDialogOpen(false);
+    setEditingTask(null);
+  };
 
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
 
@@ -88,7 +107,7 @@ export default function DashboardPage() {
                     Your study command center.
                 </p>
             </div>
-            <Button onClick={() => setAddDialogOpen(true)} className="w-full sm:w-auto">
+            <Button onClick={openAddTaskDialog} className="w-full sm:w-auto">
                 <PlusCircle className="mr-2" />
                 Add New Task
             </Button>
@@ -145,6 +164,7 @@ export default function DashboardPage() {
                         tasks={overdueTasks}
                         onUpdate={updateTask}
                         onDelete={deleteTask}
+                        onEdit={openEditTaskDialog}
                     />
                 </section>
             )}
@@ -161,6 +181,7 @@ export default function DashboardPage() {
                     tasks={upcomingTasks}
                     onUpdate={updateTask}
                     onDelete={deleteTask}
+                    onEdit={openEditTaskDialog}
                 />
                 ) : (
                 <EmptyState onAddTask={() => setAddDialogOpen(true)} title="No Upcoming Tasks" message="Your schedule is clear. Plan your next study session to get ahead!"/>
@@ -169,10 +190,12 @@ export default function DashboardPage() {
         </div>
       </main>
 
-      <AddTaskDialog
-        isOpen={isAddDialogOpen}
-        onOpenChange={setAddDialogOpen}
+      <TaskDialog
+        isOpen={isTaskFormOpen}
+        onOpenChange={(open) => !open && closeTaskFormDialog()}
         onAddTask={addTask}
+        onUpdateTask={updateTask}
+        taskToEdit={editingTask}
       />
     </div>
   );

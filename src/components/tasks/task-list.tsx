@@ -5,9 +5,10 @@ interface TaskListProps {
   tasks: StudyTask[];
   onUpdate: (task: StudyTask) => void;
   onDelete: (taskId: string) => void;
+  onEdit: (task: StudyTask) => void;
 }
 
-export function TaskList({tasks, onUpdate, onDelete}: TaskListProps) {
+export function TaskList({tasks, onUpdate, onDelete, onEdit}: TaskListProps) {
   return (
     <div className="space-y-4">
       {tasks.map(task => (
@@ -16,6 +17,7 @@ export function TaskList({tasks, onUpdate, onDelete}: TaskListProps) {
           task={task}
           onUpdate={onUpdate}
           onDelete={onDelete}
+          onEdit={onEdit}
         />
       ))}
     </div>
