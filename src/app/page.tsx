@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useMemo} from 'react';
+import React, {useState, useMemo, lazy, Suspense} from 'react';
 import {format} from 'date-fns';
 import {Button} from '@/components/ui/button';
 import {PlusCircle, Star, Award as BadgeIcon, Lightbulb} from 'lucide-react';
@@ -13,6 +13,12 @@ import {useBadges} from '@/hooks/useBadges';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {BadgeCard} from '@/components/badges/badge-card';
 import Link from 'next/link';
+
+const TaskDialog = lazy(() =>
+  import('@/components/tasks/add-task-dialog').then(m => ({
+    default: m.TaskDialog,
+  }))
+);
 
 const motivationalQuotes = [
   {
@@ -62,6 +68,7 @@ const motivationalQuotes = [
 export default function DashboardPage() {
   const {
     tasks,
+    addTask,
     updateTask,
     archiveTask,
     unarchiveTask,
@@ -69,6 +76,18 @@ export default function DashboardPage() {
     isLoaded: tasksLoaded,
   } = useTasks();
   const {allBadges, earnedBadges, isLoaded: badgesLoaded} = useBadges();
+
+  const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
+
+  const isTaskFormOpen = !!editingTask;
+
+  const openEditTaskDialog = (task: StudyTask) => {
+    setEditingTask(task);
+  };
+
+  const closeTaskFormDialog = () => {
+    setEditingTask(null);
+  };
 
   const isLoaded = tasksLoaded && badgesLoaded;
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
@@ -89,7 +108,9 @@ export default function DashboardPage() {
     const completed = todays.filter(t => t.status === 'completed');
     const points = completed.reduce((sum, task) => sum + task.points, 0);
     const badges = allBadges.filter(
-      badge => earnedBadges.has(badge.id) && earnedBadges.get(badge.id) === todayStr
+      badge =>
+        earnedBadges.has(badge.id) &&
+        earnedBadges.get(badge.id) === todayStr
     );
 
     return {
@@ -211,7 +232,7 @@ export default function DashboardPage() {
                         onArchive={archiveTask}
                         onUnarchive={unarchiveTask}
                         onPushToNextDay={pushTaskToNextDay}
-                        onEdit={() => {}}
+                        onEdit={openEditTaskDialog}
                       />
                     </section>
                   )}
@@ -226,7 +247,7 @@ export default function DashboardPage() {
                         onArchive={archiveTask}
                         onUnarchive={unarchiveTask}
                         onPushToNextDay={pushTaskToNextDay}
-                        onEdit={() => {}}
+                        onEdit={openEditTaskDialog}
                       />
                     </section>
                   )}
@@ -251,6 +272,15 @@ export default function DashboardPage() {
           </>
         )}
       </main>
+      <Suspense fallback={null}>
+        <TaskDialog
+          isOpen={isTaskFormOpen}
+          onOpenChange={open => !open && closeTaskFormDialog()}
+          onAddTask={addTask}
+          onUpdateTask={updateTask}
+          taskToEdit={editingTask}
+        />
+      </Suspense>
     </div>
   );
 }

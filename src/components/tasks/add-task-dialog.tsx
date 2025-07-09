@@ -88,8 +88,16 @@ const timeOptions = Array.from({length: 24 * 4}, (_, i) => {
   )}`;
 });
 
-// Simple point system: 1 point per minute of study
-const calculatePoints = (duration: number) => duration;
+const priorityMultipliers: Record<TaskPriority, number> = {
+  low: 1,
+  medium: 1.5,
+  high: 2,
+};
+
+const calculatePoints = (duration: number, priority: TaskPriority) => {
+  const multiplier = priorityMultipliers[priority];
+  return Math.round(duration * multiplier);
+};
 
 export function TaskDialog({
   isOpen,
@@ -153,16 +161,17 @@ export function TaskDialog({
   }, [isOpen, isEditing, taskToEdit, reset, defaultTime]);
 
   const onSubmit = (data: TaskFormData) => {
+    const points = calculatePoints(data.duration, data.priority);
     if (isEditing && taskToEdit) {
       onUpdateTask({
         ...taskToEdit,
         ...data,
-        points: calculatePoints(data.duration),
+        points,
       });
     } else {
       onAddTask({
         ...data,
-        points: calculatePoints(data.duration),
+        points,
       });
     }
     onOpenChange(false);
