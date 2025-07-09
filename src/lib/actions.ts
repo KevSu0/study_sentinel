@@ -7,6 +7,7 @@ import {
 import {
   getChatbotResponse as getChatbotResponseFlow,
   type PositivePsychologistInput,
+  PositivePsychologistInputSchema,
 } from '@/ai/flows/positive-psychologist-flow';
 
 export async function getDailySummary(input: DailySummaryInput) {
@@ -24,7 +25,10 @@ export async function getDailySummary(input: DailySummaryInput) {
 
 export async function getChatbotResponse(input: PositivePsychologistInput) {
   try {
-    const result = await getChatbotResponseFlow(input);
+    // Perform strict, runtime validation at the server boundary.
+    // This prevents any malformed data from the client from crashing the flow.
+    const validatedInput = PositivePsychologistInputSchema.parse(input);
+    const result = await getChatbotResponseFlow(validatedInput);
     return result;
   } catch (error) {
     console.error('AI chat response failed:', error);

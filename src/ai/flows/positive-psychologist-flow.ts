@@ -11,7 +11,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import {MessageData} from 'genkit/ai';
 
-const PositivePsychologistInputSchema = z.object({
+export const PositivePsychologistInputSchema = z.object({
   profile: z.any().optional(),
   dailySummary: z.any().optional(),
   history: z.array(
@@ -102,6 +102,7 @@ ${summaryContext}
 `;
 
     // Convert the incoming history to the format Genkit expects.
+    // The data is pre-validated by the server action, so we can trust it here.
     const genkitHistory: MessageData[] = history.map(h => ({
       role: h.role,
       parts: [{text: h.content}],
@@ -111,6 +112,10 @@ ${summaryContext}
     // If our history starts with the model's greeting, remove it for the API call.
     if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {
       genkitHistory.shift();
+    }
+    
+    if (genkitHistory.length === 0) {
+      return { response: "I'm ready to listen. What's on your mind?" };
     }
 
     // Generate a response using the full conversation history.
