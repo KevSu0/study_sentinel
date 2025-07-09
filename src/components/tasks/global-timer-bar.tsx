@@ -5,7 +5,7 @@ import {useLogger} from '@/hooks/use-logger';
 import {useConfetti} from '@/components/providers/confetti-provider';
 import type {StudyTask} from '@/lib/types';
 import {Button} from '@/components/ui/button';
-import {Timer, CheckCircle, XCircle} from 'lucide-react';
+import {Timer, CheckCircle, XCircle, Pause, Play} from 'lucide-react';
 import {useToast} from '@/hooks/use-toast';
 import {StopTimerDialog} from './stop-timer-dialog';
 
@@ -48,6 +48,34 @@ export function GlobalTimerBar() {
       clearTimer();
     }
   }, [activeTask, updateTask, addLog, clearTimer, fire, toast]);
+
+  const handleTogglePause = useCallback(() => {
+    const savedTimerRaw = localStorage.getItem(TIMER_STORAGE_KEY);
+    if (!savedTimerRaw || !activeTask) return;
+
+    let savedTimer: StoredTimer = JSON.parse(savedTimerRaw);
+
+    if (savedTimer.isPaused) {
+      // Resuming
+      const newEndTime = Date.now() + savedTimer.pausedTime * 1000;
+      savedTimer = {...savedTimer, isPaused: false, endTime: newEndTime};
+      addLog('TIMER_START', {
+        taskId: activeTask.id,
+        taskTitle: activeTask.title,
+        resumed: true,
+      });
+    } else {
+      // Pausing
+      savedTimer = {...savedTimer, isPaused: true, pausedTime: timeRemaining};
+      addLog('TIMER_PAUSE', {
+        taskId: activeTask.id,
+        taskTitle: activeTask.title,
+      });
+    }
+
+    localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(savedTimer));
+    setIsPaused(savedTimer.isPaused);
+  }, [activeTask, addLog, timeRemaining]);
 
   const handleConfirmStop = (reason: string) => {
     if (activeTask) {
@@ -103,7 +131,9 @@ export function GlobalTimerBar() {
             if (savedTimer.isPaused) {
               setTimeRemaining(savedTimer.pausedTime);
             } else {
-              const remaining = Math.round((savedTimer.endTime - Date.now()) / 1000);
+              const remaining = Math.round(
+                (savedTimer.endTime - Date.now()) / 1000
+              );
               if (remaining >= 0) {
                 setTimeRemaining(remaining);
               } else {
@@ -114,8 +144,11 @@ export function GlobalTimerBar() {
             clearTimer();
           }
         } catch (error) {
-            console.error("Failed to parse timer data from localStorage", error);
-            clearTimer();
+          console.error(
+            'Failed to parse timer data from localStorage',
+            error
+          );
+          clearTimer();
         }
       } else if (activeTask) {
         setActiveTask(null);
@@ -141,16 +174,30 @@ export function GlobalTimerBar() {
             <Timer className="h-6 w-6 shrink-0" />
             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 overflow-hidden">
               <p className="font-semibold truncate">{activeTask.title}</p>
-              <p className="font-mono tracking-wider text-lg">
-                {isPaused ? (
-                  <span className="text-sm font-sans">(Paused)</span>
-                ) : (
-                  formatTime(timeRemaining)
+              <div className="flex items-baseline gap-2">
+                <p className="font-mono tracking-wider text-lg">
+                  {formatTime(timeRemaining)}
+                </p>
+                {isPaused && (
+                  <span className="text-xs font-sans uppercase">(Paused)</span>
                 )}
-              </p>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleTogglePause}
+              className="hover:bg-white/20"
+            >
+              {isPaused ? (
+                <Play className="mr-2 h-4 w-4" />
+              ) : (
+                <Pause className="mr-2 h-4 w-4" />
+              )}
+              <span>{isPaused ? 'Resume' : 'Pause'}</span>
+            </Button>
             <Button
               size="sm"
               variant="secondary"
