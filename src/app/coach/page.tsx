@@ -145,7 +145,7 @@ export default function CoachPage() {
         dailySummary: dailySummary || undefined,
       });
 
-      if (result && !('error' in result)) {
+      if (result && !('error' in result) && result.response) {
         const modelMessage: ChatMessage = {
           role: 'model',
           content: result.response,

@@ -110,11 +110,13 @@ ${summaryContext}
       conversation = conversation.slice(1);
     }
     
-    // Convert the entire prepared conversation to the format Genkit expects.
-    const genkitHistory: MessageData[] = conversation.map(h => ({
-      role: h.role,
-      parts: [{text: h.content}],
-    }));
+    // Filter out malformed messages and convert to the format Genkit expects.
+    const genkitHistory: MessageData[] = conversation
+      .filter(h => h && h.content)
+      .map(h => ({
+        role: h.role,
+        parts: [{text: h.content}],
+      }));
 
     // Generate a response using the full conversation history.
     // The model understands the last message in the history is the one to respond to.
