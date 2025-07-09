@@ -27,60 +27,60 @@ const positivePsychologistFlow = ai.defineFlow(
     outputSchema: PositivePsychologistOutputSchema,
   },
   async (input: PositivePsychologistInput) => {
-    // This try/catch block is a diagnostic tool. If the flow fails, it will
-    // re-throw an error that includes the exact history data that caused the
-    // problem, allowing for a precise fix.
-    try {
-      const {profile, dailySummary, history} = input;
+    const {profile, dailySummary, history} = input;
 
-      // Use a simple, imperative loop for maximum robustness against corrupted data.
-      const genkitHistory: MessageData[] = [];
-      if (Array.isArray(history)) {
-        for (const msg of history) {
-          if (
-            msg &&
-            typeof msg.role === 'string' &&
-            typeof msg.content === 'string' &&
-            msg.content.trim() !== ''
-          ) {
-            genkitHistory.push({
-              role: msg.role as 'user' | 'model',
-              parts: [{text: msg.content}],
-            });
-          }
+    // This is the definitive, failsafe implementation.
+    // It assumes the incoming history can be corrupted and cleans it defensively.
+    const genkitHistory: MessageData[] = (history || [])
+      .map(msg => {
+        // Explicitly check for a valid message structure.
+        if (
+          msg &&
+          typeof msg.role === 'string' &&
+          typeof msg.content === 'string' &&
+          msg.content.trim() !== ''
+        ) {
+          // If valid, return it in the format Genkit expects.
+          return {
+            role: msg.role as 'user' | 'model',
+            parts: [{text: msg.content}],
+          };
         }
-      }
+        // If invalid (null, undefined, malformed), return null.
+        return null;
+      })
+      .filter((msg): msg is MessageData => msg !== null); // Filter out all the nulls.
 
-      // The Gemini API requires the history to start with a 'user' message.
-      if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {
-        genkitHistory.shift();
-      }
+    // The Gemini API requires the history to start with a 'user' message.
+    if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {
+      genkitHistory.shift();
+    }
 
-      // If, after cleaning, the history is empty, there's no valid user message to respond to.
-      if (genkitHistory.length === 0) {
-        return {response: "I'm ready to listen. What's on your mind?"};
-      }
+    // If, after cleaning, the history is empty, there's no valid user message to respond to.
+    if (genkitHistory.length === 0) {
+      return {response: "I'm ready to listen. What's on your mind?"};
+    }
 
-      // Now that history is guaranteed to be clean, build the system prompt.
-      const profileContext = profile
-        ? `
+    // Now that history is guaranteed to be clean, build the system prompt.
+    const profileContext = profile
+      ? `
 **User Profile:**
 - Name: ${profile?.name || 'Not provided'}
 - Passion: ${profile?.passion || 'Not provided'}
 - Dream: ${profile?.dream || 'Not provided'}
 - Education: ${profile?.education || 'Not provided'}
 `
-        : '**User Profile:** Not provided.';
+      : '**User Profile:** Not provided.';
 
-      const summaryContext = dailySummary
-        ? `
+    const summaryContext = dailySummary
+      ? `
 **Latest Daily Briefing:**
 - Evaluation: ${dailySummary?.evaluation}
 - Motivation: ${dailySummary?.motivationalParagraph}
 `
-        : '**Latest Daily Briefing:** Not available.';
+      : '**Latest Daily Briefing:** Not available.';
 
-      const systemPrompt = `You are "KuKe's Motivation Coach," an empathetic and supportive AI companion grounded in the principles of positive psychology. Your core purpose is to empower the user on their academic journey. You are always ready to help, listen, and provide clear, structured guidance.
+    const systemPrompt = `You are "KuKe's Motivation Coach," an empathetic and supportive AI companion grounded in the principles of positive psychology. Your core purpose is to empower the user on their academic journey. You are always ready to help, listen, and provide clear, structured guidance.
 
 **Your Persona:**
 - **Empathetic & Encouraging:** Always start by acknowledging the user's feelings or situation. Be a source of unwavering support.
@@ -111,6 +111,8 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
+    // A final try/catch for actual API or network errors.
+    try {
       const response = await ai.generate({
         model: 'googleai/gemini-2.5-flash-lite-preview-06-17',
         history: genkitHistory,
@@ -119,15 +121,9 @@ ${summaryContext}
 
       return {response: response.text};
     } catch (e: any) {
-      let historySnapshot = 'Could not stringify history.';
-      try {
-        historySnapshot = JSON.stringify(input?.history, null, 2);
-      } catch (stringifyError) {
-        // Ignore if stringify itself fails
-      }
-      // Re-throw a more informative error for debugging.
+      console.error('Gemini API call failed:', e);
       throw new Error(
-        `Fatal error processing chat history. Original error: '${e.message}'. History snapshot: ${historySnapshot}`
+        `The AI model failed to respond. Please try again. Details: ${e.message}`
       );
     }
   }
