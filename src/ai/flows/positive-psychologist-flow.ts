@@ -27,35 +27,7 @@ const positivePsychologistFlow = ai.defineFlow(
     outputSchema: PositivePsychologistOutputSchema,
   },
   async (input: PositivePsychologistInput) => {
-    // 1. Defensively filter the history to remove any invalid messages.
-    const cleanHistory = (input.chatHistory || [])
-      .slice(-10)
-      .filter(
-        msg =>
-          msg &&
-          typeof msg.content === 'string' &&
-          msg.content.trim() !== '' &&
-          (msg.role === 'user' || msg.role === 'model')
-      );
-
-    // 2. The API requires the conversation to start with a user message.
-    const firstUserIndex = cleanHistory.findIndex(m => m.role === 'user');
-
-    // 3. If no user message exists, or the history is empty, return a default response.
-    if (firstUserIndex === -1) {
-      return {response: "I'm ready to listen. What's on your mind?"};
-    }
-    
-    // 4. Slice the history to ensure it starts with a user message.
-    const validTurnHistory = cleanHistory.slice(firstUserIndex);
-
-    // 5. Map the guaranteed-safe history to the format required by the API.
-    const history: MessageData[] = validTurnHistory.map(msg => ({
-      role: msg.role,
-      parts: [{text: msg.content}],
-    }));
-
-    // Use dummy objects to prevent any potential errors from null/undefined context.
+    // 1. Use dummy objects to prevent any potential errors from null/undefined context.
     const safeProfile = input.profile || {
       name: 'User',
       passion: 'learning and growing',
@@ -68,6 +40,7 @@ const positivePsychologistFlow = ai.defineFlow(
         'Every day is a new opportunity to make progress. Focus on your goals for today!',
     };
 
+    // 2. Build the system prompt with guaranteed-safe data.
     const profileContext = `
 **User Profile:**
 - Name: ${safeProfile.name || 'Not provided'}
@@ -113,10 +86,46 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
+    // 3. Meticulously clean and prepare the conversation history.
+    const historyForApi: MessageData[] = [];
+    const sourceHistory = (input.chatHistory || []).slice(-10);
+
+    let canStartAdding = false;
+    for (const msg of sourceHistory) {
+      // Check if the message is valid
+      if (
+        msg &&
+        (msg.role === 'user' || msg.role === 'model') &&
+        typeof msg.content === 'string' &&
+        msg.content.trim() !== ''
+      ) {
+        // The conversation must start with a user message.
+        // We set a flag once we see the first one.
+        if (msg.role === 'user' && !canStartAdding) {
+          canStartAdding = true;
+        }
+
+        // Only add messages to our final history if we've seen the first user message.
+        if (canStartAdding) {
+          historyForApi.push({
+            role: msg.role,
+            parts: [{text: msg.content}],
+          });
+        }
+      }
+    }
+
+    // 4. If our final history is empty, it means no valid user message was found.
+    // In this case, we cannot call the API. Return a default response instead.
+    if (historyForApi.length === 0) {
+      return {response: "I'm ready to listen. What's on your mind?"};
+    }
+
+    // 5. Call the AI with the guaranteed-safe history and prompt.
     try {
       const response = await ai.generate({
         model: 'googleai/gemini-1.5-flash-latest',
-        history: history,
+        history: historyForApi,
         system: systemPrompt,
       });
 
