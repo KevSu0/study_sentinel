@@ -1,18 +1,19 @@
 
 "use client";
 
-import React, {useState, useMemo, useEffect} from 'react';
+import React, {useState, useMemo, useEffect, lazy, Suspense} from 'react';
 import {format} from 'date-fns';
 import {Button} from '@/components/ui/button';
 import {PlusCircle} from 'lucide-react';
 import {useTasks} from '@/hooks/use-tasks';
 import {TaskList} from '@/components/tasks/task-list';
-import {TaskDialog} from '@/components/tasks/add-task-dialog';
 import {EmptyState} from '@/components/tasks/empty-state';
 import {useToast} from '@/hooks/use-toast';
 import {Skeleton} from '@/components/ui/skeleton';
 import { type StudyTask } from '@/lib/types';
 import { useBadges } from '@/hooks/useBadges';
+
+const TaskDialog = lazy(() => import('@/components/tasks/add-task-dialog').then(m => ({ default: m.TaskDialog })));
 
 export default function DashboardPage() {
   const {tasks, addTask, updateTask, deleteTask, isLoaded} = useTasks();
@@ -172,13 +173,15 @@ export default function DashboardPage() {
         )}
       </main>
 
-      <TaskDialog
-        isOpen={isTaskFormOpen}
-        onOpenChange={(open) => !open && closeTaskFormDialog()}
-        onAddTask={addTask}
-        onUpdateTask={updateTask}
-        taskToEdit={editingTask}
-      />
+      <Suspense fallback={null}>
+        <TaskDialog
+          isOpen={isTaskFormOpen}
+          onOpenChange={(open) => !open && closeTaskFormDialog()}
+          onAddTask={addTask}
+          onUpdateTask={updateTask}
+          taskToEdit={editingTask}
+        />
+      </Suspense>
     </div>
   );
 }

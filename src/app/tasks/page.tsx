@@ -1,14 +1,15 @@
 'use client';
-import React, {useState, useMemo} from 'react';
+import React, {useState, useMemo, lazy, Suspense} from 'react';
 import {Button} from '@/components/ui/button';
 import {PlusCircle} from 'lucide-react';
 import {useTasks} from '@/hooks/use-tasks';
 import {TaskList} from '@/components/tasks/task-list';
-import {TaskDialog} from '@/components/tasks/add-task-dialog';
 import {EmptyState} from '@/components/tasks/empty-state';
 import {Skeleton} from '@/components/ui/skeleton';
 import {Tabs, TabsList, TabsTrigger, TabsContent} from '@/components/ui/tabs';
 import type {StudyTask} from '@/lib/types';
+
+const TaskDialog = lazy(() => import('@/components/tasks/add-task-dialog').then(m => ({ default: m.TaskDialog })));
 
 type TaskFilter = 'all' | 'todo' | 'in_progress' | 'completed';
 
@@ -92,13 +93,15 @@ export default function AllTasksPage() {
         </Tabs>
       </main>
 
-      <TaskDialog
-        isOpen={isTaskFormOpen}
-        onOpenChange={(open) => !open && closeTaskFormDialog()}
-        onAddTask={addTask}
-        onUpdateTask={updateTask}
-        taskToEdit={editingTask}
-      />
+      <Suspense fallback={null}>
+        <TaskDialog
+          isOpen={isTaskFormOpen}
+          onOpenChange={(open) => !open && closeTaskFormDialog()}
+          onAddTask={addTask}
+          onUpdateTask={updateTask}
+          taskToEdit={editingTask}
+        />
+      </Suspense>
     </div>
   );
 }

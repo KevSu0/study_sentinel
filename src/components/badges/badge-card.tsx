@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {memo} from 'react';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {cn} from '@/lib/utils';
 import type {Badge} from '@/lib/types';
@@ -9,7 +9,7 @@ interface BadgeCardProps {
   isEarned: boolean;
 }
 
-export function BadgeCard({badge, isEarned}: BadgeCardProps) {
+export const BadgeCard = memo(function BadgeCard({badge, isEarned}: BadgeCardProps) {
   const {Icon} = badge;
   return (
     <Card
@@ -60,4 +60,4 @@ export function BadgeCard({badge, isEarned}: BadgeCardProps) {
       </CardContent>
     </Card>
   );
-}
+});

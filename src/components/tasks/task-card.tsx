@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import React, {useState, lazy, Suspense, memo} from 'react';
 import {
   Card,
   CardContent,
@@ -28,11 +28,14 @@ import {
 } from 'lucide-react';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
-import {AnalysisDialog} from './analysis-dialog';
 import {cn} from '@/lib/utils';
 import {useToast} from '@/hooks/use-toast';
 import type {StudyTask, TaskStatus, TaskPriority} from '@/lib/types';
 import {format, parseISO} from 'date-fns';
+
+const AnalysisDialog = lazy(() =>
+  import('./analysis-dialog').then(module => ({default: module.AnalysisDialog}))
+);
 
 interface TaskCardProps {
   task: StudyTask;
@@ -62,7 +65,7 @@ const priorityConfig: Record<
   },
 };
 
-export function TaskCard({task, onUpdate, onDelete, onEdit}: TaskCardProps) {
+export const TaskCard = memo(function TaskCard({task, onUpdate, onDelete, onEdit}: TaskCardProps) {
   const [isAnalysisOpen, setAnalysisOpen] = useState(false);
   const {toast} = useToast();
 
@@ -214,13 +217,15 @@ export function TaskCard({task, onUpdate, onDelete, onEdit}: TaskCardProps) {
         </CardFooter>
       </Card>
       {isAnalysisOpen && (
-        <AnalysisDialog
-          task={task}
-          isOpen={isAnalysisOpen}
-          onOpenChange={setAnalysisOpen}
-          onAnalysisComplete={handleAnalysisComplete}
-        />
+        <Suspense fallback={null}>
+          <AnalysisDialog
+            task={task}
+            isOpen={isAnalysisOpen}
+            onOpenChange={setAnalysisOpen}
+            onAnalysisComplete={handleAnalysisComplete}
+          />
+        </Suspense>
       )}
     </>
   );
-}
+});

@@ -170,7 +170,7 @@ export function TaskDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-[480px] md:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? 'Edit Task' : 'Add a New Study Task'}
