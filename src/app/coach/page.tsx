@@ -15,11 +15,7 @@ import {format} from 'date-fns';
 import {Card, CardContent, CardFooter} from '@/components/ui/card';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-
-type ChatMessage = {
-  role: 'user' | 'model';
-  content: string;
-};
+import {useChatHistory, type ChatMessage} from '@/hooks/use-chat-history';
 
 type DailySummary = {
   evaluation: string;
@@ -81,13 +77,11 @@ function ChatBubble({role, content}: ChatMessage) {
 }
 
 export default function CoachPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: 'model',
-      content:
-        "Hello! I'm your personal motivation coach. How can I help you on your journey today?",
-    },
-  ]);
+  const {
+    messages,
+    addMessage,
+    isLoaded: historyLoaded,
+  } = useChatHistory();
   const [inputValue, setInputValue] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isContextLoading, setIsContextLoading] = useState(true);
@@ -140,16 +134,16 @@ export default function CoachPage() {
     if (!inputValue.trim() || isChatLoading || isContextLoading) return;
 
     const userMessage: ChatMessage = {role: 'user', content: inputValue};
-    setMessages(prev => [...prev, userMessage]);
+    addMessage(userMessage);
+    const currentInputValue = inputValue;
     setInputValue('');
     setIsChatLoading(true);
 
-    // Send the last 10 messages from the history for context, excluding the initial welcome message.
-    const history = messages.slice(1).slice(-10);
+    const historyForAI = messages.slice(-10);
 
     const result = await getChatbotResponse({
-      message: inputValue,
-      history,
+      message: currentInputValue,
+      history: historyForAI,
       profile,
       dailySummary: dailySummary || undefined,
     });
@@ -159,16 +153,18 @@ export default function CoachPage() {
         role: 'model',
         content: result.response,
       };
-      setMessages(prev => [...prev, modelMessage]);
+      addMessage(modelMessage);
     } else {
       const errorMessage: ChatMessage = {
         role: 'model',
         content: "Sorry, I couldn't get a response. Please try again.",
       };
-      setMessages(prev => [...prev, errorMessage]);
+      addMessage(errorMessage);
     }
     setIsChatLoading(false);
   };
+
+  const allLoaded = historyLoaded && !isContextLoading;
 
   return (
     <div className="flex flex-col h-full">
@@ -185,9 +181,16 @@ export default function CoachPage() {
           <CardContent className="flex-1 p-0">
             <ScrollArea className="h-full p-4">
               <div className="space-y-6">
-                {messages.map((msg, index) => (
-                  <ChatBubble key={index} {...msg} />
-                ))}
+                {!historyLoaded ? (
+                  <div className="space-y-6">
+                    <Skeleton className="h-16 w-3/4" />
+                    <Skeleton className="h-16 w-3/4 ml-auto" />
+                  </div>
+                ) : (
+                  messages.map((msg, index) => (
+                    <ChatBubble key={index} {...msg} />
+                  ))
+                )}
                 {isChatLoading && (
                   <div className="flex items-start gap-3">
                     <Avatar className="h-8 w-8">
@@ -210,13 +213,13 @@ export default function CoachPage() {
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
                 placeholder={
-                  isContextLoading
+                  !allLoaded
                     ? 'Coach is preparing...'
                     : 'Ask for advice or motivation...'
                 }
-                disabled={isChatLoading || isContextLoading}
+                disabled={isChatLoading || !allLoaded}
               />
-              <Button type="submit" disabled={isChatLoading || isContextLoading}>
+              <Button type="submit" disabled={isChatLoading || !allLoaded}>
                 <Send className="h-4 w-4" />
                 <span className="sr-only">Send</span>
               </Button>
