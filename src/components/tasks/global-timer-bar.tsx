@@ -6,7 +6,7 @@ import {useLogger} from '@/hooks/use-logger';
 import {useConfetti} from '@/components/providers/confetti-provider';
 import type {StudyTask, Routine} from '@/lib/types';
 import {Button} from '@/components/ui/button';
-import {Timer, CheckCircle, XCircle, Pause, Play, Stopwatch} from 'lucide-react';
+import {Timer, CheckCircle, XCircle, Pause, Play} from 'lucide-react';
 import {useToast} from '@/hooks/use-toast';
 import {StopTimerDialog} from './stop-timer-dialog';
 
@@ -258,7 +258,7 @@ export function GlobalTimerBar() {
       <div className="sticky top-[65px] md:top-0 z-20 w-full bg-accent/95 text-accent-foreground backdrop-blur-sm shadow-lg animate-in fade-in-0 slide-in-from-top-full">
         <div className="container mx-auto flex items-center justify-between gap-4 p-2">
           <div className="flex items-center gap-3 overflow-hidden">
-            <Stopwatch className="h-6 w-6 shrink-0" />
+            <Timer className="h-6 w-6 shrink-0" />
             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 overflow-hidden">
               <p className="font-semibold text-base truncate">{activeRoutine.title}</p>
               <div className="flex items-baseline gap-2">

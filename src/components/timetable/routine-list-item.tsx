@@ -1,7 +1,7 @@
 import React, { memo, useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MoreVertical, PlayCircle, Pencil, Trash2, Clock, Stopwatch } from 'lucide-react';
+import { MoreVertical, PlayCircle, Pencil, Trash2, Clock, Timer } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Routine } from '@/lib/types';
@@ -136,7 +136,7 @@ export const RoutineListItem = memo(function RoutineListItem({ routine, onEdit, 
         <Button onClick={handleStartTimer} disabled={isAnyTimerActive} className="w-full">
           {isTimerActiveForThis ? (
             <>
-                <Stopwatch className="mr-2 animate-pulse text-green-400" />
+                <Timer className="mr-2 animate-pulse text-green-400" />
                 Timer Active
             </>
           ) : (
