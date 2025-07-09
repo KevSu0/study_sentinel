@@ -17,6 +17,9 @@ import {MessageData} from 'genkit/ai';
 export async function getChatbotResponse(
   input: PositivePsychologistInput
 ): Promise<PositivePsychologistOutput> {
+  // Add this line to see exactly what the server is receiving
+  console.log('Received input:', JSON.stringify(input, null, 2));
+
   return positivePsychologistFlow(input);
 }
 
@@ -115,9 +118,12 @@ ${summaryContext}
       }
     }
 
+    console.log('History after cleaning:', JSON.stringify(historyForApi, null, 2));
+
     // 4. If our final history is empty, it means no valid user message was found.
     // In this case, we cannot call the API. Return a default response instead.
     if (historyForApi.length === 0) {
+      console.log('History is empty after filtering! Returning default response.');
       return {response: "I'm ready to listen. What's on your mind?"};
     }
 
