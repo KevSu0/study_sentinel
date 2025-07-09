@@ -78,21 +78,26 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    // FINAL, BULLETPROOF VALIDATION:
-    // This functional approach guarantees a clean history array by filtering out any
-    // null, undefined, or malformed message objects before mapping to the final format.
+    // NEW, BULLETPROOF VALIDATION LOGIC:
+    // This pattern first attempts to map each message to the required format.
+    // If a message is invalid, it maps to `null`.
+    // Then, it filters out all `null` entries, leaving a guaranteed clean array.
     const genkitHistory: MessageData[] = (Array.isArray(history) ? history : [])
-      .filter(
-        (message): message is {role: 'user' | 'model'; content: string} =>
+      .map(message => {
+        if (
           message &&
           typeof message.role === 'string' &&
           (message.role === 'user' || message.role === 'model') &&
           typeof message.content === 'string'
-      )
-      .map(message => ({
-        role: message.role,
-        parts: [{text: message.content}],
-      }));
+        ) {
+          return {
+            role: message.role,
+            parts: [{text: message.content}],
+          };
+        }
+        return null; // Return null for any invalid or malformed message
+      })
+      .filter((item): item is MessageData => item !== null); // Filter out all the nulls
 
     // The Gemini API requires the history to start with a 'user' message.
     if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {
