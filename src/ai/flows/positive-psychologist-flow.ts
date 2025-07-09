@@ -47,12 +47,10 @@ const positivePsychologistFlow = ai.defineFlow(
   async input => {
     const {profile, dailySummary, history} = input;
 
-    // Handle empty history case
     if (!history || history.length === 0) {
       return {response: 'Hello! How can I help you today?'};
     }
 
-    // Construct the system prompt with context
     const profileContext = profile
       ? `
 **User Profile:**
@@ -102,14 +100,21 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    const genkitHistory: MessageData[] = history.map(h => ({
+    const lastMessage = history[history.length - 1];
+    const conversationHistory = history.slice(0, -1);
+
+    if (lastMessage.role !== 'user') {
+      return {response: "I'm waiting for your response. How can I help?"};
+    }
+
+    const genkitHistory: MessageData[] = conversationHistory.map(h => ({
       role: h.role,
       parts: [{text: h.content}],
     }));
 
-    // Using ai.generate for chat history support
     const response = await ai.generate({
       model: 'googleai/gemini-2.0-flash',
+      prompt: lastMessage.content,
       history: genkitHistory,
       system: systemPrompt,
     });
