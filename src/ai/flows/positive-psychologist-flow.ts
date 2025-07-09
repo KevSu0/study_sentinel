@@ -27,35 +27,27 @@ const positivePsychologistFlow = ai.defineFlow(
     outputSchema: PositivePsychologistOutputSchema,
   },
   async (input: PositivePsychologistInput) => {
-    // HYPER-DEFENSIVE DATA SANITIZATION
-    const cleanHistory: MessageData[] = [];
-    if (input && Array.isArray(input.history)) {
-      for (const msg of input.history) {
-        // Explicitly check every property before using it.
-        if (
-          msg &&
-          typeof msg.role === 'string' &&
-          typeof msg.content === 'string' &&
-          msg.content.trim() !== '' &&
-          (msg.role === 'user' || msg.role === 'model')
-        ) {
-          cleanHistory.push({
-            role: msg.role,
-            parts: [{text: msg.content}],
-          });
-        }
-      }
-    }
+    // Step 1: Filter the incoming history to remove any malformed messages.
+    const validHistory = (input?.history || []).filter(
+      msg =>
+        msg &&
+        typeof msg.role === 'string' &&
+        typeof msg.content === 'string' &&
+        msg.content.trim() !== ''
+    );
 
-    let genkitHistory = cleanHistory;
+    // Step 2: Convert the clean history to the format Genkit requires.
+    let genkitHistory: MessageData[] = validHistory.map(msg => ({
+      role: msg.role as 'user' | 'model',
+      parts: [{text: msg.content}],
+    }));
 
-    // The Gemini API requires the history to start with a 'user' message.
+    // Step 3: The Gemini API requires the history to start with a 'user' message.
     if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {
       genkitHistory = genkitHistory.slice(1);
     }
 
-    // If, after cleaning, the history is empty, there's no valid user message to respond to.
-    // This prevents sending an empty history to the API, which would cause an error.
+    // Step 4: If, after cleaning, the history is empty, return a default response.
     if (genkitHistory.length === 0) {
       return {response: "I'm ready to listen. What's on your mind?"};
     }
