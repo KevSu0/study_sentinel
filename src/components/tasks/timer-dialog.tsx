@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import {Button} from '@/components/ui/button';
-import {Pause, Play, CheckCircle, XCircle} from 'lucide-react';
+import {Pause, Play, CheckCircle, XCircle, RefreshCw} from 'lucide-react';
 import type {StudyTask} from '@/lib/types';
 import {cn} from '@/lib/utils';
 import {useConfetti} from '@/components/providers/confetti-provider';
@@ -21,6 +21,36 @@ interface TimerDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   onComplete: () => void;
 }
+
+const TIMER_STORAGE_KEY = 'studySentinelActiveTimer';
+
+type StoredTimer = {
+  taskId: string;
+  endTime: number;
+  isPaused: boolean;
+  pausedTime: number; // The remaining time in seconds when it was paused
+};
+
+const requestNotificationPermission = async () => {
+  if (!('Notification' in window)) {
+    console.log('This browser does not support desktop notification');
+    return false;
+  }
+  const permission = await Notification.requestPermission();
+  return permission === 'granted';
+};
+
+const sendTimerEndNotification = (task: StudyTask) => {
+  if (Notification.permission === 'granted') {
+    const notification = new Notification(`Time's up for "${task.title}"!`, {
+      body: 'Great focus! Did you complete the task? Click here to update your progress.',
+      tag: 'study-timer-end', // Prevents multiple notifications
+    });
+    notification.onclick = () => {
+      window.focus();
+    };
+  }
+};
 
 export function TimerDialog({
   task,
@@ -33,9 +63,9 @@ export function TimerDialog({
   const [isFinished, setIsFinished] = useState(false);
   const {fire} = useConfetti();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Only create audio element on client side
     if (typeof window !== 'undefined') {
       audioRef.current = new Audio(
         'https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg'
@@ -44,44 +74,114 @@ export function TimerDialog({
     }
   }, []);
 
+  const clearTimer = useCallback(() => {
+    localStorage.removeItem(TIMER_STORAGE_KEY);
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  const handleFinish = useCallback(() => {
+    setIsFinished(true);
+    fire();
+    audioRef.current?.play().catch(e => console.error('Error playing sound:', e));
+    sendTimerEndNotification(task);
+    clearTimer();
+  }, [fire, task, clearTimer]);
+
+  const startTimerInterval = useCallback(
+    (endTime: number) => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+
+      intervalRef.current = setInterval(() => {
+        const remaining = Math.round((endTime - Date.now()) / 1000);
+        if (remaining > 0) {
+          setTimeRemaining(remaining);
+        } else {
+          setTimeRemaining(0);
+          handleFinish();
+        }
+      }, 1000);
+    },
+    [handleFinish]
+  );
+
   useEffect(() => {
     if (isOpen) {
-      // Reset timer when dialog opens
-      setTimeRemaining(task.duration * 60);
-      setIsPaused(true);
-      setIsFinished(false);
-    }
-  }, [isOpen, task.duration]);
-
-  useEffect(() => {
-    if (isPaused || !isOpen || isFinished) {
-      return;
-    }
-
-    const timerId = setInterval(() => {
-      setTimeRemaining(prevTime => {
-        if (prevTime <= 1) {
-          clearInterval(timerId);
-          setIsFinished(true);
-          fire();
-          audioRef.current?.play().catch(e => console.error("Error playing sound:", e));
-          return 0;
+      const savedTimerRaw = localStorage.getItem(TIMER_STORAGE_KEY);
+      if (savedTimerRaw) {
+        const savedTimer: StoredTimer = JSON.parse(savedTimerRaw);
+        if (savedTimer.taskId === task.id) {
+          setIsPaused(savedTimer.isPaused);
+          if (savedTimer.isPaused) {
+            setTimeRemaining(savedTimer.pausedTime);
+          } else {
+            startTimerInterval(savedTimer.endTime);
+          }
         }
-        return prevTime - 1;
-      });
-    }, 1000);
+      } else {
+        setTimeRemaining(task.duration * 60);
+        setIsPaused(true);
+        setIsFinished(false);
+      }
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [isOpen, task.id, startTimerInterval]);
 
-    return () => clearInterval(timerId);
-  }, [isPaused, isOpen, isFinished, fire]);
+  const handleStartPause = async () => {
+    if (isPaused) {
+      // Starting or Resuming
+      const permissionGranted = await requestNotificationPermission();
+      if (!permissionGranted && Notification.permission !== 'granted') {
+          alert("Please enable notifications to be alerted when the timer ends.");
+      }
 
-  const handleComplete = () => {
+      const endTime = Date.now() + timeRemaining * 1000;
+      const timerData: StoredTimer = {
+        taskId: task.id,
+        endTime,
+        isPaused: false,
+        pausedTime: timeRemaining,
+      };
+      localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(timerData));
+      setIsPaused(false);
+      startTimerInterval(endTime);
+    } else {
+      // Pausing
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      const timerData: StoredTimer = {
+        taskId: task.id,
+        endTime: 0, // Not relevant when paused
+        isPaused: true,
+        pausedTime: timeRemaining,
+      };
+      localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(timerData));
+      setIsPaused(true);
+    }
+  };
+
+  const handleMarkComplete = () => {
+    clearTimer();
     onComplete();
     onOpenChange(false);
   };
 
   const handleStop = () => {
+    clearTimer();
     onOpenChange(false);
   };
+  
+  const handleReset = () => {
+    clearTimer();
+    setTimeRemaining(task.duration * 60);
+    setIsPaused(true);
+    setIsFinished(false);
+  }
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -109,14 +209,14 @@ export function TimerDialog({
           </div>
           {isFinished && (
             <p className="mt-4 text-lg font-semibold text-accent animate-pulse">
-              Session Complete!
+              Session Complete! Great work!
             </p>
           )}
         </div>
-        <DialogFooter className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <DialogFooter className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {!isFinished ? (
             <>
-              <Button size="lg" onClick={() => setIsPaused(!isPaused)}>
+              <Button size="lg" onClick={handleStartPause} className="w-full">
                 {isPaused ? (
                   <Play className="mr-2" />
                 ) : (
@@ -124,25 +224,22 @@ export function TimerDialog({
                 )}
                 {isPaused ? 'Start' : 'Pause'}
               </Button>
-              <Button size="lg" variant="outline" onClick={handleStop}>
+               <Button size="lg" variant="outline" onClick={handleStop} className="w-full">
                 <XCircle className="mr-2" />
                 Stop
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={handleComplete}
-                className="border-accent text-accent hover:bg-accent/10 hover:text-accent"
-              >
-                <CheckCircle className="mr-2" />
-                Complete
-              </Button>
             </>
           ) : (
-            <Button size="lg" onClick={handleComplete} className="sm:col-span-3">
-              <CheckCircle className="mr-2" />
-              Mark Task as Completed
-            </Button>
+            <>
+               <Button size="lg" onClick={handleMarkComplete} className="w-full">
+                <CheckCircle className="mr-2" />
+                Mark as Completed
+              </Button>
+              <Button size="lg" variant="outline" onClick={handleReset} className="w-full">
+                 <RefreshCw className="mr-2"/>
+                 Start Again
+              </Button>
+            </>
           )}
         </DialogFooter>
       </DialogContent>

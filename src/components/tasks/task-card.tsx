@@ -1,4 +1,4 @@
-import React, {useState, lazy, Suspense, memo} from 'react';
+import React, {useState, lazy, Suspense, memo, useEffect} from 'react';
 import {
   Card,
   CardContent,
@@ -81,6 +81,8 @@ const priorityConfig: Record<
   },
 };
 
+const TIMER_STORAGE_KEY = 'studySentinelActiveTimer';
+
 export const TaskCard = memo(function TaskCard({
   task,
   onUpdate,
@@ -91,7 +93,29 @@ export const TaskCard = memo(function TaskCard({
 }: TaskCardProps) {
   const [isAnalysisDialogOpen, setAnalysisDialogOpen] = useState(false);
   const [isTimerOpen, setTimerOpen] = useState(false);
+  const [isTimerActive, setIsTimerActive] = useState(false);
   const {toast} = useToast();
+
+  useEffect(() => {
+    const checkTimerStatus = () => {
+      const savedTimerRaw = localStorage.getItem(TIMER_STORAGE_KEY);
+      if (savedTimerRaw) {
+        const savedTimer = JSON.parse(savedTimerRaw);
+        setIsTimerActive(savedTimer.taskId === task.id);
+      } else {
+        setIsTimerActive(false);
+      }
+    };
+
+    checkTimerStatus();
+    const interval = setInterval(checkTimerStatus, 2000); // Check periodically
+    window.addEventListener('storage', checkTimerStatus); // Listen for changes in other tabs
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', checkTimerStatus);
+    };
+  }, [task.id]);
 
   const handleStatusChange = (newStatus: TaskStatus) => {
     const oldStatus = task.status;
@@ -277,8 +301,14 @@ export const TaskCard = memo(function TaskCard({
               onClick={() => setTimerOpen(true)}
               disabled={task.status === 'completed'}
             >
+              {isTimerActive && (
+                <span className="relative flex h-3 w-3 mr-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-accent"></span>
+                </span>
+              )}
               <TimerIcon className="mr-2 h-4 w-4" />
-              Start Timer
+              {isTimerActive ? 'View Timer' : 'Start Timer'}
             </Button>
             <Button
               variant="outline"
