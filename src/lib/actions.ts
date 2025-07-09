@@ -5,10 +5,7 @@ import {
   type DailySummaryInput,
 } from '@/ai/flows/generate-daily-summary';
 import {getChatbotResponse as getChatbotResponseFlow} from '@/ai/flows/positive-psychologist-flow';
-import {
-  type PositivePsychologistInput,
-  PositivePsychologistInputSchema,
-} from '@/lib/types';
+import {type PositivePsychologistInput} from '@/lib/types';
 
 export async function getDailySummary(input: DailySummaryInput) {
   try {
@@ -25,14 +22,14 @@ export async function getDailySummary(input: DailySummaryInput) {
 
 export async function getChatbotResponse(input: PositivePsychologistInput) {
   try {
-    // Perform strict, runtime validation at the server boundary.
-    // This prevents any malformed data from the client from crashing the flow.
-    const validatedInput = PositivePsychologistInputSchema.parse(input);
-    const result = await getChatbotResponseFlow(validatedInput);
+    // The validation is now handled by the flow itself.
+    // We just pass the input directly.
+    const result = await getChatbotResponseFlow(input);
     return result;
   } catch (error) {
     console.error('AI chat response failed:', error);
     if (error instanceof Error) {
+      // The error might be a Zod validation error from the flow now.
       return {error: `AI chat failed: ${error.message}`};
     }
     return {

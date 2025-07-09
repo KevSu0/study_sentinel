@@ -3,29 +3,29 @@
  * @fileOverview A positive psychology chatbot flow.
  *
  * - getChatbotResponse - A function that handles the chatbot conversation.
- * - PositivePsychologistInput - The input type for the getChatbotResponse function.
- * - PositivePsychologistOutput - The return type for the getChatbotResponse function.
  */
 
 import {ai} from '@/ai/genkit';
 import {
   PositivePsychologistInput,
+  PositivePsychologistInputSchema,
   PositivePsychologistOutput,
   PositivePsychologistOutputSchema,
 } from '@/lib/types';
 import {MessageData} from 'genkit/ai';
-import {z} from 'zod';
 
 export async function getChatbotResponse(
   input: PositivePsychologistInput
 ): Promise<PositivePsychologistOutput> {
+  // Call the validated flow. The schema is now enforced by Genkit.
   return positivePsychologistFlow(input);
 }
 
 const positivePsychologistFlow = ai.defineFlow(
   {
     name: 'positivePsychologistFlow',
-    inputSchema: z.any(), // Validation is handled in the action wrapper
+    // ENFORCE THE SCHEMA AT THE FLOW LEVEL. This is the key fix.
+    inputSchema: PositivePsychologistInputSchema,
     outputSchema: PositivePsychologistOutputSchema,
   },
   async (input: PositivePsychologistInput) => {
@@ -80,22 +80,12 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    // Robustly clean and prepare the conversation history.
-    const genkitHistory: MessageData[] = [];
-    if (Array.isArray(history)) {
-      for (const msg of history) {
-        // Vigorously validate each message object before processing.
-        if (
-          msg &&
-          typeof msg === 'object' &&
-          (msg.role === 'user' || msg.role === 'model') &&
-          typeof msg.content === 'string' &&
-          msg.content.trim() !== ''
-        ) {
-          genkitHistory.push({role: msg.role, parts: [{text: msg.content}]});
-        }
-      }
-    }
+    // Map the validated history to the format Genkit requires.
+    // No need for manual validation here anymore, as the inputSchema handles it.
+    const genkitHistory: MessageData[] = history.map(msg => ({
+      role: msg.role,
+      parts: [{text: msg.content}],
+    }));
 
     // The Gemini API requires the history to start with a 'user' message.
     if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {
