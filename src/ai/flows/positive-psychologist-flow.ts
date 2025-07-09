@@ -127,7 +127,7 @@ ${summaryContext}
     }));
 
     const response = await ai.generate({
-      model: 'googleai/gemini-2.5-flash-preview',
+      model: 'googleai/gemini-2.5-flash-lite-preview-06-17',
       prompt: userPrompt,
       history: genkitHistory,
       system: systemPrompt,
