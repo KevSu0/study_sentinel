@@ -77,41 +77,29 @@ ${summaryContext}
 - Ask clarifying questions when needed to better understand the user's request.
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
+
     // FINAL, BULLETPROOF VALIDATION:
-    // This loop guarantees that only valid messages reach the AI.
-    const genkitHistory: MessageData[] = [];
-    if (Array.isArray(history)) {
-      for (const message of history) {
-        // This try-catch block provides the ultimate failsafe.
-        // It prevents a single corrupted message from crashing the entire flow.
-        try {
-          // Explicitly check for the required properties.
-          if (
-            message &&
-            (message.role === 'user' || message.role === 'model') &&
-            typeof message.content === 'string'
-          ) {
-            genkitHistory.push({
-              role: message.role,
-              parts: [{text: message.content}],
-            });
-          }
-        } catch (error) {
-          // If accessing message.role or message.content fails (e.g., message is null),
-          // this catch block will handle it gracefully.
-          console.error(
-            'A corrupted message was found and skipped in chat history:',
-            error
-          );
-        }
-      }
-    }
+    // This functional approach guarantees a clean history array by filtering out any
+    // null, undefined, or malformed message objects before mapping to the final format.
+    const genkitHistory: MessageData[] = (Array.isArray(history) ? history : [])
+      .filter(
+        (message): message is {role: 'user' | 'model'; content: string} =>
+          message &&
+          typeof message.role === 'string' &&
+          (message.role === 'user' || message.role === 'model') &&
+          typeof message.content === 'string'
+      )
+      .map(message => ({
+        role: message.role,
+        parts: [{text: message.content}],
+      }));
 
     // The Gemini API requires the history to start with a 'user' message.
     if (genkitHistory.length > 0 && genkitHistory[0]?.role === 'model') {
       genkitHistory.shift();
     }
 
+    // Add a check to prevent sending an empty history which can cause issues.
     if (genkitHistory.length === 0) {
       return {response: "I'm ready to listen. What's on your mind?"};
     }
