@@ -55,9 +55,8 @@ export function ConfettiProvider({children}: {children: ReactNode}) {
           recycle={false}
           numberOfPieces={500}
           tweenDuration={10000}
-          onConfettiComplete={confetti => {
+          onConfettiComplete={() => {
             setIsFiring(false);
-            confetti?.clear();
           }}
           style={{zIndex: 9999, position: 'fixed'}}
         />
