@@ -33,6 +33,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {useConfetti} from '@/components/providers/confetti-provider';
 
 const TimerDialog = lazy(() =>
   import('./timer-dialog').then(module => ({default: module.TimerDialog}))
@@ -81,6 +82,7 @@ export const TaskCard = memo(function TaskCard({
   const [isTimerOpen, setTimerOpen] = useState(false);
   const [isTimerActive, setIsTimerActive] = useState(false);
   const {toast} = useToast();
+  const {fire} = useConfetti();
 
   useEffect(() => {
     const checkTimerStatus = () => {
@@ -108,6 +110,7 @@ export const TaskCard = memo(function TaskCard({
     if (newStatus === oldStatus) return;
 
     if (newStatus === 'completed' && oldStatus !== 'completed') {
+      fire();
       toast({
         title: 'Task Completed!',
         description: `You've earned ${task.points} points for this task!`,
