@@ -23,10 +23,11 @@ import {
 } from 'lucide-react';
 import {useTasks} from '@/hooks/use-tasks';
 import {useBadges} from '@/hooks/useBadges';
+import {useLogger} from '@/hooks/use-logger';
 import {format, subDays, startOfDay, parseISO} from 'date-fns';
 import {Skeleton} from '@/components/ui/skeleton';
 import {BadgeCard} from '@/components/badges/badge-card';
-import type {Badge, BadgeCategory} from '@/lib/types';
+import type {Badge, BadgeCategory, TaskPriority} from '@/lib/types';
 
 const StudyActivityChart = lazy(
   () => import('@/components/stats/weekly-chart')
@@ -45,15 +46,53 @@ const badgeCategories: BadgeCategory[] = [
 export default function StatsPage() {
   const {tasks, isLoaded: tasksLoaded} = useTasks();
   const {allBadges, earnedBadges, isLoaded: badgesLoaded} = useBadges();
+  const {getAllLogs, isLoaded: loggerLoaded} = useLogger();
   const [timeRange, setTimeRange] = useState('daily');
 
-  const completedTasks = useMemo(
-    () => tasks.filter(t => t.status === 'completed'),
-    [tasks]
-  );
+  const isLoaded = tasksLoaded && badgesLoaded && loggerLoaded;
 
-  const isLoaded = tasksLoaded && badgesLoaded;
+  // A unified list of all completed work, tasks and routines.
+  const allCompletedWork = useMemo(() => {
+    if (!isLoaded) return [];
 
+    const workItems: {
+      date: string;
+      duration: number; // minutes
+      type: 'task' | 'routine';
+      title: string;
+      priority?: TaskPriority;
+    }[] = [];
+
+    // Add completed tasks
+    workItems.push(
+      ...tasks
+        .filter(t => t.status === 'completed')
+        .map(t => ({
+          date: t.date,
+          duration: t.duration,
+          type: 'task' as const,
+          title: t.title,
+          priority: t.priority,
+        }))
+    );
+
+    // Add completed routine sessions from logs
+    const routineLogs = getAllLogs().filter(
+      l => l.type === 'ROUTINE_SESSION_COMPLETE'
+    );
+    workItems.push(
+      ...routineLogs.map(l => ({
+        date: format(parseISO(l.timestamp), 'yyyy-MM-dd'),
+        duration: Math.round(l.payload.duration / 60), // convert seconds to minutes
+        type: 'routine' as const,
+        title: l.payload.title,
+      }))
+    );
+
+    return workItems;
+  }, [isLoaded, tasks, getAllLogs]);
+
+  // Filtered tasks for completion rate calculation (only tasks have this concept)
   const filteredTasks = useMemo(() => {
     const nonArchivedTasks = tasks.filter(t => t.status !== 'archived');
     const now = startOfDay(new Date());
@@ -67,7 +106,7 @@ export default function StatsPage() {
     const daysToSubtract = timeRange === 'weekly' ? 7 : 30;
     const pastDate = subDays(now, daysToSubtract);
 
-    return nonArchivedTasks.filter(t => new Date(t.date) >= pastDate);
+    return nonArchivedTasks.filter(t => parseISO(t.date) >= pastDate);
   }, [tasks, timeRange]);
 
   const filteredCompletedTasks = useMemo(
@@ -75,32 +114,50 @@ export default function StatsPage() {
     [filteredTasks]
   );
 
+  // Filtered work items (tasks + routines) for general stats
+  const filteredWork = useMemo(() => {
+    const now = startOfDay(new Date());
+
+    if (timeRange === 'daily') {
+      const todayStr = format(now, 'yyyy-MM-dd');
+      return allCompletedWork.filter(w => w.date === todayStr);
+    }
+    if (timeRange === 'overall') return allCompletedWork;
+
+    const daysToSubtract = timeRange === 'weekly' ? 7 : 30;
+    const pastDate = subDays(now, daysToSubtract);
+
+    return allCompletedWork.filter(w => parseISO(w.date) >= pastDate);
+  }, [allCompletedWork, timeRange]);
+
   const timeRangeStats = useMemo(() => {
-    const totalMinutes = filteredCompletedTasks.reduce(
-      (sum, task) => sum + task.duration,
+    const totalMinutes = filteredWork.reduce(
+      (sum, work) => sum + work.duration,
       0
     );
     const totalHours = (totalMinutes / 60).toFixed(1);
 
+    // Completion rate is specific to tasks that can be planned.
     const completionRate =
       filteredTasks.length > 0
         ? (filteredCompletedTasks.length / filteredTasks.length) * 100
         : 0;
+
     const avgSessionDuration =
-      filteredCompletedTasks.length > 0
-        ? (totalMinutes / filteredCompletedTasks.length).toFixed(0)
+      filteredWork.length > 0
+        ? (totalMinutes / filteredWork.length).toFixed(0)
         : '0';
 
     return {
       totalHours,
-      completedCount: filteredCompletedTasks.length,
+      completedCount: filteredWork.length,
       completionRate,
       avgSessionDuration,
     };
-  }, [filteredCompletedTasks, filteredTasks]);
+  }, [filteredWork, filteredTasks, filteredCompletedTasks]);
 
   const studyStreak = useMemo(() => {
-    const completedDates = new Set(completedTasks.map(t => t.date));
+    const completedDates = new Set(allCompletedWork.map(w => w.date));
     if (completedDates.size === 0) return 0;
 
     let streak = 0;
@@ -120,7 +177,7 @@ export default function StatsPage() {
       currentDate = subDays(currentDate, 1);
     }
     return streak;
-  }, [completedTasks]);
+  }, [allCompletedWork]);
 
   const badgeStats = useMemo(() => {
     const earnedCount = earnedBadges.size;
@@ -145,20 +202,20 @@ export default function StatsPage() {
     const now = new Date();
 
     if (timeRange === 'daily') {
-      return filteredCompletedTasks.map(task => ({
+      return filteredWork.map(work => ({
         name:
-          task.title.length > 20
-            ? `${task.title.substring(0, 18)}...`
-            : task.title,
-        hours: parseFloat((task.duration / 60).toFixed(2)),
+          work.title.length > 20
+            ? `${work.title.substring(0, 18)}...`
+            : work.title,
+        hours: parseFloat((work.duration / 60).toFixed(2)),
       }));
     }
 
     if (timeRange === 'overall') {
-      const monthlyData = completedTasks.reduce(
-        (acc, task) => {
-          const monthKey = format(parseISO(task.date), 'yyyy-MM');
-          acc[monthKey] = (acc[monthKey] || 0) + task.duration;
+      const monthlyData = allCompletedWork.reduce(
+        (acc, work) => {
+          const monthKey = format(parseISO(work.date), 'yyyy-MM');
+          acc[monthKey] = (acc[monthKey] || 0) + work.duration;
           return acc;
         },
         {} as Record<string, number>
@@ -180,9 +237,9 @@ export default function StatsPage() {
       const dayName =
         timeRange === 'weekly' ? format(date, 'eee') : format(date, 'd');
 
-      const durationOnDay = completedTasks
-        .filter(task => task.date === formattedDate)
-        .reduce((sum, task) => sum + task.duration, 0);
+      const durationOnDay = allCompletedWork
+        .filter(work => work.date === formattedDate)
+        .reduce((sum, work) => sum + work.duration, 0);
 
       data.push({
         name: dayName,
@@ -190,13 +247,13 @@ export default function StatsPage() {
       });
     }
     return data;
-  }, [completedTasks, filteredCompletedTasks, timeRange]);
+  }, [allCompletedWork, filteredWork, timeRange]);
 
   const chartDetails = useMemo(() => {
     if (timeRange === 'daily') {
       return {
         title: "Today's Study Breakdown",
-        description: 'Hours spent on each completed task today.',
+        description: 'Hours spent on each completed session today.',
       };
     }
     if (timeRange === 'weekly') {
@@ -219,15 +276,17 @@ export default function StatsPage() {
 
   const priorityData = useMemo(() => {
     const counts = {high: 0, medium: 0, low: 0};
-    for (const task of filteredCompletedTasks) {
-      counts[task.priority]++;
+    for (const work of filteredWork) {
+      if (work.type === 'task' && work.priority) {
+        counts[work.priority]++;
+      }
     }
     return [
-      {priority: 'high', count: counts.high},
-      {priority: 'medium', count: counts.medium},
-      {priority: 'low', count: counts.low},
+      {priority: 'high' as const, count: counts.high},
+      {priority: 'medium' as const, count: counts.medium},
+      {priority: 'low' as const, count: counts.low},
     ];
-  }, [filteredCompletedTasks]);
+  }, [filteredWork]);
 
   const getTitleCase = (str: string) =>
     str.charAt(0).toUpperCase() + str.slice(1);
@@ -241,12 +300,12 @@ export default function StatsPage() {
         Icon: Clock,
       },
       {
-        title: `Tasks Completed (${getTitleCase(timeRange)})`,
+        title: `Sessions Completed (${getTitleCase(timeRange)})`,
         value: timeRangeStats.completedCount,
         Icon: CheckCircle,
       },
       {
-        title: `Completion Rate (${getTitleCase(timeRange)})`,
+        title: `Task Completion Rate (${getTitleCase(timeRange)})`,
         value: timeRangeStats.completionRate.toFixed(0),
         unit: '%',
         Icon: Target,

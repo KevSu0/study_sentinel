@@ -48,25 +48,28 @@ export function useLogger() {
     return () => clearInterval(interval);
   }, [loadLogs]);
 
-  const addLog = useCallback((type: LogEvent['type'], payload: LogEvent['payload']) => {
-    const newLog: LogEvent = {
-      id: crypto.randomUUID(),
-      timestamp: formatISO(new Date()),
-      type,
-      payload,
-    };
+  const addLog = useCallback(
+    (type: LogEvent['type'], payload: LogEvent['payload']) => {
+      const newLog: LogEvent = {
+        id: crypto.randomUUID(),
+        timestamp: formatISO(new Date()),
+        type,
+        payload,
+      };
 
-    setLogs(prevLogs => {
-      const updatedLogs = [...prevLogs, newLog];
-      const logKey = getLogKeyForDate(getSessionDate());
-      try {
-        localStorage.setItem(logKey, JSON.stringify(updatedLogs));
-      } catch (error) {
-        console.error('Failed to save log', error);
-      }
-      return updatedLogs;
-    });
-  }, []);
+      setLogs(prevLogs => {
+        const updatedLogs = [...prevLogs, newLog];
+        const logKey = getLogKeyForDate(getSessionDate());
+        try {
+          localStorage.setItem(logKey, JSON.stringify(updatedLogs));
+        } catch (error) {
+          console.error('Failed to save log', error);
+        }
+        return updatedLogs;
+      });
+    },
+    []
+  );
 
   const getPreviousDayLogs = useCallback(() => {
     const sessionDate = getSessionDate();
@@ -81,5 +84,28 @@ export function useLogger() {
     }
   }, []);
 
-  return {logs, addLog, getPreviousDayLogs, isLoaded};
+  const getAllLogs = useCallback(() => {
+    const allLogs: LogEvent[] = [];
+    if (typeof window === 'undefined') return [];
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(LOGS_KEY)) {
+        try {
+          const savedLogs = localStorage.getItem(key);
+          if (savedLogs) {
+            const parsedLogs = JSON.parse(savedLogs);
+            if (Array.isArray(parsedLogs)) {
+              allLogs.push(...parsedLogs.filter((log: any) => log.timestamp)); // Basic validation
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to load logs for key ${key}`, error);
+        }
+      }
+    }
+    return allLogs;
+  }, []);
+
+  return {logs, addLog, getPreviousDayLogs, isLoaded, getAllLogs};
 }
