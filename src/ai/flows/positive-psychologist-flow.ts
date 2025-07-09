@@ -47,8 +47,8 @@ const positivePsychologistFlow = ai.defineFlow(
   async input => {
     const {profile, dailySummary, history} = input;
 
-    // Handle case where history is empty or just has the initial greeting
-    if (!history || history.length <= 1) {
+    // Handle case where history is empty
+    if (!history || history.length === 0) {
       return {response: 'Hello! How can I help you today?'};
     }
 
@@ -101,35 +101,35 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    // The history from the client might include the initial model greeting.
-    // If the first message is from the model, slice it off.
-    const conversation =
-      history.length > 0 && history[0].role === 'model'
-        ? history.slice(1)
-        : history;
-
     // The last message in the history is the user's current prompt.
-    const lastMessage = conversation.pop();
+    const lastMessage = history.pop();
 
     if (!lastMessage || lastMessage.role !== 'user') {
+      // This should not happen with the current client-side logic, but it's good practice.
       return {
         response:
           "I'm sorry, something went wrong. Could you try sending your message again?",
       };
     }
-
     const userPrompt = lastMessage.content;
 
     // The rest of the conversation is the history for the model.
+    // The history from the client might include the initial model greeting.
+    // The Gemini API requires the history to start with a 'user' message.
+    let conversation = history;
+    if (conversation.length > 0 && conversation[0].role === 'model') {
+      conversation = conversation.slice(1);
+    }
+
     const genkitHistory: MessageData[] = conversation.map(h => ({
       role: h.role,
       parts: [{text: h.content}],
     }));
 
     const response = await ai.generate({
-      model: 'googleai/gemini-2.0-flash',
-      prompt: userPrompt, // The actual prompt is the user's latest message.
-      history: genkitHistory, // The preceding conversation.
+      model: 'googleai/gemini-1.5-flash-latest',
+      prompt: userPrompt,
+      history: genkitHistory,
       system: systemPrompt,
     });
 
