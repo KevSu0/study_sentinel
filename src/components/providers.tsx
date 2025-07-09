@@ -14,7 +14,13 @@ import {
 } from '@/components/ui/sidebar';
 import {Toaster} from '@/components/ui/toaster';
 import {Logo} from '@/components/logo';
-import {LayoutDashboard, ListChecks, TrendingUp, Award} from 'lucide-react';
+import {
+  LayoutDashboard,
+  ListChecks,
+  TrendingUp,
+  Award,
+  Archive,
+} from 'lucide-react';
 import type {ReactNode} from 'react';
 import {ConfettiProvider} from './providers/confetti-provider';
 
@@ -53,6 +59,18 @@ export function Providers({children}: {children: ReactNode}) {
                   <Link href="/tasks" className="flex items-center gap-2">
                     <ListChecks />
                     <span>All Tasks</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === '/archive'}
+                  tooltip="Archived Tasks"
+                >
+                  <Link href="/archive" className="flex items-center gap-2">
+                    <Archive />
+                    <span>Archived Tasks</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

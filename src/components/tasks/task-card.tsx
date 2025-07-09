@@ -1,4 +1,3 @@
-
 import React, {useState, lazy, Suspense, memo} from 'react';
 import {
   Card,
@@ -9,7 +8,6 @@ import {
 } from '@/components/ui/card';
 import {
   Clock,
-  Trash2,
   BrainCircuit,
   CheckCircle,
   XCircle,
@@ -22,6 +20,10 @@ import {
   CheckCircle2,
   ChevronDown,
   RotateCcw,
+  MoreHorizontal,
+  SendToBack,
+  Archive as ArchiveIcon,
+  ArchiveRestore,
 } from 'lucide-react';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
@@ -34,6 +36,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const AnalysisDialog = lazy(() =>
   import('./analysis-dialog').then(module => ({default: module.AnalysisDialog}))
@@ -42,7 +50,9 @@ const AnalysisDialog = lazy(() =>
 interface TaskCardProps {
   task: StudyTask;
   onUpdate: (task: StudyTask) => void;
-  onDelete: (taskId: string) => void;
+  onArchive: (taskId: string) => void;
+  onUnarchive: (taskId: string) => void;
+  onPushToNextDay: (taskId: string) => void;
   onEdit: (task: StudyTask) => void;
 }
 
@@ -67,7 +77,14 @@ const priorityConfig: Record<
   },
 };
 
-export const TaskCard = memo(function TaskCard({task, onUpdate, onDelete, onEdit}: TaskCardProps) {
+export const TaskCard = memo(function TaskCard({
+  task,
+  onUpdate,
+  onArchive,
+  onUnarchive,
+  onPushToNextDay,
+  onEdit,
+}: TaskCardProps) {
   const [isAnalysisDialogOpen, setAnalysisDialogOpen] = useState(false);
   const {toast} = useToast();
 
@@ -94,6 +111,27 @@ export const TaskCard = memo(function TaskCard({task, onUpdate, onDelete, onEdit
 
   const formattedDate = format(parseISO(task.date), 'MMM d, yyyy');
 
+  if (task.status === 'archived') {
+    return (
+      <Card className="flex flex-col sm:flex-row items-center justify-between p-4 bg-card/50 border-dashed">
+        <div className="flex-grow">
+          <p className="font-semibold text-muted-foreground line-through">
+            {task.title}
+          </p>
+          <p className="text-sm text-muted-foreground/80">{formattedDate}</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onUnarchive(task.id)}
+          className="mt-2 sm:mt-0"
+        >
+          <ArchiveRestore className="mr-2 h-4 w-4" /> Unarchive
+        </Button>
+      </Card>
+    );
+  }
+
   const renderStatusControl = () => {
     switch (task.status) {
       case 'todo':
@@ -105,7 +143,12 @@ export const TaskCard = memo(function TaskCard({task, onUpdate, onDelete, onEdit
         );
       case 'in_progress':
         return (
-          <Button size="sm" variant="outline" className="border-accent text-accent hover:bg-accent/10 hover:text-accent" onClick={() => handleStatusChange('completed')}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-accent text-accent hover:bg-accent/10 hover:text-accent"
+            onClick={() => handleStatusChange('completed')}
+          >
             <CheckCircle2 className="mr-2" />
             Mark as Complete
           </Button>
@@ -126,7 +169,6 @@ export const TaskCard = memo(function TaskCard({task, onUpdate, onDelete, onEdit
         return null;
     }
   };
-
 
   return (
     <>
@@ -156,16 +198,14 @@ export const TaskCard = memo(function TaskCard({task, onUpdate, onDelete, onEdit
               </div>
             </div>
             <div className="flex-shrink-0 w-full sm:w-auto pt-2 sm:pt-0">
-                {renderStatusControl()}
+              {renderStatusControl()}
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="flex-grow pb-4 space-y-4">
           {task.description && (
-            <p className="text-sm text-foreground/80">
-              {task.description}
-            </p>
+            <p className="text-sm text-foreground/80">{task.description}</p>
           )}
           {task.analysis && (
             <Collapsible>
@@ -199,9 +239,7 @@ export const TaskCard = memo(function TaskCard({task, onUpdate, onDelete, onEdit
                     <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mt-2 prose prose-sm dark:prose-invert prose-p:my-1">
-                    <p>
-                      {task.analysis.error || task.analysis.analysis}
-                    </p>
+                    <p>{task.analysis.error || task.analysis.analysis}</p>
                   </CollapsibleContent>
                 </div>
               </div>
@@ -241,15 +279,26 @@ export const TaskCard = memo(function TaskCard({task, onUpdate, onDelete, onEdit
               <Pencil className="mr-2 h-4 w-4" />
               Edit
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onDelete(task.id)}
-              aria-label="Delete task"
-              className='text-muted-foreground hover:text-destructive hover:bg-destructive/10'
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="More actions">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onSelect={() => onPushToNextDay(task.id)}>
+                  <SendToBack className="mr-2 h-4 w-4" />
+                  Push to Next Day
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => onArchive(task.id)}
+                  className="text-destructive"
+                >
+                  <ArchiveIcon className="mr-2 h-4 w-4" />
+                  Archive
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardFooter>
       </Card>

@@ -1,6 +1,6 @@
 import type {LucideIcon} from 'lucide-react';
 
-export type TaskStatus = 'todo' | 'in_progress' | 'completed';
+export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'archived';
 export type TaskPriority = 'low' | 'medium' | 'high';
 
 export type StudyTask = {

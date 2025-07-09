@@ -4,11 +4,20 @@ import type {StudyTask} from '@/lib/types';
 interface TaskListProps {
   tasks: StudyTask[];
   onUpdate: (task: StudyTask) => void;
-  onDelete: (taskId: string) => void;
+  onArchive: (taskId: string) => void;
+  onUnarchive: (taskId: string) => void;
+  onPushToNextDay: (taskId: string) => void;
   onEdit: (task: StudyTask) => void;
 }
 
-export function TaskList({tasks, onUpdate, onDelete, onEdit}: TaskListProps) {
+export function TaskList({
+  tasks,
+  onUpdate,
+  onArchive,
+  onUnarchive,
+  onPushToNextDay,
+  onEdit,
+}: TaskListProps) {
   return (
     <div className="space-y-4">
       {tasks.map(task => (
@@ -16,7 +25,9 @@ export function TaskList({tasks, onUpdate, onDelete, onEdit}: TaskListProps) {
           key={task.id}
           task={task}
           onUpdate={onUpdate}
-          onDelete={onDelete}
+          onArchive={onArchive}
+          onUnarchive={onUnarchive}
+          onPushToNextDay={onPushToNextDay}
           onEdit={onEdit}
         />
       ))}

@@ -1,4 +1,3 @@
-
 'use client';
 import React, {useState, useMemo, lazy, Suspense} from 'react';
 import {Button} from '@/components/ui/button';
@@ -22,7 +21,15 @@ const TaskDialog = lazy(() =>
 type TaskFilter = 'all' | 'todo' | 'in_progress' | 'completed';
 
 export default function AllTasksPage() {
-  const {tasks, addTask, updateTask, deleteTask, isLoaded} = useTasks();
+  const {
+    tasks,
+    addTask,
+    updateTask,
+    archiveTask,
+    unarchiveTask,
+    pushTaskToNextDay,
+    isLoaded,
+  } = useTasks();
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
   const [filter, setFilter] = useState<TaskFilter>('all');
@@ -46,9 +53,11 @@ export default function AllTasksPage() {
   };
 
   const filteredTasks = useMemo(() => {
-    let tasksByStatus = tasks;
+    let activeTasks = tasks.filter(task => task.status !== 'archived');
+    
+    let tasksByStatus = activeTasks;
     if (filter !== 'all') {
-      tasksByStatus = tasks.filter(task => task.status === filter);
+      tasksByStatus = activeTasks.filter(task => task.status === filter);
     }
 
     if (selectedDate) {
@@ -130,7 +139,9 @@ export default function AllTasksPage() {
               <TaskList
                 tasks={filteredTasks}
                 onUpdate={updateTask}
-                onDelete={deleteTask}
+                onArchive={archiveTask}
+                onUnarchive={unarchiveTask}
+                onPushToNextDay={pushTaskToNextDay}
                 onEdit={openEditTaskDialog}
               />
             ) : (

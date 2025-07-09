@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, {useMemo} from 'react';
@@ -16,12 +15,15 @@ import {BadgeCard} from '@/components/badges/badge-card';
 import Link from 'next/link';
 
 export default function DashboardPage() {
-  const {tasks, updateTask, deleteTask, isLoaded: tasksLoaded} = useTasks();
   const {
-    allBadges,
-    earnedBadges,
-    isLoaded: badgesLoaded,
-  } = useBadges();
+    tasks,
+    updateTask,
+    archiveTask,
+    unarchiveTask,
+    pushTaskToNextDay,
+    isLoaded: tasksLoaded,
+  } = useTasks();
+  const {allBadges, earnedBadges, isLoaded: badgesLoaded} = useBadges();
 
   const isLoaded = tasksLoaded && badgesLoaded;
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
@@ -128,7 +130,9 @@ export default function DashboardPage() {
                     <TaskList
                       tasks={todaysCompletedTasks}
                       onUpdate={updateTask}
-                      onDelete={deleteTask}
+                      onArchive={archiveTask}
+                      onUnarchive={unarchiveTask}
+                      onPushToNextDay={pushTaskToNextDay}
                       onEdit={() => {}}
                     />
                   </section>

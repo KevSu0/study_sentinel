@@ -2,8 +2,22 @@
 
 import {useState, useEffect, useCallback} from 'react';
 import {type StudyTask} from '@/lib/types';
+import {addDays, format} from 'date-fns';
 
 const TASKS_KEY = 'studySentinelTasks';
+
+// Helper function to save tasks and maintain sort order
+const saveTasks = (tasks: StudyTask[]) => {
+  const sortedTasks = [...tasks].sort(
+    (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
+  );
+  try {
+    localStorage.setItem(TASKS_KEY, JSON.stringify(sortedTasks));
+  } catch (error) {
+    console.error('Failed to save tasks to localStorage', error);
+  }
+  return sortedTasks;
+};
 
 export function useTasks() {
   const [tasks, setTasks] = useState<StudyTask[]>([]);
@@ -36,16 +50,7 @@ export function useTasks() {
           description: task.description || '',
         };
         const updatedTasks = [...prevTasks, newTask];
-        const sortedTasks = [...updatedTasks].sort(
-          (a, b) =>
-            a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
-        );
-        try {
-          localStorage.setItem(TASKS_KEY, JSON.stringify(sortedTasks));
-        } catch (error) {
-          console.error('Failed to save tasks to localStorage', error);
-        }
-        return sortedTasks;
+        return saveTasks(updatedTasks);
       });
     },
     []
@@ -56,30 +61,51 @@ export function useTasks() {
       const newTasks = prevTasks.map(task =>
         task.id === updatedTask.id ? updatedTask : task
       );
-      const sortedTasks = [...newTasks].sort(
-        (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
-      );
-      try {
-        localStorage.setItem(TASKS_KEY, JSON.stringify(sortedTasks));
-      } catch (error) {
-        console.error('Failed to update task in localStorage', error);
-      }
-      return sortedTasks;
+      return saveTasks(newTasks);
     });
   }, []);
 
-  const deleteTask = useCallback((taskId: string) => {
+  const archiveTask = useCallback((taskId: string) => {
     setTasks(prevTasks => {
-      const newTasks = prevTasks.filter(task => task.id !== taskId);
-      // No need to re-sort on delete, the order is preserved
-      try {
-        localStorage.setItem(TASKS_KEY, JSON.stringify(newTasks));
-      } catch (error) {
-        console.error('Failed to delete task from localStorage', error);
-      }
-      return newTasks;
+      const newTasks = prevTasks.map(task =>
+        task.id === taskId ? {...task, status: 'archived'} : task
+      );
+      return saveTasks(newTasks);
     });
   }, []);
 
-  return {tasks, addTask, updateTask, deleteTask, isLoaded};
+  const unarchiveTask = useCallback((taskId: string) => {
+    setTasks(prevTasks => {
+      const newTasks = prevTasks.map(task =>
+        task.id === taskId ? {...task, status: 'todo'} : task
+      );
+      return saveTasks(newTasks);
+    });
+  }, []);
+
+  const pushTaskToNextDay = useCallback((taskId: string) => {
+    setTasks(prevTasks => {
+      const newTasks = prevTasks.map(task => {
+        if (task.id === taskId) {
+          // Dates are stored as 'yyyy-MM-dd', which UTC.
+          // To avoid timezone issues, we add a time component to parse it correctly, then format back.
+          const taskDate = new Date(`${task.date}T00:00:00`);
+          const nextDay = addDays(taskDate, 1);
+          return {...task, date: format(nextDay, 'yyyy-MM-dd')};
+        }
+        return task;
+      });
+      return saveTasks(newTasks);
+    });
+  }, []);
+
+  return {
+    tasks,
+    addTask,
+    updateTask,
+    archiveTask,
+    unarchiveTask,
+    pushTaskToNextDay,
+    isLoaded,
+  };
 }
