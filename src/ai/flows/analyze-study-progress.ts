@@ -13,7 +13,7 @@ import {z} from 'genkit';
 
 const AnalyzeStudyProgressInputSchema = z.object({
   task: z.string().describe('The study task to analyze.'),
-  timeAllocated: z.string().describe('The time allocated for the task.'),
+  duration: z.number().describe('The time allocated for the task in minutes.'),
   progressDescription: z
     .string()
     .describe('A description of the progress made on the task.'),
@@ -43,7 +43,7 @@ const analyzeStudyProgressPrompt = ai.definePrompt({
   prompt: `You are a strict study monitor. Analyze the study progress for the given task and determine if the user is on track.
 
 Task: {{{task}}}
-Time Allocated: {{{timeAllocated}}}
+Time Allocated: {{{duration}}} minutes
 Progress Description: {{{progressDescription}}}
 
 Based on the above information, determine if the user is on track with their studies. Provide a detailed analysis and set the isOnTrack output field appropriately.

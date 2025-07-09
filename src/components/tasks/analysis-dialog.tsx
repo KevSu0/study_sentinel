@@ -48,7 +48,7 @@ export function AnalysisDialog({
     setIsLoading(true);
     const analysisInput = {
       task: task.title,
-      timeAllocated: 'N/A', // This could be enhanced to calculate duration
+      duration: task.duration,
       progressDescription,
     };
 

@@ -14,14 +14,14 @@ import {
 } from '@/components/ui/sidebar';
 import {Toaster} from '@/components/ui/toaster';
 import {Logo} from '@/components/logo';
-import {LayoutDashboard} from 'lucide-react';
+import {LayoutDashboard, ListChecks, TrendingUp} from 'lucide-react';
 import type {ReactNode} from 'react';
 
 export function Providers({children}: {children: ReactNode}) {
   const pathname = usePathname();
 
   return (
-    <SidebarProvider className="bg-background">
+    <SidebarProvider>
       <Sidebar>
         <SidebarHeader className="p-4">
           <Link href="/" aria-label="Back to Home">
@@ -39,6 +39,30 @@ export function Providers({children}: {children: ReactNode}) {
                 <Link href="/" className="flex items-center gap-2">
                   <LayoutDashboard />
                   <span>Dashboard</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === '/tasks'}
+                tooltip="All Tasks"
+              >
+                <Link href="/tasks" className="flex items-center gap-2">
+                  <ListChecks />
+                  <span>All Tasks</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === '/stats'}
+                tooltip="Stats"
+              >
+                <Link href="/stats" className="flex items-center gap-2">
+                  <TrendingUp />
+                  <span>Stats</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

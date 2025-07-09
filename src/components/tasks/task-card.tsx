@@ -21,12 +21,17 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  Award,
+  Calendar,
 } from 'lucide-react';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
 import {AnalysisDialog} from './analysis-dialog';
 import {cn} from '@/lib/utils';
+import {useGamification} from '@/hooks/use-gamification';
+import {useToast} from '@/hooks/use-toast';
 import type {StudyTask, TaskStatus} from '@/lib/types';
+import { format, parseISO } from 'date-fns';
 
 interface TaskCardProps {
   task: StudyTask;
@@ -34,56 +39,69 @@ interface TaskCardProps {
   onDelete: (taskId: string) => void;
 }
 
-const statusConfig = {
-  todo: {label: 'To Do', color: 'bg-gray-500'},
-  in_progress: {label: 'In Progress', color: 'bg-blue-500'},
-  completed: {label: 'Completed', color: 'bg-accent'},
-};
-
 export function TaskCard({task, onUpdate, onDelete}: TaskCardProps) {
   const [isAnalysisOpen, setAnalysisOpen] = useState(false);
+  const {addPoints, subtractPoints} = useGamification();
+  const {toast} = useToast();
 
-  const handleStatusChange = (status: TaskStatus) => {
-    onUpdate({...task, status});
+  const handleStatusChange = (newStatus: TaskStatus) => {
+    const oldStatus = task.status;
+    if (newStatus === oldStatus) return;
+
+    if (newStatus === 'completed' && oldStatus !== 'completed') {
+      addPoints(task.points);
+      toast({
+        title: 'Task Completed!',
+        description: `You've earned ${task.points} points! Keep it up!`,
+      });
+    } else if (oldStatus === 'completed' && newStatus !== 'completed') {
+      subtractPoints(task.points);
+    }
+    onUpdate({...task, status: newStatus});
   };
 
   const handleAnalysisComplete = (analysis: StudyTask['analysis']) => {
-    onUpdate({...task, analysis});
+    onUpdate({...task, analysis, progressDescription: task.progressDescription});
   };
+
+  const formattedDate = format(parseISO(task.date), 'MMM d, yyyy');
 
   return (
     <>
       <Card
         className={cn(
-          'transition-all duration-300',
-          task.status === 'completed' && 'border-l-4 border-accent'
+          'transition-all duration-300 flex flex-col',
+          task.status === 'completed' && 'bg-card/60 dark:bg-card/80 border-l-4 border-accent',
+          task.status !== 'completed' && new Date(task.date) < new Date() && !isToday(new Date(task.date)) && 'border-l-4 border-destructive/70'
         )}
       >
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-            <div className='flex-grow'>
-              <CardTitle className="text-lg font-semibold">
-                {task.title}
-              </CardTitle>
-              <CardDescription className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                <Clock className="h-4 w-4" />
-                <span>{task.time}</span>
-              </CardDescription>
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+            <div className="flex-grow">
+              <CardTitle className="text-lg font-semibold">{task.title}</CardTitle>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
+                <span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> {formattedDate}</span>
+                <span className="flex items-center gap-2"><Clock className="h-4 w-4" /> {task.time} ({task.duration} min)</span>
+              </div>
             </div>
-            <Select value={task.status} onValueChange={handleStatusChange}>
-              <SelectTrigger className="w-full sm:w-[140px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todo">To Do</SelectItem>
-                <SelectItem value="in_progress">In Progress</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex-shrink-0 w-full sm:w-auto pt-2 sm:pt-0">
+                <Select value={task.status} onValueChange={handleStatusChange}>
+                  <SelectTrigger className="w-full sm:w-[140px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todo">To Do</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+            </div>
           </div>
         </CardHeader>
-        {task.analysis && (
-          <CardContent>
+
+        <CardContent className="flex-grow pb-4">
+            {task.description && <p className="text-sm text-foreground/80 mb-4">{task.description}</p>}
+            {task.analysis && (
             <div
               className={cn(
                 'p-3 rounded-md text-sm flex items-start gap-3',
@@ -115,17 +133,24 @@ export function TaskCard({task, onUpdate, onDelete}: TaskCardProps) {
                 </p>
               </div>
             </div>
-          </CardContent>
-        )}
-        <CardFooter className="flex justify-between">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setAnalysisOpen(true)}
-          >
-            <BrainCircuit className="mr-2 h-4 w-4" />
-            Analyze <span className="hidden sm:inline">Progress</span>
-          </Button>
+          )}
+        </CardContent>
+
+        <CardFooter className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAnalysisOpen(true)}
+              disabled={task.status === 'completed'}
+            >
+              <BrainCircuit className="mr-2 h-4 w-4" />
+              Analyze <span className="hidden sm:inline">Progress</span>
+            </Button>
+            <Badge variant="secondary" className="flex items-center gap-1.5">
+                <Award className="h-3.5 w-3.5 text-amber-500" /> {task.points} pts
+            </Badge>
+          </div>
           <Button
             variant="ghost"
             size="icon"
@@ -136,12 +161,21 @@ export function TaskCard({task, onUpdate, onDelete}: TaskCardProps) {
           </Button>
         </CardFooter>
       </Card>
-      <AnalysisDialog
-        task={task}
-        isOpen={isAnalysisOpen}
-        onOpenChange={setAnalysisOpen}
-        onAnalysisComplete={handleAnalysisComplete}
-      />
+      {isAnalysisOpen && (
+        <AnalysisDialog
+          task={task}
+          isOpen={isAnalysisOpen}
+          onOpenChange={setAnalysisOpen}
+          onAnalysisComplete={handleAnalysisComplete}
+        />
+      )}
     </>
   );
+}
+
+function isToday(someDate: Date) {
+    const today = new Date()
+    return someDate.getDate() == today.getDate() &&
+      someDate.getMonth() == today.getMonth() &&
+      someDate.getFullYear() == today.getFullYear()
 }

@@ -21,7 +21,7 @@ export function useTasks() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const q = query(tasksCollectionRef, orderBy('date', 'desc'), orderBy('time', 'asc'));
+    const q = query(tasksCollectionRef, orderBy('date', 'asc'), orderBy('time', 'asc'));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const fetchedTasks = querySnapshot.docs.map(
             (doc) =>
@@ -43,7 +43,11 @@ export function useTasks() {
   const addTask = useCallback(
     async (task: Omit<StudyTask, 'id' | 'status'>) => {
       try {
-        const newTaskData = {...task, status: 'todo' as const};
+        const newTaskData = {
+          ...task,
+          status: 'todo' as const,
+          description: task.description || '',
+        };
         await addDoc(tasksCollectionRef, newTaskData);
       } catch (error) {
         console.error('Failed to add task to Firestore', error);
