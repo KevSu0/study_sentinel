@@ -79,7 +79,7 @@ function ChatBubble({role, content}: ChatMessage) {
 }
 
 export default function CoachPage() {
-  const {messages, addMessage, isLoaded: historyLoaded} = useChatHistory();
+  const {messages, setMessages, isLoaded: historyLoaded} = useChatHistory();
   const [inputValue, setInputValue] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isContextLoading, setIsContextLoading] = useState(true);
@@ -132,19 +132,21 @@ export default function CoachPage() {
     if (!inputValue.trim() || isChatLoading || isContextLoading) return;
 
     const userMessage: ChatMessage = {role: 'user', content: inputValue};
-    const updatedHistory = [...messages, userMessage];
+    const newMessages = [...messages, userMessage];
 
-    addMessage(userMessage);
+    // Optimistically update UI
+    setMessages(newMessages);
     setInputValue('');
     setIsChatLoading(true);
 
     try {
       const result = await getChatbotResponse({
-        history: updatedHistory.slice(-10),
+        history: newMessages.slice(-10),
         profile,
         dailySummary: dailySummary || undefined,
       });
 
+      let finalMessages;
       // Check for a valid, non-empty string response
       if (
         result &&
@@ -156,7 +158,7 @@ export default function CoachPage() {
           role: 'model',
           content: result.response,
         };
-        addMessage(modelMessage);
+        finalMessages = [...newMessages, modelMessage];
       } else {
         const errorMessage: ChatMessage = {
           role: 'model',
@@ -164,8 +166,9 @@ export default function CoachPage() {
             (result as any)?.error ||
             "Sorry, I couldn't get a response. Please try again.",
         };
-        addMessage(errorMessage);
+        finalMessages = [...newMessages, errorMessage];
       }
+      setMessages(finalMessages);
     } catch (error) {
       console.error('AI Chat Error:', error);
       const errorMessage: ChatMessage = {
@@ -174,7 +177,8 @@ export default function CoachPage() {
           error instanceof Error ? error.message : 'Unknown error'
         }. Please try again.`,
       };
-      addMessage(errorMessage);
+      const finalMessages = [...newMessages, errorMessage];
+      setMessages(finalMessages);
     } finally {
       setIsChatLoading(false);
     }
