@@ -21,14 +21,15 @@ import {useForm, Controller} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
 import {z} from 'zod';
 import {format} from 'date-fns';
-import type {StudyTask} from '@/lib/types';
+import type {StudyTask, TaskPriority} from '@/lib/types';
 
 const taskSchema = z.object({
   title: z.string().min(3, 'Task title must be at least 3 characters.'),
   description: z.string().optional(),
   date: z.string(),
-  time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, 'Invalid time format.'),
+  time: z.string(),
   duration: z.coerce.number().min(1, 'Duration is required.'),
+  priority: z.enum(['low', 'medium', 'high']),
 });
 
 type TaskFormData = z.infer<typeof taskSchema>;
@@ -48,6 +49,21 @@ const durationOptions = [
   {value: 120, label: '2 hours'},
 ];
 
+const priorityOptions: {value: TaskPriority; label: string}[] = [
+  {value: 'low', label: 'Low'},
+  {value: 'medium', label: 'Medium'},
+  {value: 'high', label: 'High'},
+];
+
+const timeOptions = Array.from({length: 24 * 4}, (_, i) => {
+  const hours = Math.floor(i / 4);
+  const minutes = (i % 4) * 15;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(
+    2,
+    '0'
+  )}`;
+});
+
 // Simple point system: 1 point per minute of study
 const calculatePoints = (duration: number) => duration;
 
@@ -56,6 +72,11 @@ export function AddTaskDialog({
   onOpenChange,
   onAddTask,
 }: AddTaskDialogProps) {
+  const now = new Date();
+  const roundedMinutes = Math.round(now.getMinutes() / 15) * 15;
+  const roundedDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), roundedMinutes);
+  const defaultTime = format(roundedDate, 'HH:mm');
+
   const {
     register,
     handleSubmit,
@@ -66,8 +87,9 @@ export function AddTaskDialog({
     resolver: zodResolver(taskSchema),
     defaultValues: {
       date: format(new Date(), 'yyyy-MM-dd'),
-      time: format(new Date(), 'HH:mm'),
+      time: defaultTime,
       duration: 30,
+      priority: 'medium',
     },
   });
 
@@ -78,10 +100,11 @@ export function AddTaskDialog({
     });
     reset({
       date: format(new Date(), 'yyyy-MM-dd'),
-      time: format(new Date(), 'HH:mm'),
+      time: defaultTime,
       duration: 30,
       title: '',
       description: '',
+      priority: 'medium',
     });
     onOpenChange(false);
   };
@@ -122,7 +145,12 @@ export function AddTaskDialog({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="date">Date</Label>
-              <Input id="date" type="date" {...register('date')} className="mt-1" />
+              <Input
+                id="date"
+                type="date"
+                {...register('date')}
+                className="mt-1"
+              />
               {errors.date && (
                 <p className="text-sm text-destructive mt-1">
                   {errors.date.message}
@@ -131,7 +159,27 @@ export function AddTaskDialog({
             </div>
             <div>
               <Label htmlFor="time">Time</Label>
-              <Input id="time" type="time" {...register('time')} className="mt-1" />
+              <Controller
+                name="time"
+                control={control}
+                render={({field}) => (
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <SelectTrigger id="time" className="mt-1">
+                      <SelectValue placeholder="Select time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {timeOptions.map(time => (
+                        <SelectItem key={time} value={time}>
+                          {time}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
               {errors.time && (
                 <p className="text-sm text-destructive mt-1">
                   {errors.time.message}
@@ -139,37 +187,75 @@ export function AddTaskDialog({
               )}
             </div>
           </div>
-          <div>
-            <Label htmlFor="duration">Duration</Label>
-            <Controller
-              name="duration"
-              control={control}
-              render={({field}) => (
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={String(field.value)}
-                >
-                  <SelectTrigger id="duration" className="mt-1">
-                    <SelectValue placeholder="Select duration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {durationOptions.map(option => (
-                      <SelectItem key={option.value} value={String(option.value)}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="duration">Duration</Label>
+              <Controller
+                name="duration"
+                control={control}
+                render={({field}) => (
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={String(field.value)}
+                  >
+                    <SelectTrigger id="duration" className="mt-1">
+                      <SelectValue placeholder="Select duration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {durationOptions.map(option => (
+                        <SelectItem
+                          key={option.value}
+                          value={String(option.value)}
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.duration && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.duration.message}
+                </p>
               )}
-            />
-            {errors.duration && (
-              <p className="text-sm text-destructive mt-1">
-                {errors.duration.message}
-              </p>
-            )}
+            </div>
+            <div>
+              <Label htmlFor="priority">Priority</Label>
+              <Controller
+                name="priority"
+                control={control}
+                render={({field}) => (
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <SelectTrigger id="priority" className="mt-1">
+                      <SelectValue placeholder="Select priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {priorityOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.priority && (
+                <p className="text-sm text-destructive mt-1">
+                  {errors.priority.message}
+                </p>
+              )}
+            </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit">Add Task</Button>

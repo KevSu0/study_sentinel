@@ -23,6 +23,7 @@ import {
   AlertCircle,
   Award,
   Calendar,
+  Flame,
 } from 'lucide-react';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
@@ -30,14 +31,35 @@ import {AnalysisDialog} from './analysis-dialog';
 import {cn} from '@/lib/utils';
 import {useGamification} from '@/hooks/use-gamification';
 import {useToast} from '@/hooks/use-toast';
-import type {StudyTask, TaskStatus} from '@/lib/types';
-import { format, parseISO } from 'date-fns';
+import type {StudyTask, TaskStatus, TaskPriority} from '@/lib/types';
+import {format, parseISO} from 'date-fns';
 
 interface TaskCardProps {
   task: StudyTask;
   onUpdate: (task: StudyTask) => void;
   onDelete: (taskId: string) => void;
 }
+
+const priorityConfig: Record<
+  TaskPriority,
+  {label: string; className: string; badgeVariant: 'destructive' | 'secondary' | 'outline'}
+> = {
+  low: {
+    label: 'Low',
+    className: 'border-sky-400',
+    badgeVariant: 'outline',
+  },
+  medium: {
+    label: 'Medium',
+    className: 'border-yellow-400',
+    badgeVariant: 'secondary',
+  },
+  high: {
+    label: 'High',
+    className: 'border-destructive',
+    badgeVariant: 'destructive',
+  },
+};
 
 export function TaskCard({task, onUpdate, onDelete}: TaskCardProps) {
   const [isAnalysisOpen, setAnalysisOpen] = useState(false);
@@ -61,7 +83,11 @@ export function TaskCard({task, onUpdate, onDelete}: TaskCardProps) {
   };
 
   const handleAnalysisComplete = (analysis: StudyTask['analysis']) => {
-    onUpdate({...task, analysis, progressDescription: task.progressDescription});
+    onUpdate({
+      ...task,
+      analysis,
+      progressDescription: task.progressDescription,
+    });
   };
 
   const formattedDate = format(parseISO(task.date), 'MMM d, yyyy');
@@ -70,9 +96,14 @@ export function TaskCard({task, onUpdate, onDelete}: TaskCardProps) {
     <>
       <Card
         className={cn(
-          'transition-all duration-300 flex flex-col',
-          task.status === 'completed' && 'bg-card/60 dark:bg-card/80 border-l-4 border-accent',
-          task.status !== 'completed' && new Date(task.date) < new Date() && !isToday(new Date(task.date)) && 'border-l-4 border-destructive/70'
+          'transition-all duration-300 flex flex-col border-l-4',
+          task.status !== 'completed' &&
+            new Date(task.date) < new Date() &&
+            !isToday(new Date(task.date))
+            ? 'border-destructive/70'
+            : task.status === 'completed'
+            ? 'bg-card/60 dark:bg-card/80 border-accent'
+            : priorityConfig[task.priority]?.className || 'border-transparent'
         )}
       >
         <CardHeader className="pb-4">
@@ -80,28 +111,37 @@ export function TaskCard({task, onUpdate, onDelete}: TaskCardProps) {
             <div className="flex-grow">
               <CardTitle className="text-lg font-semibold">{task.title}</CardTitle>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
-                <span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> {formattedDate}</span>
-                <span className="flex items-center gap-2"><Clock className="h-4 w-4" /> {task.time} ({task.duration} min)</span>
+                <span className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" /> {formattedDate}
+                </span>
+                <span className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" /> {task.time} ({task.duration}{' '}
+                  min)
+                </span>
               </div>
             </div>
             <div className="flex-shrink-0 w-full sm:w-auto pt-2 sm:pt-0">
-                <Select value={task.status} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="w-full sm:w-[140px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todo">To Do</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
+              <Select value={task.status} onValueChange={handleStatusChange}>
+                <SelectTrigger className="w-full sm:w-[140px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todo">To Do</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardHeader>
 
         <CardContent className="flex-grow pb-4">
-            {task.description && <p className="text-sm text-foreground/80 mb-4">{task.description}</p>}
-            {task.analysis && (
+          {task.description && (
+            <p className="text-sm text-foreground/80 mb-4">
+              {task.description}
+            </p>
+          )}
+          {task.analysis && (
             <div
               className={cn(
                 'p-3 rounded-md text-sm flex items-start gap-3',
@@ -137,7 +177,7 @@ export function TaskCard({task, onUpdate, onDelete}: TaskCardProps) {
         </CardContent>
 
         <CardFooter className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="outline"
               size="sm"
@@ -148,7 +188,14 @@ export function TaskCard({task, onUpdate, onDelete}: TaskCardProps) {
               Analyze <span className="hidden sm:inline">Progress</span>
             </Button>
             <Badge variant="secondary" className="flex items-center gap-1.5">
-                <Award className="h-3.5 w-3.5 text-amber-500" /> {task.points} pts
+              <Award className="h-3.5 w-3.5 text-amber-500" /> {task.points} pts
+            </Badge>
+            <Badge
+              variant={priorityConfig[task.priority]?.badgeVariant || 'secondary'}
+              className="capitalize flex items-center gap-1.5"
+            >
+              <Flame className="h-3.5 w-3.5" />
+              {task.priority}
             </Badge>
           </div>
           <Button
@@ -174,8 +221,10 @@ export function TaskCard({task, onUpdate, onDelete}: TaskCardProps) {
 }
 
 function isToday(someDate: Date) {
-    const today = new Date()
-    return someDate.getDate() == today.getDate() &&
-      someDate.getMonth() == today.getMonth() &&
-      someDate.getFullYear() == today.getFullYear()
+  const today = new Date();
+  return (
+    someDate.getDate() == today.getDate() &&
+    someDate.getMonth() == today.getMonth() &&
+    someDate.getFullYear() == today.getFullYear()
+  );
 }

@@ -1,4 +1,5 @@
 export type TaskStatus = 'todo' | 'in_progress' | 'completed';
+export type TaskPriority = 'low' | 'medium' | 'high';
 
 export type StudyTask = {
   id: string;
@@ -9,6 +10,7 @@ export type StudyTask = {
   duration: number; // in minutes
   points: number;
   status: TaskStatus;
+  priority: TaskPriority;
   progressDescription?: string;
   analysis?: {
     isOnTrack: boolean;
