@@ -27,26 +27,23 @@ const positivePsychologistFlow = ai.defineFlow(
     outputSchema: PositivePsychologistOutputSchema,
   },
   async (input: PositivePsychologistInput) => {
-    // Genkit has already validated the input against the Zod schema.
-    // We can trust that `input.history` is an array of valid message objects.
-    // All we need to do is map it to the Genkit MessageData format.
-    const mappedHistory: MessageData[] = input.history.map(msg => ({
+    // Defensively filter the history to remove any malformed messages.
+    // This ensures every message is a valid object with 'role' and 'content'.
+    const cleanHistory = input.history.filter(
+      msg => msg && msg.role && typeof msg.content === 'string'
+    );
+
+    // If, after cleaning, the history is empty, return a default response
+    // to prevent sending an invalid request to the AI.
+    if (cleanHistory.length === 0) {
+      return {response: "I'm ready to listen. What's on your mind?"};
+    }
+
+    // Map the sanitized history directly to the format Genkit requires.
+    const genkitHistory: MessageData[] = cleanHistory.map(msg => ({
       role: msg.role,
       parts: [{text: msg.content}],
     }));
-
-    // The Gemini API requires the history to start with a 'user' message.
-    // Find the first user message and slice the history from that point.
-    let genkitHistory: MessageData[] = [];
-    const firstUserIndex = mappedHistory.findIndex(msg => msg.role === 'user');
-    if (firstUserIndex !== -1) {
-      genkitHistory = mappedHistory.slice(firstUserIndex);
-    }
-    
-    // If, after slicing, the history is empty, return a default response.
-    if (genkitHistory.length === 0) {
-      return {response: "I'm ready to listen. What's on your mind?"};
-    }
 
     const {profile, dailySummary} = input;
 
