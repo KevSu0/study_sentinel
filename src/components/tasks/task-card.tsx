@@ -1,3 +1,4 @@
+
 import React, {useState, lazy, Suspense, memo} from 'react';
 import {
   Card,
@@ -7,13 +8,6 @@ import {
   CardDescription,
   CardFooter,
 } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Clock,
   Trash2,
@@ -25,6 +19,8 @@ import {
   Calendar,
   Flame,
   Pencil,
+  PlayCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
@@ -92,6 +88,35 @@ export const TaskCard = memo(function TaskCard({task, onUpdate, onDelete, onEdit
 
   const formattedDate = format(parseISO(task.date), 'MMM d, yyyy');
 
+  const renderStatusControl = () => {
+    switch (task.status) {
+      case 'todo':
+        return (
+          <Button size="sm" onClick={() => handleStatusChange('in_progress')}>
+            <PlayCircle className="mr-2" />
+            Start Task
+          </Button>
+        );
+      case 'in_progress':
+        return (
+          <Button size="sm" variant="outline" className="border-accent text-accent hover:bg-accent/10 hover:text-accent" onClick={() => handleStatusChange('completed')}>
+            <CheckCircle2 className="mr-2" />
+            Mark as Complete
+          </Button>
+        );
+      case 'completed':
+        return (
+           <div className="flex items-center justify-center text-sm font-medium text-accent h-9 px-3 rounded-md border border-accent bg-accent/10">
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Completed
+           </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+
   return (
     <>
       <Card
@@ -120,16 +145,7 @@ export const TaskCard = memo(function TaskCard({task, onUpdate, onDelete, onEdit
               </div>
             </div>
             <div className="flex-shrink-0 w-full sm:w-auto pt-2 sm:pt-0">
-              <Select value={task.status} onValueChange={handleStatusChange}>
-                <SelectTrigger className="w-full sm:w-[140px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todo">To Do</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
+                {renderStatusControl()}
             </div>
           </div>
         </CardHeader>

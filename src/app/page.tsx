@@ -70,35 +70,35 @@ export default function DashboardPage() {
 
 
   useEffect(() => {
-    const checkTasks = () => {
-      const now = new Date();
-      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(
-        now.getMinutes()
-      ).padStart(2, '0')}`;
-      const todayFormatted = format(now, 'yyyy-MM-dd');
+    const checkOverdueTasks = () => {
+        const now = new Date();
+        const notifiedOverdue = new Set(JSON.parse(sessionStorage.getItem('notifiedOverdueTasks') || '[]'));
 
-      const notifiedTasks = new Set(
-        JSON.parse(sessionStorage.getItem('notifiedTasks') || '[]')
-      );
+        tasks.forEach(task => {
+            if (task.status === 'completed' || notifiedOverdue.has(task.id)) {
+                return;
+            }
+            
+            // Create a local date time object from task date and time
+            const taskStartDateTime = new Date(`${task.date}T${task.time}`);
+            const taskEndDateTime = new Date(taskStartDateTime.getTime() + task.duration * 60000);
 
-      todaysTasks.forEach(task => {
-        if (
-          task.time === currentTime &&
-          !notifiedTasks.has(task.id)
-        ) {
-          toast({
-            title: `Time for: ${task.title}`,
-            description: "It's time to start your scheduled task. Let's get to it!",
-          });
-          notifiedTasks.add(task.id);
-          sessionStorage.setItem('notifiedTasks', JSON.stringify([...notifiedTasks]));
-        }
-      });
+            if (now > taskEndDateTime) {
+                toast({
+                    variant: 'destructive',
+                    title: `Task Overdue: ${task.title}`,
+                    description: "Time's up! Mark it complete to claim your points, or it will remain overdue.",
+                });
+                notifiedOverdue.add(task.id);
+                sessionStorage.setItem('notifiedOverdueTasks', JSON.stringify([...notifiedOverdue]));
+            }
+        });
     };
 
-    const intervalId = setInterval(checkTasks, 60000); // Check every minute
+    const intervalId = setInterval(checkOverdueTasks, 60000); // Check every minute
     return () => clearInterval(intervalId);
-  }, [todaysTasks, toast]);
+  }, [tasks, toast]);
+
 
   return (
     <div className="flex flex-col h-full">
