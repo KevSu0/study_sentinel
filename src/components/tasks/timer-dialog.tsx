@@ -5,8 +5,6 @@ import React, {
   useEffect,
   useRef,
   useCallback,
-  lazy,
-  Suspense,
 } from 'react';
 import {
   Dialog,
@@ -22,12 +20,8 @@ import type {StudyTask} from '@/lib/types';
 import {cn} from '@/lib/utils';
 import {useConfetti} from '@/components/providers/confetti-provider';
 import {useLogger} from '@/hooks/use-logger';
+import {StopTimerDialog} from './stop-timer-dialog';
 
-const StopTimerDialog = lazy(() =>
-  import('./stop-timer-dialog').then(module => ({
-    default: module.StopTimerDialog,
-  }))
-);
 
 interface TimerDialogProps {
   task: StudyTask;
@@ -154,7 +148,7 @@ export function TimerDialog({
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isOpen, task.id, startTimerInterval]);
+  }, [isOpen, task.id, task.duration, startTimerInterval]);
 
   const handleStartPause = async () => {
     if (isPaused) {
@@ -217,6 +211,7 @@ export function TimerDialog({
     setTimeRemaining(task.duration * 60);
     setIsPaused(true);
     setIsFinished(false);
+    localStorage.removeItem(TIMER_STORAGE_KEY);
   };
 
   const formatTime = (seconds: number) => {
@@ -295,15 +290,11 @@ export function TimerDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {isStopDialogOpen && (
-        <Suspense fallback={null}>
-          <StopTimerDialog
-            isOpen={isStopDialogOpen}
-            onOpenChange={setStopDialogOpen}
-            onConfirm={handleConfirmStop}
-          />
-        </Suspense>
-      )}
+      <StopTimerDialog
+        isOpen={isStopDialogOpen}
+        onOpenChange={setStopDialogOpen}
+        onConfirm={handleConfirmStop}
+      />
     </>
   );
 }

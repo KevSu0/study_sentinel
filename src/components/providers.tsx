@@ -30,6 +30,7 @@ import {
 import {ConfettiProvider} from './providers/confetti-provider';
 import {SplashScreen} from '@/components/splash-screen';
 import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
+import {GlobalTimerBar} from './tasks/global-timer-bar';
 
 export function Providers({children}: {children: ReactNode}) {
   const pathname = usePathname();
@@ -88,7 +89,10 @@ export function Providers({children}: {children: ReactNode}) {
               <SidebarMenuItem>
                 <SidebarMenuButton tooltip="Account">
                   <Avatar className="size-7">
-                    <AvatarImage src="https://placehold.co/40x40.png" data-ai-hint="user profile"/>
+                    <AvatarImage
+                      src="https://placehold.co/40x40.png"
+                      data-ai-hint="user profile"
+                    />
                     <AvatarFallback>U</AvatarFallback>
                   </Avatar>
                   <span>Account</span>
@@ -98,10 +102,11 @@ export function Providers({children}: {children: ReactNode}) {
           </SidebarFooter>
         </Sidebar>
         <SidebarInset>
-          <div className="p-4 border-b flex items-center justify-between md:hidden sticky top-0 bg-background z-10">
+          <div className="p-4 border-b flex items-center justify-between md:hidden sticky top-0 bg-background z-30">
             <Logo />
             <SidebarTrigger />
           </div>
+          <GlobalTimerBar />
           {children}
         </SidebarInset>
         <Toaster />

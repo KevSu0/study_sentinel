@@ -10,6 +10,7 @@ import {
 import {Button} from '@/components/ui/button';
 import {Textarea} from '@/components/ui/textarea';
 import {Label} from '@/components/ui/label';
+import {RadioGroup, RadioGroupItem} from '@/components/ui/radio-group';
 
 interface StopTimerDialogProps {
   isOpen: boolean;
@@ -17,18 +18,30 @@ interface StopTimerDialogProps {
   onConfirm: (reason: string) => void;
 }
 
+const reasons = [
+  'Too much work',
+  'Boredom',
+  'Laziness',
+  'Took a break',
+  'Other',
+];
+
 export function StopTimerDialog({
   isOpen,
   onOpenChange,
   onConfirm,
 }: StopTimerDialogProps) {
-  const [reason, setReason] = useState('');
+  const [selectedValue, setSelectedValue] = useState('');
+  const [customReason, setCustomReason] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onConfirm(reason || 'No reason provided.');
+    const finalReason =
+      selectedValue === 'Other' ? customReason : selectedValue;
+    onConfirm(finalReason || 'No reason provided.');
     onOpenChange(false);
-    setReason('');
+    setSelectedValue('');
+    setCustomReason('');
   };
 
   return (
@@ -39,20 +52,33 @@ export function StopTimerDialog({
             <DialogTitle>Stop Timer</DialogTitle>
             <DialogDescription>
               Why are you stopping the timer? Your feedback helps the AI give
-              better advice. (Optional)
+              better advice.
             </DialogDescription>
           </DialogHeader>
-          <div className="my-4">
-            <Label htmlFor="stop-reason" className="sr-only">
-              Reason for stopping
-            </Label>
-            <Textarea
-              id="stop-reason"
-              value={reason}
-              onChange={e => setReason(e.target.value)}
-              placeholder="e.g., I got distracted, the task was harder than I thought, I needed a break..."
-              rows={3}
-            />
+          <div className="my-4 space-y-4">
+            <RadioGroup onValueChange={setSelectedValue} value={selectedValue}>
+              {reasons.map(reason => (
+                <div key={reason} className="flex items-center space-x-2">
+                  <RadioGroupItem value={reason} id={reason} />
+                  <Label htmlFor={reason}>{reason}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+            {selectedValue === 'Other' && (
+              <div>
+                <Label htmlFor="stop-reason" className="sr-only">
+                  Other reason
+                </Label>
+                <Textarea
+                  id="stop-reason"
+                  value={customReason}
+                  onChange={e => setCustomReason(e.target.value)}
+                  placeholder="Please specify your reason..."
+                  rows={3}
+                  className="mt-2"
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button
@@ -62,7 +88,9 @@ export function StopTimerDialog({
             >
               Cancel
             </Button>
-            <Button type="submit">Confirm Stop</Button>
+            <Button type="submit" disabled={!selectedValue}>
+              Confirm Stop
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
