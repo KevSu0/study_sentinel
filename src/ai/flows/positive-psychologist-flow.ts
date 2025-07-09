@@ -47,6 +47,7 @@ const positivePsychologistFlow = ai.defineFlow(
   async input => {
     const {profile, dailySummary, history} = input;
 
+    // Handle case where history is empty or just has the initial greeting
     if (!history || history.length <= 1) {
       return {response: 'Hello! How can I help you today?'};
     }
@@ -100,9 +101,12 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    // The history from the client includes the initial model greeting.
-    // We slice(1) to remove it, ensuring the history always starts with a user message.
-    const conversation = history.slice(1);
+    // The history from the client might include the initial model greeting.
+    // If the first message is from the model, slice it off.
+    const conversation =
+      history.length > 0 && history[0].role === 'model'
+        ? history.slice(1)
+        : history;
 
     // The last message in the history is the user's current prompt.
     const lastMessage = conversation.pop();

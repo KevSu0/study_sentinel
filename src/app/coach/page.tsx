@@ -79,11 +79,7 @@ function ChatBubble({role, content}: ChatMessage) {
 }
 
 export default function CoachPage() {
-  const {
-    messages,
-    addMessage,
-    isLoaded: historyLoaded,
-  } = useChatHistory();
+  const {messages, addMessage, isLoaded: historyLoaded} = useChatHistory();
   const [inputValue, setInputValue] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isContextLoading, setIsContextLoading] = useState(true);
@@ -136,18 +132,15 @@ export default function CoachPage() {
     if (!inputValue.trim() || isChatLoading || isContextLoading) return;
 
     const userMessage: ChatMessage = {role: 'user', content: inputValue};
-    
-    // Create the new history first for the API call
     const updatedHistory = [...messages, userMessage];
 
-    // Then update the UI
     addMessage(userMessage);
     setInputValue('');
     setIsChatLoading(true);
 
     try {
       const result = await getChatbotResponse({
-        history: updatedHistory.slice(-10), // Send last 10 messages for context
+        history: updatedHistory.slice(-10),
         profile,
         dailySummary: dailySummary || undefined,
       });
@@ -161,18 +154,19 @@ export default function CoachPage() {
       } else {
         const errorMessage: ChatMessage = {
           role: 'model',
-          content: "Sorry, I couldn't get a response. Please try again.",
+          content:
+            result?.error ||
+            "Sorry, I couldn't get a response. Please try again.",
         };
         addMessage(errorMessage);
       }
     } catch (error) {
-       const errorMessage: ChatMessage = {
-          role: 'model',
-          content: "Sorry, an unexpected error occurred. Please try again.",
-        };
-        addMessage(errorMessage);
-    }
-    finally {
+      const errorMessage: ChatMessage = {
+        role: 'model',
+        content: 'Sorry, an unexpected error occurred. Please try again.',
+      };
+      addMessage(errorMessage);
+    } finally {
       setIsChatLoading(false);
     }
   };
