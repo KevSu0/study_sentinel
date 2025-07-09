@@ -8,7 +8,6 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {generate} from 'genkit/generate';
 import {z} from 'genkit';
 import {MessageData} from 'genkit/ai';
 import type {UserProfile} from '@/hooks/use-profile';
@@ -100,8 +99,8 @@ ${summaryContext}
       parts: [{text: h.content}],
     }));
 
-    // Using generate directly for chat history support
-    const response = await generate({
+    // Using ai.generate for chat history support
+    const response = await ai.generate({
       model: 'googleai/gemini-2.0-flash',
       prompt: message,
       history: genkitHistory,
