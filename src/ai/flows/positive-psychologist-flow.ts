@@ -55,18 +55,18 @@ const positivePsychologistFlow = ai.defineFlow(
     const profileContext = profile
       ? `
 **User Profile:**
-- Name: ${profile.name || 'Not provided'}
-- Passion: ${profile.passion || 'Not provided'}
-- Dream: ${profile.dream || 'Not provided'}
-- Education: ${profile.education || 'Not provided'}
+- Name: ${profile?.name || 'Not provided'}
+- Passion: ${profile?.passion || 'Not provided'}
+- Dream: ${profile?.dream || 'Not provided'}
+- Education: ${profile?.education || 'Not provided'}
 `
       : '**User Profile:** Not provided.';
 
     const summaryContext = dailySummary
       ? `
 **Latest Daily Briefing:**
-- Evaluation: ${dailySummary.evaluation}
-- Motivation: ${dailySummary.motivationalParagraph}
+- Evaluation: ${dailySummary?.evaluation}
+- Motivation: ${dailySummary?.motivationalParagraph}
 `
       : '**Latest Daily Briefing:** Not available.';
 
@@ -101,18 +101,20 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    // The history from the client includes the user's latest message and
-    // might include the initial model greeting.
-    // The Gemini API requires the history to start with a 'user' message.
+    // The history from the client includes the user's latest message.
     let conversation = history;
-    if (conversation.length > 0 && conversation[0].role === 'model') {
+    
+    // The Gemini API requires the history to start with a 'user' message.
+    if (conversation.length > 0 && conversation[0]?.role === 'model') {
       // If the first message is the model's initial greeting, remove it for the API call.
       conversation = conversation.slice(1);
     }
     
-    // Filter out malformed messages and convert to the format Genkit expects.
+    // Filter out malformed messages with a robust type guard to prevent crashes.
     const genkitHistory: MessageData[] = conversation
-      .filter(h => h && h.content)
+      .filter((h): h is { role: 'user' | 'model'; content: string } => 
+        h && typeof h.role === 'string' && typeof h.content === 'string'
+      )
       .map(h => ({
         role: h.role,
         parts: [{text: h.content}],
