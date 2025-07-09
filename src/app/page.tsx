@@ -30,6 +30,10 @@ import {useViewMode} from '@/hooks/use-view-mode';
 import {cn} from '@/lib/utils';
 import {useRoutines} from '@/hooks/use-routines';
 import {RoutineDashboardCard} from '@/components/timetable/routine-dashboard-card';
+import {
+  CardCompletedRoutineItem,
+  SimpleCompletedRoutineItem,
+} from '@/components/dashboard/completed-routine-card';
 
 const TaskDialog = dynamic(
   () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),
@@ -335,6 +339,7 @@ export default function DashboardPage() {
     pointsToday,
     todaysBadges,
     todaysRoutines,
+    todaysCompletedRoutines,
   } = useMemo(() => {
     const todays = tasks.filter(
       t => t.date === todayStr && t.status !== 'archived'
@@ -344,13 +349,17 @@ export default function DashboardPage() {
     );
     const completed = todays.filter(t => t.status === 'completed');
     let points = completed.reduce((sum, task) => sum + task.points, 0);
-    
+
     // Add points from routines
-    const todaysRoutineLogs = getAllLogs().filter(l => 
+    const todaysRoutineLogs = getAllLogs().filter(
+      l =>
         l.type === 'ROUTINE_SESSION_COMPLETE' &&
         format(parseISO(l.timestamp), 'yyyy-MM-dd') === todayStr
     );
-    const routinePoints = todaysRoutineLogs.reduce((sum, log) => sum + (log.payload.points || 0), 0);
+    const routinePoints = todaysRoutineLogs.reduce(
+      (sum, log) => sum + (log.payload.points || 0),
+      0
+    );
     points += routinePoints;
 
     const badges = allBadges.filter(
@@ -361,6 +370,11 @@ export default function DashboardPage() {
     const today = new Date().getDay(); // Sunday - 0, Monday - 1, etc.
     const todaysRoutines = routines.filter(r => r.days.includes(today));
 
+    // Sort completed routines by timestamp descending
+    const sortedCompletedRoutines = todaysRoutineLogs.sort(
+      (a, b) => parseISO(b.timestamp).getTime() - parseISO(a.timestamp).getTime()
+    );
+
     return {
       todaysTasks: todays,
       pendingTasks: pending,
@@ -368,6 +382,7 @@ export default function DashboardPage() {
       pointsToday: points,
       todaysBadges: badges,
       todaysRoutines,
+      todaysCompletedRoutines: sortedCompletedRoutines,
     };
   }, [tasks, todayStr, allBadges, earnedBadges, routines, getAllLogs]);
 
@@ -564,12 +579,34 @@ export default function DashboardPage() {
                       {renderTaskList(pendingTasks)}
                     </section>
                   )}
-                  {todaysCompletedTasks.length > 0 && (
+                  {(todaysCompletedTasks.length > 0 ||
+                    todaysCompletedRoutines.length > 0) && (
                     <section>
                       <h2 className="text-xl font-semibold text-primary mb-3">
                         Completed Today
                       </h2>
-                      {renderTaskList(todaysCompletedTasks)}
+                      {todaysCompletedTasks.length > 0 &&
+                        renderTaskList(todaysCompletedTasks)}
+
+                      {todaysCompletedRoutines.length > 0 && (
+                        <div
+                          className={cn(
+                            viewMode === 'card' ? 'space-y-4' : 'space-y-2',
+                            todaysCompletedTasks.length > 0 && 'mt-4'
+                          )}
+                        >
+                          {todaysCompletedRoutines.map(log =>
+                            viewMode === 'card' ? (
+                              <CardCompletedRoutineItem key={log.id} log={log} />
+                            ) : (
+                              <SimpleCompletedRoutineItem
+                                key={log.id}
+                                log={log}
+                              />
+                            )
+                          )}
+                        </div>
+                      )}
                     </section>
                   )}
                 </>
