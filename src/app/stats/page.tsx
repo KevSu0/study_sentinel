@@ -17,11 +17,11 @@ import {
 } from 'lucide-react';
 import {useTasks} from '@/hooks/use-tasks';
 import {useBadges} from '@/hooks/useBadges';
-import {format, subDays, startOfDay} from 'date-fns';
+import {format, subDays, startOfDay, parseISO} from 'date-fns';
 import {Skeleton} from '@/components/ui/skeleton';
 import {Progress} from '@/components/ui/progress';
 
-const WeeklyChart = lazy(() => import('@/components/stats/weekly-chart'));
+const StudyActivityChart = lazy(() => import('@/components/stats/weekly-chart'));
 const PriorityChart = lazy(
   () => import('@/components/stats/priority-chart')
 );
@@ -39,13 +39,14 @@ export default function StatsPage() {
   const isLoaded = tasksLoaded && badgesLoaded;
 
   const filteredTasks = useMemo(() => {
-    if (timeRange === 'overall') return tasks;
+    const nonArchivedTasks = tasks.filter(t => t.status !== 'archived');
+    if (timeRange === 'overall') return nonArchivedTasks;
 
     const now = startOfDay(new Date());
     const daysToSubtract = timeRange === 'weekly' ? 7 : 30;
     const pastDate = subDays(now, daysToSubtract);
 
-    return tasks.filter(t => new Date(t.date) >= pastDate);
+    return nonArchivedTasks.filter(t => new Date(t.date) >= pastDate);
   }, [tasks, timeRange]);
 
   const filteredCompletedTasks = useMemo(
@@ -108,12 +109,31 @@ export default function StatsPage() {
   }, [earnedBadges, allBadges]);
 
   const barChartData = useMemo(() => {
+    const now = new Date();
+    if (timeRange === 'overall') {
+      const monthlyData = completedTasks.reduce(
+        (acc, task) => {
+          const monthKey = format(parseISO(task.date), 'yyyy-MM');
+          acc[monthKey] = (acc[monthKey] || 0) + task.duration;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
+
+      return Object.keys(monthlyData)
+        .sort()
+        .map(monthKey => ({
+          name: format(parseISO(`${monthKey}-01`), 'MMM yy'),
+          hours: parseFloat((monthlyData[monthKey] / 60).toFixed(2)),
+        }));
+    }
+
     const dataPoints = timeRange === 'weekly' ? 7 : 30;
     const data: {name: string; hours: number}[] = [];
     for (let i = dataPoints - 1; i >= 0; i--) {
-      const date = subDays(new Date(), i);
+      const date = subDays(now, i);
       const formattedDate = format(date, 'yyyy-MM-dd');
-      const dayName = format(date, timeRange === 'weekly' ? 'eee' : 'd');
+      const dayName = timeRange === 'weekly' ? format(date, 'eee') : format(date, 'd');
 
       const durationOnDay = completedTasks
         .filter(task => task.date === formattedDate)
@@ -126,6 +146,16 @@ export default function StatsPage() {
     }
     return data;
   }, [completedTasks, timeRange]);
+  
+  const chartDetails = useMemo(() => {
+    if (timeRange === 'weekly') {
+      return { title: 'Study Activity', description: 'Hours studied in the last 7 days.' };
+    }
+    if (timeRange === 'monthly') {
+      return { title: 'Study Activity', description: 'Hours studied in the last 30 days.' };
+    }
+    return { title: 'Overall Study Activity', description: 'Total hours studied per month.' };
+  }, [timeRange]);
 
   const priorityData = useMemo(() => {
     const counts = {high: 0, medium: 0, low: 0};
@@ -139,20 +169,22 @@ export default function StatsPage() {
     ];
   }, [filteredCompletedTasks]);
 
+  const getTitleCase = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
+
   const statCards = [
     {
-      title: 'Total Study Time',
+      title: `Time (${getTitleCase(timeRange)})`,
       value: timeRangeStats.totalHours,
       unit: 'hours',
       Icon: Clock,
     },
     {
-      title: 'Completed Tasks',
+      title: `Tasks Completed (${getTitleCase(timeRange)})`,
       value: timeRangeStats.completedCount,
       Icon: CheckCircle,
     },
     {
-      title: 'Completion Rate',
+      title: `Completion Rate (${getTitleCase(timeRange)})`,
       value: timeRangeStats.completionRate.toFixed(0),
       unit: '%',
       Icon: Target,
@@ -160,7 +192,7 @@ export default function StatsPage() {
     {title: 'Badges Earned', value: badgeStats.earnedCount, Icon: Award},
     {title: 'Current Streak', value: studyStreak, unit: 'days', Icon: Flame},
     {
-      title: 'Avg. Session',
+      title: `Avg. Session (${getTitleCase(timeRange)})`,
       value: timeRangeStats.avgSessionDuration,
       unit: 'min',
       Icon: Activity,
@@ -190,7 +222,7 @@ export default function StatsPage() {
             <TabsTrigger value="overall">Overall</TabsTrigger>
           </TabsList>
           <TabsContent value={timeRange} className="mt-6 space-y-6">
-            <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {statCards.map(stat => (
                 <Card key={stat.title}>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -223,7 +255,12 @@ export default function StatsPage() {
                   <Suspense
                     fallback={<Skeleton className="w-full h-[380px] rounded-lg" />}
                   >
-                    <WeeklyChart data={barChartData} />
+                    <StudyActivityChart 
+                        data={barChartData} 
+                        title={chartDetails.title}
+                        description={chartDetails.description}
+                        timeRange={timeRange}
+                    />
                   </Suspense>
                 ) : (
                   <Skeleton className="w-full h-[380px] rounded-lg" />
