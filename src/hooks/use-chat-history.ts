@@ -18,14 +18,19 @@ const initialMessage: ChatMessage = {
 
 // A robust validation function to ensure a message is in the correct format
 const isValidMessage = (msg: any): msg is ChatMessage => {
-  return (
-    msg &&
-    typeof msg === 'object' &&
-    !Array.isArray(msg) &&
-    typeof msg.role === 'string' &&
-    (msg.role === 'user' || msg.role === 'model') &&
-    typeof msg.content === 'string'
-  );
+  if (!msg || typeof msg !== 'object' || Array.isArray(msg)) {
+    return false;
+  }
+  if (
+    typeof msg.role !== 'string' ||
+    (msg.role !== 'user' && msg.role !== 'model')
+  ) {
+    return false;
+  }
+  if (typeof msg.content !== 'string') {
+    return false;
+  }
+  return true;
 };
 
 export function useChatHistory() {
@@ -47,28 +52,24 @@ export function useChatHistory() {
         }
 
         if (Array.isArray(parsedHistory)) {
-          // Use reduce to build a new, guaranteed-clean array.
-          // This explicitly handles sparse arrays or null/undefined items.
-          const cleanHistory = parsedHistory.reduce(
-            (acc: ChatMessage[], msg: any) => {
-              if (isValidMessage(msg)) {
-                acc.push(msg);
-              }
-              return acc;
-            },
-            []
-          );
+          // Explicitly build a new, guaranteed-clean array.
+          const validatedHistory: ChatMessage[] = [];
+          for (const msg of parsedHistory) {
+            if (isValidMessage(msg)) {
+              validatedHistory.push(msg);
+            }
+          }
 
-          if (cleanHistory.length !== parsedHistory.length) {
+          if (validatedHistory.length !== parsedHistory.length) {
             // If anything was cleaned, update localStorage immediately with the clean version.
             localStorage.setItem(
               CHAT_HISTORY_KEY,
-              JSON.stringify(cleanHistory)
+              JSON.stringify(validatedHistory)
             );
           }
 
           setInternalMessages(
-            cleanHistory.length > 0 ? cleanHistory : [initialMessage]
+            validatedHistory.length > 0 ? validatedHistory : [initialMessage]
           );
         } else {
           // If stored data is not an array, reset.
