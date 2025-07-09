@@ -27,44 +27,29 @@ const positivePsychologistFlow = ai.defineFlow(
     outputSchema: PositivePsychologistOutputSchema,
   },
   async (input: PositivePsychologistInput) => {
-    // Step 1: Defensively rebuild the history from the input.
-    // This creates a clean, safe version of the history.
-    const rebuiltHistory: MessageData[] = [];
-    if (input?.history && Array.isArray(input.history)) {
-      for (const msg of input.history) {
-        // Explicitly check for all required properties to prevent crashes.
-        if (
-          msg &&
-          typeof msg.role === 'string' &&
-          typeof msg.content === 'string' &&
-          msg.content.trim() !== ''
-        ) {
-          rebuiltHistory.push({
-            role: msg.role as 'user' | 'model',
-            parts: [{text: msg.content}],
-          });
-        }
-      }
-    }
+    // Genkit has already validated the input against the Zod schema.
+    // We can trust that `input.history` is an array of valid message objects.
+    // All we need to do is map it to the Genkit MessageData format.
+    const mappedHistory: MessageData[] = input.history.map(msg => ({
+      role: msg.role,
+      parts: [{text: msg.content}],
+    }));
 
-    // Step 2: The Gemini API requires the history to start with a 'user' message.
+    // The Gemini API requires the history to start with a 'user' message.
     // Find the first user message and slice the history from that point.
     let genkitHistory: MessageData[] = [];
-    const firstUserIndex = rebuiltHistory.findIndex(msg => msg.role === 'user');
-
+    const firstUserIndex = mappedHistory.findIndex(msg => msg.role === 'user');
     if (firstUserIndex !== -1) {
-      genkitHistory = rebuiltHistory.slice(firstUserIndex);
+      genkitHistory = mappedHistory.slice(firstUserIndex);
     }
-
-    // Step 3: If, after cleaning, the history is empty or contains no user messages,
-    // return a default response to avoid calling the API with invalid input. This was the root cause of the crash.
+    
+    // If, after slicing, the history is empty, return a default response.
     if (genkitHistory.length === 0) {
       return {response: "I'm ready to listen. What's on your mind?"};
     }
 
     const {profile, dailySummary} = input;
 
-    // Now that history is guaranteed to be clean, build the system prompt.
     const profileContext = profile
       ? `
 **User Profile:**
