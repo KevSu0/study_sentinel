@@ -16,13 +16,14 @@ const initialMessage: ChatMessage = {
     "Hello! I'm your personal motivation coach. How can I help you on your journey today?",
 };
 
-// This is the most robust way to check for a valid message.
+// This is a robust type guard to check for a valid message.
 const isValidMessage = (msg: any): msg is ChatMessage => {
   return (
     msg &&
     typeof msg === 'object' &&
     (msg.role === 'user' || msg.role === 'model') &&
-    typeof msg.content === 'string'
+    typeof msg.content === 'string' &&
+    msg.content.trim() !== ''
   );
 };
 
@@ -35,19 +36,12 @@ export function useChatHistory() {
       const savedHistory = localStorage.getItem(CHAT_HISTORY_KEY);
       if (savedHistory) {
         const parsed = JSON.parse(savedHistory);
-        // Use an imperative loop to build a clean history array.
-        const cleanHistory: ChatMessage[] = [];
+        // Use filter with a type guard to create a guaranteed-clean history array.
         if (Array.isArray(parsed)) {
-          for (const msg of parsed) {
-            if (isValidMessage(msg)) {
-              cleanHistory.push(msg);
-            }
-          }
-        }
-        
-        if (cleanHistory.length > 0) {
-          setMessages(cleanHistory);
+          const cleanHistory = parsed.filter(isValidMessage);
+          setMessages(cleanHistory.length > 0 ? cleanHistory : [initialMessage]);
         } else {
+          // If the stored value is not an array, reset to the initial state.
           setMessages([initialMessage]);
         }
       } else {
@@ -63,13 +57,19 @@ export function useChatHistory() {
   }, []);
 
   useEffect(() => {
-    if (isLoaded && messages.length > 0) {
+    if (isLoaded) {
       try {
         // Filter one last time before saving to ensure data integrity.
         const historyToSave = messages
           .filter(isValidMessage)
           .slice(-MAX_HISTORY_LENGTH);
-        localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(historyToSave));
+        
+        // Only save if there's something valid to save, otherwise reset to initial.
+        if (historyToSave.length > 0) {
+           localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(historyToSave));
+        } else {
+           localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify([initialMessage]));
+        }
       } catch (error) {
         console.error('Failed to save chat history', error);
       }
