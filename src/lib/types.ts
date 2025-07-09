@@ -20,9 +20,29 @@ export type BadgeCategory = 'daily' | 'weekly' | 'monthly' | 'overall';
 export type Badge = {
   id: string;
   name: string;
-  description: string;
+  description:string;
   motivationalMessage: string;
   category: BadgeCategory;
   Icon: LucideIcon;
   checker: (completedTasks: StudyTask[]) => boolean;
+};
+
+export type LogEventType =
+  | 'TASK_ADD'
+  | 'TASK_UPDATE'
+  | 'TASK_COMPLETE'
+  | 'TASK_IN_PROGRESS'
+  | 'TASK_ARCHIVE'
+  | 'TASK_UNARCHIVE'
+  | 'TASK_PUSH_NEXT_DAY'
+  | 'TIMER_START'
+  | 'TIMER_PAUSE'
+  | 'TIMER_COMPLETE'
+  | 'TIMER_STOP';
+
+export type LogEvent = {
+  id: string;
+  timestamp: string; // ISO 8601 format
+  type: LogEventType;
+  payload: Record<string, any>;
 };

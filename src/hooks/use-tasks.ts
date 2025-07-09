@@ -3,6 +3,7 @@
 import {useState, useEffect, useCallback} from 'react';
 import {type StudyTask} from '@/lib/types';
 import {addDays, format} from 'date-fns';
+import {useLogger} from './use-logger';
 
 const TASKS_KEY = 'studySentinelTasks';
 
@@ -22,6 +23,7 @@ const saveTasks = (tasks: StudyTask[]) => {
 export function useTasks() {
   const [tasks, setTasks] = useState<StudyTask[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const {addLog} = useLogger();
 
   // Load tasks from localStorage on initial mount
   useEffect(() => {
@@ -42,62 +44,108 @@ export function useTasks() {
 
   const addTask = useCallback(
     (task: Omit<StudyTask, 'id' | 'status'>) => {
+      const newTask: StudyTask = {
+        ...task,
+        id: crypto.randomUUID(), // Generate a unique ID
+        status: 'todo',
+        description: task.description || '',
+      };
       setTasks(prevTasks => {
-        const newTask: StudyTask = {
-          ...task,
-          id: crypto.randomUUID(), // Generate a unique ID
-          status: 'todo',
-          description: task.description || '',
-        };
         const updatedTasks = [...prevTasks, newTask];
         return saveTasks(updatedTasks);
       });
+      addLog('TASK_ADD', {taskId: newTask.id, title: newTask.title});
     },
-    []
+    [addLog]
   );
 
-  const updateTask = useCallback((updatedTask: StudyTask) => {
-    setTasks(prevTasks => {
-      const newTasks = prevTasks.map(task =>
-        task.id === updatedTask.id ? updatedTask : task
-      );
-      return saveTasks(newTasks);
-    });
-  }, []);
-
-  const archiveTask = useCallback((taskId: string) => {
-    setTasks(prevTasks => {
-      const newTasks = prevTasks.map(task =>
-        task.id === taskId ? {...task, status: 'archived'} : task
-      );
-      return saveTasks(newTasks);
-    });
-  }, []);
-
-  const unarchiveTask = useCallback((taskId: string) => {
-    setTasks(prevTasks => {
-      const newTasks = prevTasks.map(task =>
-        task.id === taskId ? {...task, status: 'todo'} : task
-      );
-      return saveTasks(newTasks);
-    });
-  }, []);
-
-  const pushTaskToNextDay = useCallback((taskId: string) => {
-    setTasks(prevTasks => {
-      const newTasks = prevTasks.map(task => {
-        if (task.id === taskId) {
-          // Dates are stored as 'yyyy-MM-dd', which UTC.
-          // To avoid timezone issues, we add a time component to parse it correctly, then format back.
-          const taskDate = new Date(`${task.date}T00:00:00`);
-          const nextDay = addDays(taskDate, 1);
-          return {...task, date: format(nextDay, 'yyyy-MM-dd')};
-        }
-        return task;
+  const updateTask = useCallback(
+    (updatedTask: StudyTask) => {
+      let oldTask: StudyTask | undefined;
+      setTasks(prevTasks => {
+        oldTask = prevTasks.find(t => t.id === updatedTask.id);
+        const newTasks = prevTasks.map(task =>
+          task.id === updatedTask.id ? updatedTask : task
+        );
+        return saveTasks(newTasks);
       });
-      return saveTasks(newTasks);
-    });
-  }, []);
+
+      // Log status changes or general updates
+      if (oldTask && oldTask.status !== updatedTask.status) {
+        if (updatedTask.status === 'completed') {
+          addLog('TASK_COMPLETE', {
+            taskId: updatedTask.id,
+            title: updatedTask.title,
+          });
+        } else if (updatedTask.status === 'in_progress') {
+          addLog('TASK_IN_PROGRESS', {
+            taskId: updatedTask.id,
+            title: updatedTask.title,
+          });
+        }
+      } else {
+        addLog('TASK_UPDATE', {
+          taskId: updatedTask.id,
+          title: updatedTask.title,
+        });
+      }
+    },
+    [addLog]
+  );
+
+  const archiveTask = useCallback(
+    (taskId: string) => {
+      let taskTitle = '';
+      setTasks(prevTasks => {
+        const taskToArchive = prevTasks.find(t => t.id === taskId);
+        if (taskToArchive) taskTitle = taskToArchive.title;
+        const newTasks = prevTasks.map(task =>
+          task.id === taskId ? {...task, status: 'archived'} : task
+        );
+        return saveTasks(newTasks);
+      });
+      addLog('TASK_ARCHIVE', {taskId, title: taskTitle});
+    },
+    [addLog]
+  );
+
+  const unarchiveTask = useCallback(
+    (taskId: string) => {
+      let taskTitle = '';
+      setTasks(prevTasks => {
+        const taskToUnarchive = prevTasks.find(t => t.id === taskId);
+        if (taskToUnarchive) taskTitle = taskToUnarchive.title;
+        const newTasks = prevTasks.map(task =>
+          task.id === taskId ? {...task, status: 'todo'} : task
+        );
+        return saveTasks(newTasks);
+      });
+      addLog('TASK_UNARCHIVE', {taskId, title: taskTitle});
+    },
+    [addLog]
+  );
+
+  const pushTaskToNextDay = useCallback(
+    (taskId: string) => {
+      let taskTitle = '';
+      setTasks(prevTasks => {
+        const newTasks = prevTasks.map(task => {
+          if (task.id === taskId) {
+            if (!taskTitle) taskTitle = task.title;
+            // Dates are stored as 'yyyy-MM-dd', which UTC.
+            // To avoid timezone issues, we add a time component to parse it correctly, then format back.
+            const taskDate = new Date(`${task.date}T00:00:00`);
+            const nextDay = addDays(taskDate, 1);
+            return {...task, date: format(nextDay, 'yyyy-MM-dd')};
+          }
+          return task;
+        });
+        return saveTasks(newTasks);
+      });
+      addLog('TASK_PUSH_NEXT_DAY', {taskId, title: taskTitle});
+    },
+    [addLog]
+  );
 
   return {
     tasks,

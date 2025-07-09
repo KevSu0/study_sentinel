@@ -21,6 +21,7 @@ import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {BadgeCard} from '@/components/badges/badge-card';
 import Link from 'next/link';
 import {getDailySummary} from '@/lib/actions';
+import {useLogger} from '@/hooks/use-logger';
 
 const TaskDialog = dynamic(
   () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),
@@ -250,6 +251,8 @@ export default function DashboardPage() {
     isLoaded: tasksLoaded,
   } = useTasks();
   const {allBadges, earnedBadges, isLoaded: badgesLoaded} = useBadges();
+  const {getPreviousDayLogs, isLoaded: loggerLoaded} = useLogger();
+
   const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
   const [dailySummary, setDailySummary] = useState<{
     evaluation: string;
@@ -261,7 +264,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchDailySummary = async () => {
-      if (!tasksLoaded) return;
+      // Wait for all data to be loaded
+      if (!tasksLoaded || !loggerLoaded) return;
 
       const DAILY_SUMMARY_KEY = 'dailySummaryLastShown';
       const lastShownDate = localStorage.getItem(DAILY_SUMMARY_KEY);
@@ -280,16 +284,11 @@ export default function DashboardPage() {
         return;
       }
 
-      const previousDay = new Date(sessionDate);
-      previousDay.setDate(previousDay.getDate() - 1);
-      const previousDayStr = format(previousDay, 'yyyy-MM-dd');
+      const yesterdaysLogs = getPreviousDayLogs();
 
-      const yesterdaysCompletedTasks = tasks
-        .filter(t => t.status === 'completed' && t.date === previousDayStr)
-        .map(({title, description, duration}) => ({title, description, duration}));
-
-      if (yesterdaysCompletedTasks.length > 0) {
-        const summary = await getDailySummary({tasks: yesterdaysCompletedTasks});
+      // Only call AI if there were logs
+      if (yesterdaysLogs.length > 0) {
+        const summary = await getDailySummary({logs: yesterdaysLogs});
         if (summary && !('error' in summary)) {
           setDailySummary(summary as any);
           localStorage.setItem(DAILY_SUMMARY_KEY, sessionDateStr);
@@ -299,7 +298,7 @@ export default function DashboardPage() {
     };
 
     fetchDailySummary();
-  }, [tasksLoaded, tasks]);
+  }, [tasksLoaded, loggerLoaded, getPreviousDayLogs]);
 
   const openEditTaskDialog = (task: StudyTask) => {
     setEditingTask(task);
@@ -309,7 +308,7 @@ export default function DashboardPage() {
     setEditingTask(null);
   };
 
-  const isLoaded = tasksLoaded && badgesLoaded;
+  const isLoaded = tasksLoaded && badgesLoaded && loggerLoaded;
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
 
   const {
