@@ -130,7 +130,7 @@ ${summaryContext}
     // A final try/catch for actual API or network errors.
     try {
       const response = await ai.generate({
-        model: 'googleai/gemini-2.5-flash-lite-preview-06-17',
+        model: 'googleai/gemini-1.5-flash-latest',
         history: genkitHistory,
         system: systemPrompt,
       });
