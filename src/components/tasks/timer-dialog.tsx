@@ -113,7 +113,7 @@ export function TimerDialog({
             </p>
           )}
         </div>
-        <DialogFooter className="flex-col sm:flex-row sm:justify-center gap-2">
+        <DialogFooter className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {!isFinished ? (
             <>
               <Button size="lg" onClick={() => setIsPaused(!isPaused)}>
@@ -139,7 +139,7 @@ export function TimerDialog({
               </Button>
             </>
           ) : (
-            <Button size="lg" onClick={handleComplete} className="w-full">
+            <Button size="lg" onClick={handleComplete} className="sm:col-span-3">
               <CheckCircle className="mr-2" />
               Mark Task as Completed
             </Button>
