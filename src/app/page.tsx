@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, {useState, useMemo, useEffect} from 'react';
@@ -263,7 +264,12 @@ export default function DashboardPage() {
     isLoaded: tasksLoaded,
   } = useTasks();
   const {allBadges, earnedBadges, isLoaded: badgesLoaded} = useBadges();
-  const {getPreviousDayLogs, getAllLogs, isLoaded: loggerLoaded} = useLogger();
+  const {
+    logs,
+    getPreviousDayLogs,
+    getAllLogs,
+    isLoaded: loggerLoaded,
+  } = useLogger();
   const {profile, isLoaded: profileLoaded} = useProfile();
   const {viewMode, setViewMode, isLoaded: viewModeLoaded} = useViewMode();
   const {routines, isLoaded: routinesLoaded} = useRoutines();
@@ -384,7 +390,7 @@ export default function DashboardPage() {
       todaysRoutines,
       todaysCompletedRoutines: sortedCompletedRoutines,
     };
-  }, [tasks, todayStr, allBadges, earnedBadges, routines, getAllLogs]);
+  }, [tasks, todayStr, allBadges, earnedBadges, routines, getAllLogs, logs]);
 
   const dailyQuote = useMemo(() => {
     const now = new Date();
