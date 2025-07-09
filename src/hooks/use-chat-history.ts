@@ -22,7 +22,8 @@ const isValidMessage = (msg: any): msg is ChatMessage => {
     msg &&
     typeof msg.role === 'string' &&
     (msg.role === 'user' || msg.role === 'model') &&
-    typeof msg.content === 'string'
+    typeof msg.content === 'string' &&
+    msg.content.trim() !== ''
   );
 };
 
@@ -43,6 +44,7 @@ export function useChatHistory() {
         if (cleanHistory.length > 0) {
           setInternalMessages(cleanHistory);
         } else {
+          // If all messages were invalid, reset to initial.
           setInternalMessages([initialMessage]);
         }
       } else {
@@ -57,20 +59,32 @@ export function useChatHistory() {
     }
   }, []);
 
-  const setMessages = useCallback((newMessages: ChatMessage[]) => {
-    // Trim to max length
-    const updatedMessages = newMessages.slice(-MAX_HISTORY_LENGTH);
+  const addMessage = useCallback((message: ChatMessage) => {
+    // Validate message before adding
+    if (!isValidMessage(message)) {
+      console.error('Attempted to add invalid message:', message);
+      return;
+    }
 
-    setInternalMessages(updatedMessages);
+    setInternalMessages(prevMessages => {
+      const newMessages = [...prevMessages, message].slice(-MAX_HISTORY_LENGTH);
+      try {
+        localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(newMessages));
+      } catch (error) {
+        console.error('Failed to save chat history', error);
+      }
+      return newMessages;
+    });
+  }, []);
+
+  const clearMessages = useCallback(() => {
     try {
-      localStorage.setItem(
-        CHAT_HISTORY_KEY,
-        JSON.stringify(updatedMessages)
-      );
+      localStorage.removeItem(CHAT_HISTORY_KEY);
+      setInternalMessages([initialMessage]);
     } catch (error) {
-      console.error('Failed to save chat history', error);
+      console.error('Failed to clear chat history', error);
     }
   }, []);
 
-  return {messages, setMessages, isLoaded};
+  return {messages, addMessage, clearMessages, isLoaded};
 }

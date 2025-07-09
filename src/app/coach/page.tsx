@@ -5,7 +5,7 @@ import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 import {ScrollArea} from '@/components/ui/scroll-area';
 import {Avatar, AvatarFallback} from '@/components/ui/avatar';
-import {Bot, User, Send} from 'lucide-react';
+import {Bot, User, Send, Trash2} from 'lucide-react';
 import {useProfile} from '@/hooks/use-profile';
 import {useLogger} from '@/hooks/use-logger';
 import {getDailySummary, getChatbotResponse} from '@/lib/actions';
@@ -16,6 +16,17 @@ import {Card, CardContent, CardFooter} from '@/components/ui/card';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {useChatHistory, type ChatMessage} from '@/hooks/use-chat-history';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 type DailySummary = {
   evaluation: string;
@@ -79,7 +90,12 @@ function ChatBubble({role, content}: ChatMessage) {
 }
 
 export default function CoachPage() {
-  const {messages, setMessages, isLoaded: historyLoaded} = useChatHistory();
+  const {
+    messages,
+    addMessage,
+    clearMessages,
+    isLoaded: historyLoaded,
+  } = useChatHistory();
   const [inputValue, setInputValue] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [isContextLoading, setIsContextLoading] = useState(true);
@@ -132,53 +148,47 @@ export default function CoachPage() {
     if (!inputValue.trim() || isChatLoading || isContextLoading) return;
 
     const userMessage: ChatMessage = {role: 'user', content: inputValue};
-    const newMessages = [...messages, userMessage];
 
-    // Optimistically update UI
-    setMessages(newMessages);
+    // Optimistic UI updates
+    addMessage(userMessage);
     setInputValue('');
     setIsChatLoading(true);
 
+    const updatedHistory = [...messages, userMessage];
+
     try {
       const result = await getChatbotResponse({
-        history: newMessages.slice(-10),
+        history: updatedHistory.slice(-10),
         profile,
         dailySummary: dailySummary || undefined,
       });
 
-      let finalMessages;
-      // Check for a valid, non-empty string response
       if (
         result &&
         !('error' in result) &&
         typeof result.response === 'string' &&
         result.response.trim()
       ) {
-        const modelMessage: ChatMessage = {
+        addMessage({
           role: 'model',
           content: result.response,
-        };
-        finalMessages = [...newMessages, modelMessage];
+        });
       } else {
-        const errorMessage: ChatMessage = {
+        addMessage({
           role: 'model',
           content:
             (result as any)?.error ||
             "Sorry, I couldn't get a response. Please try again.",
-        };
-        finalMessages = [...newMessages, errorMessage];
+        });
       }
-      setMessages(finalMessages);
     } catch (error) {
       console.error('AI Chat Error:', error);
-      const errorMessage: ChatMessage = {
+      addMessage({
         role: 'model',
         content: `Sorry, an unexpected error occurred: ${
           error instanceof Error ? error.message : 'Unknown error'
         }. Please try again.`,
-      };
-      const finalMessages = [...newMessages, errorMessage];
-      setMessages(finalMessages);
+      });
     } finally {
       setIsChatLoading(false);
     }
@@ -188,13 +198,42 @@ export default function CoachPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <header className="p-4 border-b">
-        <h1 className="text-3xl font-bold text-primary flex items-center gap-2">
-          <Bot /> AI Coach
-        </h1>
-        <p className="text-muted-foreground">
-          Your personal positive psychology companion.
-        </p>
+      <header className="p-4 border-b flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-primary flex items-center gap-2">
+            <Bot /> AI Coach
+          </h1>
+          <p className="text-muted-foreground">
+            Your personal positive psychology companion.
+          </p>
+        </div>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              disabled={messages.length <= 1}
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="sr-only">Clear Chat History</span>
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete your
+                chat history.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => clearMessages()}>
+                Continue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </header>
       <main className="flex-1 overflow-hidden p-2 sm:p-4">
         <Card className="h-full flex flex-col">
