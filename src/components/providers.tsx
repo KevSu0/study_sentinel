@@ -32,7 +32,7 @@ export function Providers({children}: {children: ReactNode}) {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 3000);
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, []);
