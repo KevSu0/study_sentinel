@@ -13,7 +13,7 @@ import {MessageData} from 'genkit/ai';
 import type {UserProfile} from '@/hooks/use-profile';
 import type {DailySummaryOutput} from '@/ai/flows/generate-daily-summary';
 
-export const PositivePsychologistInputSchema = z.object({
+const PositivePsychologistInputSchema = z.object({
   profile: z.custom<UserProfile>().optional(),
   dailySummary: z.custom<DailySummaryOutput>().optional(),
   history: z.array(
@@ -28,7 +28,7 @@ export type PositivePsychologistInput = z.infer<
   typeof PositivePsychologistInputSchema
 >;
 
-export const PositivePsychologistOutputSchema = z.object({
+const PositivePsychologistOutputSchema = z.object({
   response: z.string(),
 });
 export type PositivePsychologistOutput = z.infer<
