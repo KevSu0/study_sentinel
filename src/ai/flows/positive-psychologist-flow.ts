@@ -10,25 +10,11 @@
 import {ai} from '@/ai/genkit';
 import {
   PositivePsychologistInput,
-  PositivePsychologistInputSchema,
   PositivePsychologistOutput,
   PositivePsychologistOutputSchema,
 } from '@/lib/types';
 import {MessageData} from 'genkit/ai';
-
-// A type guard to ensure a message is valid
-const isValidMessage = (
-  msg: any
-): msg is {role: 'user' | 'model'; content: string} => {
-  return (
-    msg &&
-    typeof msg === 'object' &&
-    'role' in msg &&
-    (msg.role === 'user' || msg.role === 'model') &&
-    'content' in msg &&
-    typeof msg.content === 'string'
-  );
-};
+import {z} from 'zod';
 
 export async function getChatbotResponse(
   input: PositivePsychologistInput
@@ -39,16 +25,11 @@ export async function getChatbotResponse(
 const positivePsychologistFlow = ai.defineFlow(
   {
     name: 'positivePsychologistFlow',
-    inputSchema: PositivePsychologistInputSchema,
+    inputSchema: z.any(), // Validation is handled in the action wrapper
     outputSchema: PositivePsychologistOutputSchema,
   },
-  async input => {
+  async (input: PositivePsychologistInput) => {
     const {profile, dailySummary, history} = input;
-
-    // A simple guard for an empty history
-    if (!Array.isArray(history) || history.length === 0) {
-      return {response: 'Hello! How can I help you today?'};
-    }
 
     const profileContext = profile
       ? `
@@ -99,11 +80,20 @@ ${summaryContext}
 - **Crucially:** Never give medical advice. If the user expresses severe mental distress, gently and firmly guide them to seek help from a qualified professional, like a therapist or counselor.
 `;
 
-    // Convert the incoming history to the format Genkit expects.
+    // Robustly clean and prepare the conversation history.
     const genkitHistory: MessageData[] = [];
-    for (const h of history) {
-      if (isValidMessage(h)) {
-        genkitHistory.push({role: h.role, parts: [{text: h.content}]});
+    if (Array.isArray(history)) {
+      for (const msg of history) {
+        // Vigorously validate each message object before processing.
+        if (
+          msg &&
+          typeof msg === 'object' &&
+          (msg.role === 'user' || msg.role === 'model') &&
+          typeof msg.content === 'string' &&
+          msg.content.trim() !== ''
+        ) {
+          genkitHistory.push({role: msg.role, parts: [{text: msg.content}]});
+        }
       }
     }
 
