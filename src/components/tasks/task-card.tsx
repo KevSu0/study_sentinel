@@ -60,8 +60,8 @@ export function TaskCard({task, onUpdate, onDelete}: TaskCardProps) {
         )}
       >
         <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+            <div className='flex-grow'>
               <CardTitle className="text-lg font-semibold">
                 {task.title}
               </CardTitle>
@@ -71,7 +71,7 @@ export function TaskCard({task, onUpdate, onDelete}: TaskCardProps) {
               </CardDescription>
             </div>
             <Select value={task.status} onValueChange={handleStatusChange}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-full sm:w-[140px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -124,7 +124,7 @@ export function TaskCard({task, onUpdate, onDelete}: TaskCardProps) {
             onClick={() => setAnalysisOpen(true)}
           >
             <BrainCircuit className="mr-2 h-4 w-4" />
-            Analyze Progress
+            Analyze <span className="hidden sm:inline">Progress</span>
           </Button>
           <Button
             variant="ghost"

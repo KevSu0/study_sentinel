@@ -57,20 +57,20 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col h-full">
-      <header className="flex items-center justify-between p-4 border-b">
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border-b gap-2">
         <div>
           <h1 className="text-2xl font-bold text-primary">Today's Focus</h1>
           <p className="text-muted-foreground">
             {format(new Date(), 'EEEE, MMMM d')}
           </p>
         </div>
-        <Button onClick={() => setAddDialogOpen(true)}>
+        <Button onClick={() => setAddDialogOpen(true)} className="w-full sm:w-auto">
           <PlusCircle className="mr-2" />
           Add Task
         </Button>
       </header>
 
-      <main className="flex-1 p-4 overflow-y-auto">
+      <main className="flex-1 p-2 sm:p-4 overflow-y-auto">
         {!isLoaded ? (
           <div className="space-y-4">
             <Skeleton className="h-24 w-full" />
