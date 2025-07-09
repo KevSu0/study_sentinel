@@ -27,30 +27,33 @@ const positivePsychologistFlow = ai.defineFlow(
     outputSchema: PositivePsychologistOutputSchema,
   },
   async (input: PositivePsychologistInput) => {
-    // A simplified and robust history processing logic.
-    const recentHistory = (input.chatHistory || []).slice(-10);
-    const history: MessageData[] = [];
-    let hasUserMessage = false;
+    // 1. Defensively filter the history to remove any invalid messages.
+    const cleanHistory = (input.chatHistory || [])
+      .slice(-10)
+      .filter(
+        msg =>
+          msg &&
+          typeof msg.content === 'string' &&
+          msg.content.trim() !== '' &&
+          (msg.role === 'user' || msg.role === 'model')
+      );
 
-    // Build a clean history, ensuring we only have valid messages.
-    for (const msg of recentHistory) {
-      if (
-        msg &&
-        typeof msg.content === 'string' &&
-        msg.content.trim() !== '' &&
-        (msg.role === 'user' || msg.role === 'model')
-      ) {
-        history.push({role: msg.role, parts: [{text: msg.content}]});
-        if (msg.role === 'user') {
-          hasUserMessage = true;
-        }
-      }
-    }
+    // 2. The API requires the conversation to start with a user message.
+    const firstUserIndex = cleanHistory.findIndex(m => m.role === 'user');
 
-    // The API requires at least one user message in the history.
-    if (!hasUserMessage) {
+    // 3. If no user message exists, or the history is empty, return a default response.
+    if (firstUserIndex === -1) {
       return {response: "I'm ready to listen. What's on your mind?"};
     }
+    
+    // 4. Slice the history to ensure it starts with a user message.
+    const validTurnHistory = cleanHistory.slice(firstUserIndex);
+
+    // 5. Map the guaranteed-safe history to the format required by the API.
+    const history: MessageData[] = validTurnHistory.map(msg => ({
+      role: msg.role,
+      parts: [{text: msg.content}],
+    }));
 
     // Use dummy objects to prevent any potential errors from null/undefined context.
     const safeProfile = input.profile || {
