@@ -123,7 +123,7 @@ export const SimpleTaskItem = memo(function SimpleTaskItem({
           }`}
           className={cn(
             isCompleted &&
-              'data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600'
+              'data-[state=checked]:bg-accent data-[state=checked]:border-accent'
           )}
         />
         <div className="flex-1 grid gap-1">
