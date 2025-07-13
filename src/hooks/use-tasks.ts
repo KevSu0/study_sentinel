@@ -76,14 +76,6 @@ interface TasksContextType {
 
 const TasksContext = createContext<TasksContextType | null>(null);
 
-export const useTasks = () => {
-  const context = useContext(TasksContext);
-  if (!context) {
-    throw new Error('useTasks must be used within a TasksProvider');
-  }
-  return context;
-};
-
 // --- Provider Component ---
 export function TasksProvider({children}: {children: ReactNode}) {
   const TASKS_KEY = 'studySentinelTasks';
@@ -308,7 +300,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
         newTimerState.endTime = Date.now() + newTimerState.pausedTime * 1000;
       } else if (
         newTimerState.item.type === 'routine' &&
-        newTimerState.startTime
+        newTimerState.pausedTime && newTimerState.startTime
       ) {
         const pauseDuration = Date.now() - newTimerState.pausedTime;
         newTimerState.startTime = newTimerState.startTime + pauseDuration;
@@ -323,6 +315,10 @@ export function TasksProvider({children}: {children: ReactNode}) {
           Math.round((newTimerState.endTime - Date.now()) / 1000)
         );
       } else if (newTimerState.item.type === 'routine') {
+        if (newTimerState.startTime) {
+           const elapsed = Date.now() - newTimerState.startTime;
+           newTimerState.pausedDuration = elapsed;
+        }
         newTimerState.pausedTime = Date.now();
       }
       addLog('TIMER_PAUSE', logPayload);
@@ -345,7 +341,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
           taskId: activeTimer.item.item.id,
           taskTitle: activeTimer.item.item.title,
           reason,
-          timeSpentSeconds: Math.round(timeSpent),
+          timeSpentSeconds: Math.max(0, Math.round(timeSpent)),
         });
         updateTask({...activeTimer.item.item, status: 'todo'});
       } else {
@@ -379,7 +375,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
         activeTimer.isPaused || !activeTimer.endTime || activeTimer.endTime > Date.now()
           ? 0
           : Math.round((Date.now() - activeTimer.endTime) / 1000);
-          
+
       const totalDurationSecs = item.item.duration * 60 + overtimeElapsed;
 
       addLog('TIMER_SESSION_COMPLETE', {
@@ -479,6 +475,14 @@ export function TasksProvider({children}: {children: ReactNode}) {
     completeTimer,
     stopTimer,
   };
-
+  
   return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>;
 }
+
+export const useTasks = () => {
+  const context = useContext(TasksContext);
+  if (!context) {
+    throw new Error('useTasks must be used within a TasksProvider');
+  }
+  return context;
+};
