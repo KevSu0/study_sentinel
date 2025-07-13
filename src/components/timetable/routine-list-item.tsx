@@ -174,5 +174,3 @@ export const RoutineListItem = React.memo(function RoutineListItem({
     </>
   );
 });
-
-    
