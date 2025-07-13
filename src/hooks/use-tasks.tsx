@@ -141,14 +141,12 @@ export function TasksProvider({children}: {children: ReactNode}) {
 
   const updateTask = useCallback(
     (updatedTask: StudyTask) => {
-      let oldTask: StudyTask | undefined;
-      setTasks(prevTasks => {
-        oldTask = prevTasks.find(t => t.id === updatedTask.id);
-        const newTasks = prevTasks.map(task =>
-          task.id === updatedTask.id ? updatedTask : task
-        );
-        return saveTasks(newTasks);
-      });
+      const oldTask = tasks.find(t => t.id === updatedTask.id);
+
+      const newTasks = tasks.map(task =>
+        task.id === updatedTask.id ? updatedTask : task
+      );
+      setTasks(saveTasks(newTasks));
 
       if (oldTask && oldTask.status !== updatedTask.status) {
         if (updatedTask.status === 'completed') {
@@ -170,7 +168,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
         });
       }
     },
-    [addLog]
+    [tasks, addLog]
   );
 
   const addTask = useCallback(
