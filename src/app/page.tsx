@@ -697,7 +697,7 @@ export default function DashboardPage() {
         ) : (
           hasMounted && (
             <DragDropContext onDragEnd={onDragEnd}>
-              <Droppable droppableId="dashboard-widgets">
+              <Droppable droppableId="dashboard-widgets" isDropDisabled={false}>
                 {(provided) => (
                   <div
                     {...provided.droppableProps}
