@@ -1,5 +1,5 @@
 
-import React, {useState, lazy, Suspense, memo} from 'react';
+import React, {useState, lazy, Suspense} from 'react';
 import {
   Card,
   CardContent,
@@ -48,6 +48,7 @@ interface TaskCardProps {
   onUnarchive: (taskId: string) => void;
   onPushToNextDay: (taskId: string) => void;
   onEdit: (task: StudyTask) => void;
+  activeItem: ReturnType<typeof useTasks>['activeItem'];
 }
 
 const priorityConfig: Record<
@@ -72,18 +73,18 @@ const priorityConfig: Record<
 };
 
 
-export const TaskCard = memo(function TaskCard({
+export function TaskCard({
   task,
   onUpdate,
   onArchive,
   onUnarchive,
   onPushToNextDay,
   onEdit,
+  activeItem,
 }: TaskCardProps) {
   const [isTimerOpen, setTimerOpen] = useState(false);
   const {toast} = useToast();
   const {fire} = useConfetti();
-  const { activeItem } = useTasks();
   const isTimerActive = activeItem?.type === 'task' && activeItem.item.id === task.id;
 
   const handleStatusChange = (newStatus: TaskStatus) => {
@@ -278,4 +279,4 @@ export const TaskCard = memo(function TaskCard({
       )}
     </>
   );
-});
+}

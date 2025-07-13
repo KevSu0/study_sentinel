@@ -1,6 +1,7 @@
 
 import {SimpleTaskItem} from './simple-task-item';
 import type {StudyTask} from '@/lib/types';
+import { useTasks } from '@/hooks/use-tasks.tsx';
 
 interface SimpleTaskListProps {
   tasks: StudyTask[];
@@ -9,6 +10,7 @@ interface SimpleTaskListProps {
   onUnarchive: (taskId: string) => void;
   onPushToNextDay: (taskId: string) => void;
   onEdit: (task: StudyTask) => void;
+  activeItem: ReturnType<typeof useTasks>['activeItem'];
 }
 
 export function SimpleTaskList({
@@ -18,6 +20,7 @@ export function SimpleTaskList({
   onUnarchive,
   onPushToNextDay,
   onEdit,
+  activeItem,
 }: SimpleTaskListProps) {
   return (
     <div className="space-y-2">
@@ -30,6 +33,7 @@ export function SimpleTaskList({
           onUnarchive={onUnarchive}
           onPushToNextDay={onPushToNextDay}
           onEdit={onEdit}
+          activeItem={activeItem}
         />
       ))}
     </div>

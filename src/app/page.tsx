@@ -132,38 +132,21 @@ function SortableWidget({id, children}: {id: string; children: React.ReactNode})
 export default function DashboardPage() {
   const {
     tasks,
-    addTask: rawAddTask,
-    updateTask: rawUpdateTask,
-    archiveTask: rawArchiveTask,
-    unarchiveTask: rawUnarchiveTask,
-    pushTaskToNextDay: rawPushTaskToNextDay,
+    addTask,
+    updateTask,
+    archiveTask,
+    unarchiveTask,
+    pushTaskToNextDay,
     isLoaded: tasksLoaded,
+    activeItem,
   } = useTasks();
 
-  // Wrap functions in useCallback to ensure stable references
-  const addTask = useCallback(rawAddTask, [rawAddTask]);
-  const updateTask = useCallback(rawUpdateTask, [rawUpdateTask]);
-  const archiveTask = useCallback(rawArchiveTask, [rawArchiveTask]);
-  const unarchiveTask = useCallback(rawUnarchiveTask, [rawUnarchiveTask]);
-  const pushTaskToNextDay = useCallback(rawPushTaskToNextDay, [rawPushTaskToNextDay]);
-
   const {allBadges, earnedBadges, isLoaded: badgesLoaded} = useBadges();
-  const {
-    logs,
-    getPreviousDayLogs: rawGetPreviousDayLogs,
-    isLoaded: loggerLoaded,
-  } = useLogger();
-  const getPreviousDayLogs = useCallback(rawGetPreviousDayLogs, [rawGetPreviousDayLogs]);
-
+  const {logs, getPreviousDayLogs, isLoaded: loggerLoaded} = useLogger();
   const {profile, isLoaded: profileLoaded} = useProfile();
   const {viewMode, isLoaded: viewModeLoaded} = useViewMode();
   const {routines, isLoaded: routinesLoaded} = useRoutines();
-  const {
-    layout,
-    setLayout: rawSetLayout,
-    isLoaded: layoutLoaded,
-  } = useDashboardLayout();
-  const setLayout = useCallback(rawSetLayout, [rawSetLayout]);
+  const {layout, setLayout, isLoaded: layoutLoaded} = useDashboardLayout();
   const [isCustomizeOpen, setCustomizeOpen] = useState(false);
 
   const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
@@ -233,7 +216,7 @@ export default function DashboardPage() {
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   const today = useMemo(() => new Date().getDay(), []);
 
-  // --- Data processing, moved from the large useMemo block ---
+  // --- Data processing ---
 
   const todaysTasks = tasks.filter(
     t => t.date === todayStr && t.status !== 'archived'
@@ -315,6 +298,7 @@ export default function DashboardPage() {
         onUnarchive: unarchiveTask,
         onPushToNextDay: pushTaskToNextDay,
         onEdit: openEditTaskDialog,
+        activeItem: activeItem,
       };
       return viewMode === 'card' ? (
         <TaskList {...props} />
@@ -329,6 +313,7 @@ export default function DashboardPage() {
       unarchiveTask,
       pushTaskToNextDay,
       openEditTaskDialog,
+      activeItem,
     ]
   );
   
@@ -344,7 +329,7 @@ export default function DashboardPage() {
     }
   }, [setLayout]);
 
-  const widgetMap: Record<DashboardWidgetType, React.ReactNode> = useMemo(() => ({
+  const widgetMap: Record<DashboardWidgetType, React.ReactNode> = {
     daily_briefing: (
         isSummaryLoading ? (
           <Skeleton className="h-32 w-full" />
@@ -479,11 +464,7 @@ export default function DashboardPage() {
         )}
       </section>
     ) : null,
-  }), [
-      isSummaryLoading, dailySummary, dailyQuote, pointsToday, todaysBadges, 
-      productivityData, todaysRoutines, pendingTasks, renderTaskList, 
-      todaysCompletedTasks, todaysCompletedRoutines, viewMode
-  ]);
+  };
   
   const visibleWidgets = useMemo(() => {
     return layout.filter(w => w.isVisible && widgetMap[w.id] !== null);

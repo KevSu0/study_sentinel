@@ -1,5 +1,5 @@
 
-import React, {memo, useState, Suspense, lazy, useMemo} from 'react';
+import React, {useState, Suspense, lazy, useMemo} from 'react';
 import {
   MoreVertical,
   Timer,
@@ -34,19 +34,19 @@ interface SimpleTaskItemProps {
   onUnarchive: (taskId: string) => void;
   onPushToNextDay: (taskId: string) => void;
   onEdit: (task: StudyTask) => void;
+  activeItem: ReturnType<typeof useTasks>['activeItem'];
 }
 
-export const SimpleTaskItem = memo(function SimpleTaskItem({
+export function SimpleTaskItem({
   task,
   onUpdate,
   onArchive,
   onUnarchive,
   onPushToNextDay,
   onEdit,
+  activeItem,
 }: SimpleTaskItemProps) {
-  const { activeItem } = useTasks();
   const isTimerActive = activeItem?.type === 'task' && activeItem.item.id === task.id;
-
   const isCompleted = task.status === 'completed';
   const {fire} = useConfetti();
   const {toast} = useToast();
@@ -188,4 +188,4 @@ export const SimpleTaskItem = memo(function SimpleTaskItem({
       )}
     </>
   );
-});
+}
