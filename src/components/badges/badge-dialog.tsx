@@ -29,6 +29,7 @@ import {ScrollArea} from '../ui/scroll-area';
 import {cn} from '@/lib/utils';
 import {X} from 'lucide-react';
 import {useRoutines} from '@/hooks/use-routines';
+import {DurationInput} from './duration-input';
 
 const conditionSchema = z.object({
   type: z.enum([
@@ -298,47 +299,29 @@ export function BadgeDialog({
                 <Label>Conditions to Earn</Label>
                 {fields.map((field, index) => {
                   const watchedType = watchedConditions[index]?.type;
-                  const isTimeBased = ['TOTAL_STUDY_TIME', 'TIME_ON_SUBJECT', 'SINGLE_SESSION_TIME'].includes(watchedType);
-                  const disableTimeframe = ['DAY_STREAK', 'SINGLE_SESSION_TIME', 'ALL_TASKS_COMPLETED_ON_DAY'].includes(watchedType);
-                  const showTargetInput = watchedType !== 'ALL_TASKS_COMPLETED_ON_DAY';
+                  const isTimeBased = [
+                    'TOTAL_STUDY_TIME',
+                    'TIME_ON_SUBJECT',
+                    'SINGLE_SESSION_TIME',
+                  ].includes(watchedType);
+                  const disableTimeframe = [
+                    'DAY_STREAK',
+                    'SINGLE_SESSION_TIME',
+                    'ALL_TASKS_COMPLETED_ON_DAY',
+                  ].includes(watchedType);
+                  const showTargetInput =
+                    watchedType !== 'ALL_TASKS_COMPLETED_ON_DAY';
 
-
-                  return(
-                  <div
-                    key={field.id}
-                    className="flex gap-2 items-end p-3 border rounded-lg bg-muted/50"
-                  >
-                    <div className="grid flex-1 gap-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Type</Label>
-                        <Controller
-                          name={`conditions.${index}.type`}
-                          control={control}
-                          render={({field}) => (
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {conditionOptions.map(opt => (
-                                  <SelectItem key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
-                      </div>
-
-                      {watchedType === 'TIME_ON_SUBJECT' && (
+                  return (
+                    <div
+                      key={field.id}
+                      className="flex gap-2 items-end p-3 border rounded-lg bg-muted/50"
+                    >
+                      <div className="grid flex-1 gap-2 grid-cols-1 md:grid-cols-2">
                         <div className="space-y-1">
-                          <Label className="text-xs">Subject</Label>
+                          <Label className="text-xs">Type</Label>
                           <Controller
-                            name={`conditions.${index}.subjectId`}
+                            name={`conditions.${index}.type`}
                             control={control}
                             render={({field}) => (
                               <Select
@@ -346,12 +329,15 @@ export function BadgeDialog({
                                 defaultValue={field.value}
                               >
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Select Subject" />
+                                  <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {routines.map(r => (
-                                    <SelectItem key={r.id} value={r.id}>
-                                      {r.title}
+                                  {conditionOptions.map(opt => (
+                                    <SelectItem
+                                      key={opt.value}
+                                      value={opt.value}
+                                    >
+                                      {opt.label}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -359,61 +345,101 @@ export function BadgeDialog({
                             )}
                           />
                         </div>
-                      )}
-                      
-                      {showTargetInput && (
+
+                        {watchedType === 'TIME_ON_SUBJECT' && (
+                          <div className="space-y-1">
+                            <Label className="text-xs">Subject</Label>
+                            <Controller
+                              name={`conditions.${index}.subjectId`}
+                              control={control}
+                              render={({field}) => (
+                                <Select
+                                  onValueChange={field.onChange}
+                                  defaultValue={field.value}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select Subject" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {routines.map(r => (
+                                      <SelectItem key={r.id} value={r.id}>
+                                        {r.title}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            />
+                          </div>
+                        )}
+
+                        {showTargetInput && (
+                          <div className="space-y-1 md:col-span-2">
+                            <Label className="text-xs">
+                              {isTimeBased ? 'Duration' : 'Target'}
+                            </Label>
+                            {isTimeBased ? (
+                              <Controller
+                                name={`conditions.${index}.target`}
+                                control={control}
+                                render={({field}) => (
+                                  <DurationInput
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                  />
+                                )}
+                              />
+                            ) : (
+                              <Input
+                                type="number"
+                                {...register(`conditions.${index}.target`)}
+                                placeholder="e.g., 10"
+                              />
+                            )}
+                          </div>
+                        )}
+
                         <div className="space-y-1">
-                          <Label className="text-xs">
-                            {isTimeBased ? 'Target (Minutes)' : 'Target'}
-                          </Label>
-                          <Input
-                            type="number"
-                            {...register(`conditions.${index}.target`)}
-                            placeholder={isTimeBased ? "e.g., 120" : "e.g., 10"}
+                          <Label className="text-xs">Timeframe</Label>
+                          <Controller
+                            name={`conditions.${index}.timeframe`}
+                            control={control}
+                            render={({field}) => (
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                                disabled={disableTimeframe}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {timeframeOptions.map(opt => (
+                                    <SelectItem
+                                      key={opt.value}
+                                      value={opt.value}
+                                    >
+                                      {opt.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
                           />
                         </div>
-                      )}
-                      
-                      <div className={cn(
-                          "space-y-1",
-                          watchedType === 'TIME_ON_SUBJECT' ? "md:col-span-3" : "md:col-span-1"
-                      )}>
-                        <Label className="text-xs">Timeframe</Label>
-                        <Controller
-                          name={`conditions.${index}.timeframe`}
-                          control={control}
-                          render={({field}) => (
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                              disabled={disableTimeframe}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {timeframeOptions.map(opt => (
-                                  <SelectItem key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
                       </div>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => remove(index)}
+                        disabled={fields.length <= 1}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      onClick={() => remove(index)}
-                      disabled={fields.length <= 1}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )})}
+                  );
+                })}
                 {errors.conditions?.root && (
                   <p className="text-sm text-destructive">
                     {errors.conditions.root.message}
