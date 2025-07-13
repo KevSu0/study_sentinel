@@ -467,7 +467,9 @@ export function TasksProvider({children}: {children: ReactNode}) {
     stopTimer,
   };
 
-  return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>;
+  return (
+    <TasksContext.Provider value={value}>{children}</TasksContext.Provider>
+  );
 }
 
 export const useTasks = () => {
