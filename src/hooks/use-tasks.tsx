@@ -286,17 +286,19 @@ export function TasksProvider({children}: {children: ReactNode}) {
         pausedTime: 0,
         pausedDuration: 0,
       };
-
+      
       if (type === 'task') {
-        timerData.endTime = Date.now() + item.duration * 60 * 1000;
-        timerData.pausedTime = item.duration * 60;
-        addLog('TIMER_START', {taskId: item.id, taskTitle: item.title});
-        updateTask({...item, status: 'in_progress'});
+        const task = item as StudyTask;
+        timerData.endTime = Date.now() + task.duration * 60 * 1000;
+        timerData.pausedTime = task.duration * 60;
+        addLog('TIMER_START', {taskId: task.id, taskTitle: task.title});
+        updateTask({...task, status: 'in_progress'});
       } else {
+        const routine = item as Routine;
         timerData.startTime = Date.now();
         addLog('TIMER_START', {
-          routineId: item.id,
-          routineTitle: item.title,
+          routineId: routine.id,
+          routineTitle: routine.title,
         });
       }
         
