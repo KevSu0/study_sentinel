@@ -1,3 +1,4 @@
+
 // This is a new file for the badge creation/editing dialog.
 import {
   Dialog,
@@ -228,7 +229,7 @@ export function BadgeDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? 'Edit Badge' : 'Create Custom Badge'}
@@ -305,7 +306,6 @@ export function BadgeDialog({
             {/* Right Column: Conditions */}
             <div className="space-y-4">
               <Label className="text-base font-medium">Conditions to Earn</Label>
-              <ScrollArea className="h-[450px] pr-4 -mr-4">
                 <div className="space-y-3">
                   {fields.map((field, index) => {
                     const watchedType = watchedConditions[index]?.type;
@@ -450,7 +450,6 @@ export function BadgeDialog({
                     );
                   })}
                   </div>
-              </ScrollArea>
               {errors.conditions?.root && (
                 <p className="text-sm text-destructive">
                   {errors.conditions.root.message}
@@ -473,7 +472,7 @@ export function BadgeDialog({
             </div>
           </div>
 
-          <DialogFooter className="pt-8">
+          <DialogFooter className="pt-8 sticky bottom-0 bg-background py-4 -mx-6 px-6 border-t">
             <Button
               type="button"
               variant="ghost"
