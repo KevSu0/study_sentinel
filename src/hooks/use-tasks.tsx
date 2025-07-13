@@ -126,72 +126,71 @@ export function TasksProvider({children}: {children: ReactNode}) {
     } finally {
       setIsLoaded(true);
     }
-  }, [loggerLoaded, saveTimer]);
+  }, [loggerLoaded]);
+
+  const saveTasks = useCallback((newTasks: StudyTask[]) => {
+      const sortedTasks = [...newTasks].sort(
+        (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
+      );
+      setTasks(sortedTasks);
+      localStorage.setItem(TASKS_KEY, JSON.stringify(sortedTasks));
+  }, []);
 
   const addTask = useCallback(
     (task: Omit<StudyTask, 'id' | 'status'>) => {
-      const newTask: StudyTask = {
-        ...task,
-        id: crypto.randomUUID(),
-        status: 'todo',
-        description: task.description || '',
-      };
-      setTasks(prevTasks => {
-        const updatedTasks = [...prevTasks, newTask];
-        const sortedTasks = [...updatedTasks].sort(
-          (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
-        );
-        localStorage.setItem(TASKS_KEY, JSON.stringify(sortedTasks));
+        const newTask: StudyTask = {
+          ...task,
+          id: crypto.randomUUID(),
+          status: 'todo',
+          description: task.description || '',
+        };
+        setTasks(prevTasks => {
+          const updatedTasks = [...prevTasks, newTask];
+          saveTasks(updatedTasks);
+          return updatedTasks;
+        });
         addLog('TASK_ADD', {taskId: newTask.id, title: newTask.title});
-        return sortedTasks;
-      });
     },
-    [addLog]
+    [addLog, saveTasks]
   );
   
   const updateTask = useCallback(
     (updatedTask: StudyTask) => {
-      setTasks(currentTasks => {
-        const oldTask = currentTasks.find(t => t.id === updatedTask.id);
-        
-        const newTasks = currentTasks.map(task =>
-          task.id === updatedTask.id ? updatedTask : task
-        );
-
-        if (oldTask && oldTask.status !== updatedTask.status) {
-          if (updatedTask.status === 'completed') {
-            addLog('TASK_COMPLETE', {
-              taskId: updatedTask.id,
-              title: updatedTask.title,
-              points: updatedTask.points,
-            });
-          } else if (updatedTask.status === 'in_progress') {
-            addLog('TASK_IN_PROGRESS', {
+        setTasks(currentTasks => {
+          const oldTask = currentTasks.find(t => t.id === updatedTask.id);
+          const newTasks = currentTasks.map(task =>
+            task.id === updatedTask.id ? updatedTask : task
+          );
+          if (oldTask && oldTask.status !== updatedTask.status) {
+            if (updatedTask.status === 'completed') {
+              addLog('TASK_COMPLETE', {
+                taskId: updatedTask.id,
+                title: updatedTask.title,
+                points: updatedTask.points,
+              });
+            } else if (updatedTask.status === 'in_progress') {
+              addLog('TASK_IN_PROGRESS', {
+                taskId: updatedTask.id,
+                title: updatedTask.title,
+              });
+            }
+          } else if (oldTask) {
+            addLog('TASK_UPDATE', {
               taskId: updatedTask.id,
               title: updatedTask.title,
             });
           }
-        } else if (oldTask) {
-          addLog('TASK_UPDATE', {
-            taskId: updatedTask.id,
-            title: updatedTask.title,
-          });
-        }
-        
-        const sortedTasks = [...newTasks].sort(
-            (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
-        );
-        localStorage.setItem(TASKS_KEY, JSON.stringify(sortedTasks));
-        return sortedTasks;
+          saveTasks(newTasks);
+          return newTasks;
       });
     },
-    [addLog]
+    [addLog, saveTasks]
   );
 
   const archiveTask = useCallback(
     (taskId: string) => {
+      let taskToArchive: StudyTask | undefined;
       setTasks(prevTasks => {
-        let taskToArchive: StudyTask | undefined;
         const newTasks = prevTasks.map(task => {
           if (task.id === taskId) {
             taskToArchive = task;
@@ -199,25 +198,20 @@ export function TasksProvider({children}: {children: ReactNode}) {
           }
           return task;
         });
-
-        if (taskToArchive) {
-          addLog('TASK_ARCHIVE', {taskId, title: taskToArchive.title});
-        }
-        
-        const sortedTasks = [...newTasks].sort(
-            (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
-        );
-        localStorage.setItem(TASKS_KEY, JSON.stringify(sortedTasks));
-        return sortedTasks;
+        saveTasks(newTasks);
+        return newTasks;
       });
+      if (taskToArchive) {
+        addLog('TASK_ARCHIVE', {taskId, title: taskToArchive.title});
+      }
     },
-    [addLog]
+    [addLog, saveTasks]
   );
 
   const unarchiveTask = useCallback(
     (taskId: string) => {
+      let taskToUnarchive: StudyTask | undefined;
       setTasks(prevTasks => {
-        let taskToUnarchive: StudyTask | undefined;
         const newTasks = prevTasks.map(task => {
           if (task.id === taskId) {
             taskToUnarchive = task;
@@ -225,25 +219,20 @@ export function TasksProvider({children}: {children: ReactNode}) {
           }
           return task;
         });
-        
-        if (taskToUnarchive) {
-          addLog('TASK_UNARCHIVE', {taskId, title: taskToUnarchive.title});
-        }
-        
-        const sortedTasks = [...newTasks].sort(
-            (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
-        );
-        localStorage.setItem(TASKS_KEY, JSON.stringify(sortedTasks));
-        return sortedTasks;
+        saveTasks(newTasks);
+        return newTasks;
       });
+      if (taskToUnarchive) {
+        addLog('TASK_UNARCHIVE', {taskId, title: taskToUnarchive.title});
+      }
     },
-    [addLog]
+    [addLog, saveTasks]
   );
 
   const pushTaskToNextDay = useCallback(
     (taskId: string) => {
+      let pushedTask: StudyTask | undefined;
       setTasks(prevTasks => {
-        let pushedTask: StudyTask | undefined;
         const newTasks = prevTasks.map(task => {
           if (task.id === taskId) {
             const taskDate = new Date(`${task.date}T00:00:00`);
@@ -253,19 +242,14 @@ export function TasksProvider({children}: {children: ReactNode}) {
           }
           return task;
         });
-
-        if (pushedTask) {
-          addLog('TASK_PUSH_NEXT_DAY', {taskId, title: pushedTask.title});
-        }
-        
-        const sortedTasks = [...newTasks].sort(
-            (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
-        );
-        localStorage.setItem(TASKS_KEY, JSON.stringify(sortedTasks));
-        return sortedTasks;
+        saveTasks(newTasks);
+        return newTasks;
       });
+      if (pushedTask) {
+        addLog('TASK_PUSH_NEXT_DAY', {taskId, title: pushedTask.title});
+      }
     },
-    [addLog]
+    [addLog, saveTasks]
   );
 
   const startTimer = useCallback(
@@ -278,7 +262,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
         });
         return;
       }
-      
+
       const type = 'duration' in item ? 'task' : 'routine';
       const timerData: StoredTimer = {
         item: {type, item},
@@ -286,7 +270,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
         pausedTime: 0,
         pausedDuration: 0,
       };
-      
+
       if (type === 'task') {
         const task = item as StudyTask;
         timerData.endTime = Date.now() + task.duration * 60 * 1000;
@@ -301,10 +285,10 @@ export function TasksProvider({children}: {children: ReactNode}) {
           routineTitle: routine.title,
         });
       }
-        
+
       saveTimer(timerData);
     },
-    [activeTimer, toast, addLog, updateTask, saveTimer]
+    [toast, addLog, updateTask, saveTimer, activeTimer]
   );
 
   const togglePause = useCallback(() => {
