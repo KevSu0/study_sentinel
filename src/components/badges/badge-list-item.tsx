@@ -10,7 +10,13 @@ import {
 } from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
 import {Switch} from '@/components/ui/switch';
-import {Pencil, Trash2, ShieldCheck, Wrench, CalendarCheck2} from 'lucide-react';
+import {
+  Pencil,
+  Trash2,
+  ShieldCheck,
+  Wrench,
+  CalendarCheck2,
+} from 'lucide-react';
 import {Badge} from '@/lib/types';
 import * as Icons from 'lucide-react';
 import {cn} from '@/lib/utils';
@@ -60,16 +66,16 @@ export const BadgeListItem = memo(function BadgeListItem({
           </div>
           {isEarned ? (
             <div className="flex flex-col items-center text-xs text-accent">
-                <CalendarCheck2 className="h-5 w-5" />
-                <span>Earned</span>
+              <CalendarCheck2 className="h-5 w-5" />
+              <span>Earned</span>
             </div>
           ) : (
             <div className="flex items-center gap-2">
-                <Switch
+              <Switch
                 checked={badge.isEnabled}
                 onCheckedChange={handleToggle}
                 aria-label="Enable or disable badge"
-                />
+              />
             </div>
           )}
         </div>
@@ -95,7 +101,8 @@ export const BadgeListItem = memo(function BadgeListItem({
           </Button>
         )}
         <Button variant="outline" size="sm" onClick={() => onEdit(badge)}>
-          <Pencil className="mr-2 h-4 w-4" /> {badge.isCustom ? 'Edit' : 'View'}
+          <Pencil className="mr-2 h-4 w-4" />{' '}
+          {badge.isCustom ? 'Edit' : 'View'}
         </Button>
       </CardFooter>
     </Card>

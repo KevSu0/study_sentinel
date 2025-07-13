@@ -12,7 +12,10 @@ import Link from 'next/link';
 
 const BadgeDialog = dynamic(
   () => import('@/components/badges/badge-dialog').then(m => m.BadgeDialog),
-  {ssr: false}
+  {
+    ssr: false,
+    loading: () => <p>Loading...</p>,
+  }
 );
 
 export default function ManageBadgesPage() {
@@ -100,13 +103,15 @@ export default function ManageBadgesPage() {
         )}
       </main>
 
-      <BadgeDialog
-        isOpen={isDialogOpen}
-        onOpenChange={setDialogOpen}
-        onAddBadge={addBadge}
-        onUpdateBadge={updateBadge}
-        badgeToEdit={editingBadge}
-      />
+      {isDialogOpen && (
+        <BadgeDialog
+          isOpen={isDialogOpen}
+          onOpenChange={setDialogOpen}
+          onAddBadge={addBadge}
+          onUpdateBadge={updateBadge}
+          badgeToEdit={editingBadge}
+        />
+      )}
     </div>
   );
 }

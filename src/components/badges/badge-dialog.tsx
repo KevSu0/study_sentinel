@@ -90,7 +90,7 @@ const timeframeOptions = [
   {value: 'MONTH', label: 'In a Single Month'},
 ];
 
-// Dynamically get a list of available Lucide icons
+// Dynamically get a list of available Lucide icons, but only once.
 const iconList = Object.keys(Icons).filter(
   key =>
     typeof (Icons as any)[key] === 'object' && (Icons as any)[key].displayName
@@ -191,6 +191,44 @@ export function BadgeDialog({
     () => (Icons as any)[selectedIconName] || Icons.Award,
     [selectedIconName]
   );
+
+  const getTargetLabel = (type?: BadgeFormData['conditions'][0]['type']) => {
+    switch (type) {
+      case 'TOTAL_STUDY_TIME':
+      case 'TIME_ON_SUBJECT':
+      case 'SINGLE_SESSION_TIME':
+        return 'Duration';
+      case 'DAY_STREAK':
+        return 'Target (Days)';
+      case 'POINTS_EARNED':
+        return 'Target (Points)';
+      case 'TASKS_COMPLETED':
+      case 'ROUTINES_COMPLETED':
+        return 'Target (Count)';
+      default:
+        return 'Target';
+    }
+  };
+
+  const getTargetPlaceholder = (
+    type?: BadgeFormData['conditions'][0]['type']
+  ) => {
+    switch (type) {
+      case 'TOTAL_STUDY_TIME':
+      case 'TIME_ON_SUBJECT':
+      case 'SINGLE_SESSION_TIME':
+        return ''; // The duration input has its own placeholders
+      case 'DAY_STREAK':
+        return 'e.g., 7';
+      case 'POINTS_EARNED':
+        return 'e.g., 1000';
+      case 'TASKS_COMPLETED':
+      case 'ROUTINES_COMPLETED':
+        return 'e.g., 10';
+      default:
+        return 'e.g., 5';
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -376,7 +414,7 @@ export function BadgeDialog({
                         {showTargetInput && (
                           <div className="space-y-1 md:col-span-2">
                             <Label className="text-xs">
-                              {isTimeBased ? 'Duration' : 'Target'}
+                              {getTargetLabel(watchedType)}
                             </Label>
                             {isTimeBased ? (
                               <Controller
@@ -393,7 +431,7 @@ export function BadgeDialog({
                               <Input
                                 type="number"
                                 {...register(`conditions.${index}.target`)}
-                                placeholder="e.g., 10"
+                                placeholder={getTargetPlaceholder(watchedType)}
                               />
                             )}
                           </div>
