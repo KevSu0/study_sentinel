@@ -194,9 +194,24 @@ const Sidebar = React.forwardRef<
     }
     
     // On mobile, this will render as a sheet.
-    // For this app, we handle mobile nav with BottomNav, so sidebar is hidden on mobile.
     if (isMobile) {
-        return null;
+      return (
+        <Sheet open={openMobile} onOpenChange={setOpenMobile}>
+          <SheetContent
+            side={side}
+            className="w-[--sidebar-width-mobile] p-0"
+            style={
+              {
+                "--sidebar-width-mobile": SIDEBAR_WIDTH_MOBILE,
+              } as React.CSSProperties
+            }
+          >
+            <div data-sidebar="sidebar" className="flex h-full flex-col">
+              {children}
+            </div>
+          </SheetContent>
+        </Sheet>
+      )
     }
 
     return (
