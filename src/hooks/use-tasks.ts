@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, {
@@ -138,7 +137,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
       setIsLoaded(true);
     }
   }, []);
-  
+
   const updateTask = useCallback(
     (updatedTask: StudyTask) => {
       let oldTask: StudyTask | undefined;
@@ -172,7 +171,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
     },
     [addLog]
   );
-  
+
   const addTask = useCallback(
     (task: Omit<StudyTask, 'id' | 'status'>) => {
       const newTask: StudyTask = {
@@ -452,7 +451,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
     addTask,
     updateTask,
     archiveTask,
-unarchiveTask,
+    unarchiveTask,
     pushTaskToNextDay,
     activeItem: activeTimer?.item ?? null,
     timeDisplay,
@@ -466,7 +465,7 @@ unarchiveTask,
     completeTimer,
     stopTimer,
   };
-  
+
   return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>;
 }
 
