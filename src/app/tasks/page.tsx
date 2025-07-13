@@ -21,7 +21,7 @@ import type {StudyTask} from '@/lib/types';
 import {format} from 'date-fns';
 import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
 import {cn} from '@/lib/utils';
-import {useViewMode} from '@/hooks/use-view-mode';
+import {useViewMode} from '@/hooks/use-view-mode.tsx';
 
 const TaskDialog = dynamic(
   () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),

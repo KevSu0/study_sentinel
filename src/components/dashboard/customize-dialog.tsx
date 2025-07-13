@@ -25,7 +25,7 @@ import {
 } from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
 import {GripVertical, LayoutGrid, List} from 'lucide-react';
-import {useViewMode} from '@/hooks/use-view-mode';
+import {useViewMode} from '@/hooks/use-view-mode.tsx';
 import {Separator} from '../ui/separator';
 
 interface CustomizeDialogProps {

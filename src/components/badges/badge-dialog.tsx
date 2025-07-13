@@ -29,7 +29,7 @@ import * as Icons from 'lucide-react';
 import {ScrollArea} from '../ui/scroll-area';
 import {cn} from '@/lib/utils';
 import {X} from 'lucide-react';
-import {useRoutines} from '@/hooks/use-routines';
+import {useRoutines} from '@/hooks/use-routines.tsx';
 import {DurationInput} from './duration-input';
 import {IconPicker, iconList} from './icon-picker';
 

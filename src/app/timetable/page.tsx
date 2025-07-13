@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
-import { useRoutines } from '@/hooks/use-routines';
+import { useRoutines } from '@/hooks/use-routines.tsx';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RoutineListItem } from '@/components/timetable/routine-list-item';
 import { Routine } from '@/lib/types';

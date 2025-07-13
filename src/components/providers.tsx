@@ -41,8 +41,8 @@ import { TasksProvider, useTasks } from '@/hooks/use-tasks.tsx';
 import { LoggerProvider } from '@/hooks/use-logger.tsx';
 import { useBadges } from '@/hooks/useBadges';
 import { ProfileProvider, useProfile } from '@/hooks/use-profile.tsx';
-import { RoutinesProvider, useRoutines } from '@/hooks/use-routines';
-import { ViewModeProvider, useViewMode } from '@/hooks/use-view-mode';
+import { RoutinesProvider, useRoutines } from '@/hooks/use-routines.tsx';
+import { ViewModeProvider, useViewMode } from '@/hooks/use-view-mode.tsx';
 import { DashboardLayoutProvider, useDashboardLayout } from '@/hooks/use-dashboard-layout.tsx';
 
 // The Chat Widget is temporarily disabled.

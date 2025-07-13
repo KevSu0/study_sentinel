@@ -1,7 +1,7 @@
 
 'use client';
 
-import {useState, useEffect, useCallback, createContext, useContext, ReactNode} from 'react';
+import React, {useState, useEffect, useCallback, createContext, useContext, ReactNode} from 'react';
 import {type Routine} from '@/lib/types';
 
 const ROUTINES_KEY = 'studySentinelRoutines';

@@ -26,9 +26,9 @@ import Link from 'next/link';
 import {getDailySummary} from '@/lib/actions';
 import {useLogger} from '@/hooks/use-logger.tsx';
 import {useProfile} from '@/hooks/use-profile.tsx';
-import {useViewMode} from '@/hooks/use-view-mode';
+import {useViewMode} from '@/hooks/use-view-mode.tsx';
 import {cn} from '@/lib/utils';
-import {useRoutines} from '@/hooks/use-routines';
+import {useRoutines} from '@/hooks/use-routines.tsx';
 import {RoutineDashboardCard} from '@/components/timetable/routine-dashboard-card';
 import {
   CardCompletedRoutineItem,
