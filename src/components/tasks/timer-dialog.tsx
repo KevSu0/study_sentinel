@@ -13,7 +13,7 @@ import {Button} from '@/components/ui/button';
 import {Pause, Play, CheckCircle, XCircle} from 'lucide-react';
 import type {StudyTask} from '@/lib/types';
 import {cn} from '@/lib/utils';
-import { useTasks } from '@/hooks/use-tasks';
+import { useTasks } from '@/hooks/use-tasks.tsx';
 import {StopTimerDialog} from './stop-timer-dialog';
 
 interface TimerDialogProps {

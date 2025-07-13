@@ -26,7 +26,7 @@ import {
 import {Badge} from '@/components/ui/badge';
 import {Routine} from '@/lib/types';
 import {useToast} from '@/hooks/use-toast';
-import {useTasks} from '@/hooks/use-tasks';
+import {useTasks} from '@/hooks/use-tasks.tsx';
 import {
   AlertDialog,
   AlertDialogAction,

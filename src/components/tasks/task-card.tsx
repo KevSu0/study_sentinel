@@ -35,7 +35,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {useConfetti} from '@/components/providers/confetti-provider';
-import { useTasks } from '@/hooks/use-tasks';
+import { useTasks } from '@/hooks/use-tasks.tsx';
 
 const TimerDialog = lazy(() =>
   import('./timer-dialog').then(module => ({default: module.TimerDialog}))

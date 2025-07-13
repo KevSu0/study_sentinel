@@ -1,7 +1,7 @@
 
 'use client';
 import React, {useState} from 'react';
-import { useTasks } from '@/hooks/use-tasks';
+import { useTasks } from '@/hooks/use-tasks.tsx';
 import type {StudyTask, Routine} from '@/lib/types';
 import {Button} from '@/components/ui/button';
 import {Timer, CheckCircle, XCircle, Pause, Play} from 'lucide-react';

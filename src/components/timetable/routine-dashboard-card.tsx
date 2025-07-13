@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { PlayCircle, Timer, Clock } from 'lucide-react';
 import { Routine } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useTasks } from '@/hooks/use-tasks';
+import { useTasks } from '@/hooks/use-tasks.tsx';
 
 interface RoutineDashboardCardProps {
   routine: Routine;

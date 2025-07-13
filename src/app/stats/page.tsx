@@ -22,7 +22,7 @@ import {
   Activity,
   Star,
 } from 'lucide-react';
-import {useTasks} from '@/hooks/use-tasks';
+import {useTasks} from '@/hooks/use-tasks.tsx';
 import {useBadges} from '@/hooks/useBadges';
 import {useLogger} from '@/hooks/use-logger';
 import {format, subDays, startOfDay, parseISO} from 'date-fns';

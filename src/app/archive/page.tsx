@@ -1,6 +1,6 @@
 'use client';
 import React, {useMemo} from 'react';
-import {useTasks} from '@/hooks/use-tasks';
+import {useTasks} from '@/hooks/use-tasks.tsx';
 import {TaskList} from '@/components/tasks/task-list';
 import {EmptyState} from '@/components/tasks/empty-state';
 import {Skeleton} from '@/components/ui/skeleton';

@@ -10,7 +10,7 @@ import {
   LayoutGrid,
   List,
 } from 'lucide-react';
-import {useTasks} from '@/hooks/use-tasks';
+import {useTasks} from '@/hooks/use-tasks.tsx';
 import {TaskList} from '@/components/tasks/task-list';
 import {SimpleTaskList} from '@/components/tasks/simple-task-list';
 import {EmptyState} from '@/components/tasks/empty-state';

@@ -21,7 +21,7 @@ import type {StudyTask} from '@/lib/types';
 import {useConfetti} from '@/components/providers/confetti-provider';
 import {useToast} from '@/hooks/use-toast';
 import {format} from 'date-fns';
-import { useTasks } from '@/hooks/use-tasks';
+import { useTasks } from '@/hooks/use-tasks.tsx';
 
 const TimerDialog = lazy(() =>
   import('./timer-dialog').then(module => ({default: module.TimerDialog}))

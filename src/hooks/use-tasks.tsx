@@ -199,9 +199,9 @@ export function TasksProvider({children}: {children: ReactNode}) {
         const newTasks = prevTasks.map(task =>
           task.id === taskId ? {...task, status: 'archived'} : task
         );
+        addLog('TASK_ARCHIVE', {taskId, title: taskTitle});
         return saveTasks(newTasks);
       });
-      addLog('TASK_ARCHIVE', {taskId, title: taskTitle});
     },
     [addLog]
   );
@@ -215,9 +215,9 @@ export function TasksProvider({children}: {children: ReactNode}) {
         const newTasks = prevTasks.map(task =>
           task.id === taskId ? {...task, status: 'todo'} : task
         );
+        addLog('TASK_UNARCHIVE', {taskId, title: taskTitle});
         return saveTasks(newTasks);
       });
-      addLog('TASK_UNARCHIVE', {taskId, title: taskTitle});
     },
     [addLog]
   );
@@ -235,9 +235,9 @@ export function TasksProvider({children}: {children: ReactNode}) {
           }
           return task;
         });
+        addLog('TASK_PUSH_NEXT_DAY', {taskId, title: taskTitle});
         return saveTasks(newTasks);
       });
-      addLog('TASK_PUSH_NEXT_DAY', {taskId, title: taskTitle});
     },
     [addLog]
   );

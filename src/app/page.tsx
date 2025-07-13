@@ -15,7 +15,7 @@ import {
   List,
   Settings,
 } from 'lucide-react';
-import {useTasks} from '@/hooks/use-tasks';
+import {useTasks} from '@/hooks/use-tasks.tsx';
 import {TaskList} from '@/components/tasks/task-list';
 import {SimpleTaskList} from '@/components/tasks/simple-task-list';
 import {EmptyState} from '@/components/tasks/empty-state';
@@ -482,7 +482,7 @@ export default function DashboardPage() {
       todaysCompletedRoutines: sortedCompletedRoutines,
       productivityData: prodData,
     };
-  }, [tasks, todayStr, allBadges, earnedBadges, routines, logs]);
+  }, [tasks, logs, todayStr, allBadges, earnedBadges, routines]);
 
   const dailyQuote = useMemo(() => {
     const now = new Date();
