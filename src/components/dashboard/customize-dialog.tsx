@@ -88,7 +88,7 @@ export function CustomizeDialog({isOpen, onOpenChange}: CustomizeDialogProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Customize Dashboard</DialogTitle>
           <DialogDescription>
@@ -96,7 +96,7 @@ export function CustomizeDialog({isOpen, onOpenChange}: CustomizeDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4 space-y-6">
+        <div className="py-4 space-y-6 flex-1 overflow-y-auto pr-2">
           <div>
             <Label className="text-base font-medium">View Mode</Label>
             <div className="grid grid-cols-2 gap-2 mt-2">
@@ -143,7 +143,7 @@ export function CustomizeDialog({isOpen, onOpenChange}: CustomizeDialogProps) {
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="mt-auto pt-4 border-t">
           <Button onClick={() => onOpenChange(false)}>Done</Button>
         </DialogFooter>
       </DialogContent>
