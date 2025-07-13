@@ -30,6 +30,7 @@ import {cn} from '@/lib/utils';
 import {X} from 'lucide-react';
 import {useRoutines} from '@/hooks/use-routines';
 import {DurationInput} from './duration-input';
+import {IconPicker, iconList} from './icon-picker';
 
 const conditionSchema = z.object({
   type: z.enum([
@@ -90,12 +91,6 @@ const timeframeOptions = [
   {value: 'MONTH', label: 'In a Single Month'},
 ];
 
-// Dynamically get a list of available Lucide icons, but only once.
-const iconList = Object.keys(Icons).filter(
-  key =>
-    typeof (Icons as any)[key] === 'object' && (Icons as any)[key].displayName
-);
-
 export function BadgeDialog({
   isOpen,
   onOpenChange,
@@ -131,6 +126,8 @@ export function BadgeDialog({
   });
 
   const watchedConditions = watch('conditions');
+  const selectedIconName = watch('icon');
+  const watchedColor = watch('color');
 
   useEffect(() => {
     if (isOpen) {
@@ -185,8 +182,7 @@ export function BadgeDialog({
     }
     onOpenChange(false);
   };
-
-  const selectedIconName = watch('icon');
+  
   const SelectedIcon = useMemo(
     () => (Icons as any)[selectedIconName] || Icons.Award,
     [selectedIconName]
@@ -232,7 +228,7 @@ export function BadgeDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? 'Edit Badge' : 'Create Custom Badge'}
@@ -241,71 +237,10 @@ export function BadgeDialog({
             Design your own challenge. Set the rules and earn your reward.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4">
-          <ScrollArea className="h-96 pr-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="pt-4">
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Left Column: Badge Appearance */}
             <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="space-y-2">
-                  <Label>Preview</Label>
-                  <div
-                    className="flex items-center justify-center w-20 h-20 rounded-full border-4"
-                    style={{borderColor: watch('color')}}
-                  >
-                    <SelectedIcon
-                      className="h-10 w-10"
-                      style={{color: watch('color')}}
-                    />
-                  </div>
-                </div>
-                <div className="flex-1 grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="icon">Icon</Label>
-                    <Controller
-                      name="icon"
-                      control={control}
-                      render={({field}) => (
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <ScrollArea className="h-72">
-                              {iconList.map(iconName => (
-                                <SelectItem key={iconName} value={iconName}>
-                                  {iconName}
-                                </SelectItem>
-                              ))}
-                            </ScrollArea>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    {errors.icon && (
-                      <p className="text-sm text-destructive mt-1">
-                        {errors.icon.message}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="color">Color</Label>
-                    <Input
-                      id="color"
-                      type="color"
-                      {...register('color')}
-                      className="p-1 h-10"
-                    />
-                    {errors.color && (
-                      <p className="text-sm text-destructive mt-1">
-                        {errors.color.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="name">Badge Name</Label>
                 <Input
@@ -332,32 +267,67 @@ export function BadgeDialog({
                   </p>
                 )}
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="color">Color</Label>
+                <Input
+                  id="color"
+                  type="color"
+                  {...register('color')}
+                  className="p-1 h-10"
+                />
+                {errors.color && (
+                  <p className="text-sm text-destructive mt-1">
+                    {errors.color.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                 <Label>Icon</Label>
+                 <Controller
+                    name="icon"
+                    control={control}
+                    render={({ field }) => (
+                      <IconPicker 
+                        selectedIcon={field.value}
+                        onSelectIcon={field.onChange}
+                        color={watchedColor}
+                      />
+                    )}
+                  />
+                  {errors.icon && (
+                      <p className="text-sm text-destructive mt-1">
+                        {errors.icon.message}
+                      </p>
+                    )}
+              </div>
+            </div>
 
-              <div className="space-y-4">
-                <Label>Conditions to Earn</Label>
-                {fields.map((field, index) => {
-                  const watchedType = watchedConditions[index]?.type;
-                  const isTimeBased = [
-                    'TOTAL_STUDY_TIME',
-                    'TIME_ON_SUBJECT',
-                    'SINGLE_SESSION_TIME',
-                  ].includes(watchedType);
-                  const disableTimeframe = [
-                    'DAY_STREAK',
-                    'SINGLE_SESSION_TIME',
-                    'ALL_TASKS_COMPLETED_ON_DAY',
-                  ].includes(watchedType);
-                  const showTargetInput =
-                    watchedType !== 'ALL_TASKS_COMPLETED_ON_DAY';
+            {/* Right Column: Conditions */}
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Conditions to Earn</Label>
+              <ScrollArea className="h-[450px] pr-4 -mr-4">
+                <div className="space-y-3">
+                  {fields.map((field, index) => {
+                    const watchedType = watchedConditions[index]?.type;
+                    const isTimeBased = [
+                      'TOTAL_STUDY_TIME',
+                      'TIME_ON_SUBJECT',
+                      'SINGLE_SESSION_TIME',
+                    ].includes(watchedType);
+                    const disableTimeframe = [
+                      'DAY_STREAK',
+                      'SINGLE_SESSION_TIME',
+                      'ALL_TASKS_COMPLETED_ON_DAY',
+                    ].includes(watchedType);
+                    const showTargetInput =
+                      watchedType !== 'ALL_TASKS_COMPLETED_ON_DAY';
 
-                  return (
-                    <div
-                      key={field.id}
-                      className="flex gap-2 items-end p-3 border rounded-lg bg-muted/50"
-                    >
-                      <div className="grid flex-1 gap-2 grid-cols-1 md:grid-cols-2">
-                        <div className="space-y-1">
-                          <Label className="text-xs">Type</Label>
+                    return (
+                      <div
+                        key={field.id}
+                        className="flex gap-2 items-start p-3 border rounded-lg bg-muted/50"
+                      >
+                        <div className="grid flex-1 gap-2 grid-cols-1">
                           <Controller
                             name={`conditions.${index}.type`}
                             control={control}
@@ -382,11 +352,8 @@ export function BadgeDialog({
                               </Select>
                             )}
                           />
-                        </div>
 
-                        {watchedType === 'TIME_ON_SUBJECT' && (
-                          <div className="space-y-1">
-                            <Label className="text-xs">Subject</Label>
+                          {watchedType === 'TIME_ON_SUBJECT' && (
                             <Controller
                               name={`conditions.${index}.subjectId`}
                               control={control}
@@ -408,99 +375,105 @@ export function BadgeDialog({
                                 </Select>
                               )}
                             />
-                          </div>
-                        )}
+                          )}
+                          
+                          <div className="grid grid-cols-2 gap-2">
+                             {showTargetInput && (
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-normal">
+                                    {getTargetLabel(watchedType)}
+                                  </Label>
+                                  {isTimeBased ? (
+                                    <Controller
+                                      name={`conditions.${index}.target`}
+                                      control={control}
+                                      render={({field}) => (
+                                        <DurationInput
+                                          value={field.value}
+                                          onChange={field.onChange}
+                                        />
+                                      )}
+                                    />
+                                  ) : (
+                                    <Input
+                                      type="number"
+                                      {...register(`conditions.${index}.target`)}
+                                      placeholder={getTargetPlaceholder(
+                                        watchedType
+                                      )}
+                                    />
+                                  )}
+                                </div>
+                              )}
 
-                        {showTargetInput && (
-                          <div className="space-y-1 md:col-span-2">
-                            <Label className="text-xs">
-                              {getTargetLabel(watchedType)}
-                            </Label>
-                            {isTimeBased ? (
+                            <div className="space-y-1">
+                              <Label className="text-xs font-normal">Timeframe</Label>
                               <Controller
-                                name={`conditions.${index}.target`}
+                                name={`conditions.${index}.timeframe`}
                                 control={control}
                                 render={({field}) => (
-                                  <DurationInput
-                                    value={field.value}
-                                    onChange={field.onChange}
-                                  />
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    disabled={disableTimeframe}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {timeframeOptions.map(opt => (
+                                        <SelectItem
+                                          key={opt.value}
+                                          value={opt.value}
+                                        >
+                                          {opt.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
                                 )}
                               />
-                            ) : (
-                              <Input
-                                type="number"
-                                {...register(`conditions.${index}.target`)}
-                                placeholder={getTargetPlaceholder(watchedType)}
-                              />
-                            )}
-                          </div>
-                        )}
-
-                        <div className="space-y-1">
-                          <Label className="text-xs">Timeframe</Label>
-                          <Controller
-                            name={`conditions.${index}.timeframe`}
-                            control={control}
-                            render={({field}) => (
-                              <Select
-                                onValueChange={field.onChange}
-                                defaultValue={field.value}
-                                disabled={disableTimeframe}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {timeframeOptions.map(opt => (
-                                    <SelectItem
-                                      key={opt.value}
-                                      value={opt.value}
-                                    >
-                                      {opt.label}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            )}
-                          />
+                            </div>
+                           </div>
                         </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => remove(index)}
+                          disabled={fields.length <= 1}
+                          className="mt-1"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => remove(index)}
-                        disabled={fields.length <= 1}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  );
-                })}
-                {errors.conditions?.root && (
-                  <p className="text-sm text-destructive">
-                    {errors.conditions.root.message}
-                  </p>
-                )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() =>
-                    append({
-                      type: 'TASKS_COMPLETED',
-                      target: 10,
-                      timeframe: 'TOTAL',
-                    })
-                  }
-                >
-                  Add Condition
-                </Button>
-              </div>
+                    );
+                  })}
+                  </div>
+              </ScrollArea>
+              {errors.conditions?.root && (
+                <p className="text-sm text-destructive">
+                  {errors.conditions.root.message}
+                </p>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  append({
+                    type: 'TASKS_COMPLETED',
+                    target: 10,
+                    timeframe: 'TOTAL',
+                  })
+                }
+              >
+                Add Condition
+              </Button>
             </div>
-          </ScrollArea>
+          </div>
 
-          <DialogFooter className="pt-4">
+          <DialogFooter className="pt-8">
             <Button
               type="button"
               variant="ghost"
