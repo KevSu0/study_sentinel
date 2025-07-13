@@ -377,9 +377,9 @@ export function BadgeDialog({
                             />
                           )}
                           
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                              {showTargetInput && (
-                                <div className="space-y-1">
+                                <div className="space-y-1 sm:col-span-2">
                                   <Label className="text-xs font-normal">
                                     {getTargetLabel(watchedType)}
                                   </Label>
@@ -406,7 +406,7 @@ export function BadgeDialog({
                                 </div>
                               )}
 
-                            <div className="space-y-1">
+                            <div className="space-y-1 sm:col-span-2">
                               <Label className="text-xs font-normal">Timeframe</Label>
                               <Controller
                                 name={`conditions.${index}.timeframe`}
