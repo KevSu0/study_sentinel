@@ -101,10 +101,6 @@ export function TaskCard({
     onUpdate({...task, status: newStatus});
   };
 
-  const handleTimerComplete = () => {
-    // This is now handled by the useTasks hook
-  };
-
   const formattedDate = format(parseISO(task.date), 'MMM d, yyyy');
   const formattedTime = format(parse(task.time, 'HH:mm', new Date()), 'p');
 
@@ -177,7 +173,8 @@ export function TaskCard({
             ? 'border-destructive/70'
             : task.status === 'completed'
             ? 'bg-card/60 dark:bg-card/80 border-accent'
-            : priorityConfig[task.priority]?.className || 'border-transparent'
+            : priorityConfig[task.priority]?.className || 'border-transparent',
+            isTimerActive && 'ring-2 ring-primary'
         )}
       >
         <CardHeader className="pb-4">
@@ -273,7 +270,7 @@ export function TaskCard({
             task={task}
             isOpen={isTimerOpen}
             onOpenChange={setTimerOpen}
-            onComplete={handleTimerComplete}
+            onComplete={() => {}}
           />
         </Suspense>
       )}

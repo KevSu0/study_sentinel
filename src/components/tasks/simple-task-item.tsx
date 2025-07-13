@@ -66,12 +66,6 @@ export function SimpleTaskItem({
     onUpdate({...task, status: newStatus});
   };
 
-  const handleTimerComplete = () => {
-    // The useTasks hook handles updating the task status now.
-    // We just need to make sure the UI reflects it.
-    // This could involve refetching or relying on the hook's state management.
-  };
-
   if (task.status === 'archived') {
     return (
       <div className="flex items-center p-2 border-b">
@@ -91,7 +85,8 @@ export function SimpleTaskItem({
         className={cn(
           'flex items-center gap-4 p-3 border rounded-lg transition-colors hover:bg-muted/50',
           isOverdue && 'border-destructive/50 bg-destructive/5',
-          isCompleted && 'bg-accent/10'
+          isCompleted && 'bg-accent/10',
+          isTimerActive && 'ring-2 ring-primary'
         )}
       >
         <Checkbox
@@ -182,7 +177,7 @@ export function SimpleTaskItem({
             task={task}
             isOpen={isTimerOpen}
             onOpenChange={setTimerOpen}
-            onComplete={handleTimerComplete}
+            onComplete={() => {}}
           />
         </Suspense>
       )}
