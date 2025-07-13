@@ -210,7 +210,9 @@ export default function StatsPage() {
       overall: [],
     };
     for (const badge of allBadges) {
-      categories[badge.category].push(badge);
+      // Safely default to 'overall' if category is missing
+      const category = badge.category || 'overall';
+      categories[category].push(badge);
     }
     return categories;
   }, [allBadges]);
