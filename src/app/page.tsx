@@ -49,6 +49,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
   useSortable,
+  arrayMove,
 } from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
 
@@ -314,7 +315,7 @@ export default function DashboardPage() {
     isLoaded: loggerLoaded,
   } = useLogger();
   const {profile, isLoaded: profileLoaded} = useProfile();
-  const {viewMode, setViewMode, isLoaded: viewModeLoaded} = useViewMode();
+  const {viewMode, isLoaded: viewModeLoaded} = useViewMode();
   const {routines, isLoaded: routinesLoaded} = useRoutines();
   const {
     layout,
@@ -515,10 +516,7 @@ export default function DashboardPage() {
     if (over && active.id !== over.id) {
       const oldIndex = layout.findIndex(w => w.id === active.id);
       const newIndex = layout.findIndex(w => w.id === over.id);
-      const newLayout = [...layout];
-      const [reorderedItem] = newLayout.splice(oldIndex, 1);
-      newLayout.splice(newIndex, 0, reorderedItem);
-      setLayout(newLayout);
+      setLayout(arrayMove(layout, oldIndex, newIndex));
     }
   };
 
@@ -684,26 +682,6 @@ export default function DashboardPage() {
               <Settings className="h-4 w-4" />
               <span className="hidden sm:inline ml-2">Customize</span>
             </Button>
-            <div className="hidden sm:flex items-center gap-1 rounded-lg bg-muted p-1">
-              <Button
-                variant={viewMode === 'card' ? 'secondary' : 'ghost'}
-                size="sm"
-                className="h-8 px-2.5"
-                onClick={() => setViewMode('card')}
-              >
-                <LayoutGrid className="h-4 w-4" />
-                <span className="sr-only">Card View</span>
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                size="sm"
-                className="h-8 px-2.5"
-                onClick={() => setViewMode('list')}
-              >
-                <List className="h-4 w-4" />
-                <span className="sr-only">List View</span>
-              </Button>
-            </div>
             <Button asChild className="w-full sm:w-auto">
               <Link href="/tasks">
                 <PlusCircle />
