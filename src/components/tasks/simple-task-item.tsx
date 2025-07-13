@@ -1,5 +1,5 @@
 
-import React, {memo, useState, useEffect, Suspense, lazy, useMemo} from 'react';
+import React, {memo, useState, Suspense, lazy, useMemo} from 'react';
 import {
   MoreVertical,
   Timer,
@@ -21,6 +21,7 @@ import type {StudyTask} from '@/lib/types';
 import {useConfetti} from '@/components/providers/confetti-provider';
 import {useToast} from '@/hooks/use-toast';
 import {format} from 'date-fns';
+import { useTimer } from '@/hooks/use-timer';
 
 const TimerDialog = lazy(() =>
   import('./timer-dialog').then(module => ({default: module.TimerDialog}))
@@ -35,8 +36,6 @@ interface SimpleTaskItemProps {
   onEdit: (task: StudyTask) => void;
 }
 
-const TIMER_STORAGE_KEY = 'studySentinelActiveTimer';
-
 export const SimpleTaskItem = memo(function SimpleTaskItem({
   task,
   onUpdate,
@@ -45,38 +44,15 @@ export const SimpleTaskItem = memo(function SimpleTaskItem({
   onPushToNextDay,
   onEdit,
 }: SimpleTaskItemProps) {
+  const { activeItem } = useTimer();
+  const isTimerActive = activeItem?.type === 'task' && activeItem.item.id === task.id;
+
   const isCompleted = task.status === 'completed';
   const {fire} = useConfetti();
   const {toast} = useToast();
   const [isTimerOpen, setTimerOpen] = useState(false);
-  const [isTimerActive, setIsTimerActive] = useState(false);
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   const isOverdue = !isCompleted && task.date < todayStr;
-
-  useEffect(() => {
-    const checkTimerStatus = () => {
-      const savedTimerRaw = localStorage.getItem(TIMER_STORAGE_KEY);
-      if (savedTimerRaw) {
-        try {
-          const savedTimer = JSON.parse(savedTimerRaw);
-          setIsTimerActive(savedTimer.taskId === task.id);
-        } catch {
-          setIsTimerActive(false);
-        }
-      } else {
-        setIsTimerActive(false);
-      }
-    };
-
-    checkTimerStatus();
-    const interval = setInterval(checkTimerStatus, 2000);
-    window.addEventListener('storage', checkTimerStatus);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('storage', checkTimerStatus);
-    };
-  }, [task.id]);
 
   const handleToggleComplete = () => {
     const newStatus = isCompleted ? 'todo' : 'completed';
@@ -91,7 +67,9 @@ export const SimpleTaskItem = memo(function SimpleTaskItem({
   };
 
   const handleTimerComplete = () => {
-    onUpdate({...task, status: 'completed'});
+    // The useTimer hook handles updating the task status now.
+    // We just need to make sure the UI reflects it.
+    // This could involve refetching or relying on the hook's state management.
   };
 
   if (task.status === 'archived') {

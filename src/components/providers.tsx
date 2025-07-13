@@ -37,6 +37,7 @@ import {SplashScreen} from '@/components/splash-screen';
 import {GlobalTimerBar} from './tasks/global-timer-bar';
 import {BottomNav} from './bottom-nav';
 import {cn} from '@/lib/utils';
+import {TimerProvider} from '@/hooks/use-timer';
 
 const ChatWidget = dynamic(
   () => import('@/components/coach/chat-widget').then(m => m.ChatWidget),
@@ -163,9 +164,11 @@ export function Providers({children}: {children: ReactNode}) {
 
   return (
     <ConfettiProvider>
-      <SidebarProvider>
-        <AppLayout>{children}</AppLayout>
-      </SidebarProvider>
+      <TimerProvider>
+        <SidebarProvider>
+          <AppLayout>{children}</AppLayout>
+        </SidebarProvider>
+      </TimerProvider>
     </ConfettiProvider>
   );
 }

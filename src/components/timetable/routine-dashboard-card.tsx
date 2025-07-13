@@ -1,14 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PlayCircle, Timer, Clock } from 'lucide-react';
 import { Routine } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-
-const TASK_TIMER_KEY = 'studySentinelActiveTimer';
-const ROUTINE_TIMER_KEY = 'studySentinelActiveRoutineTimer';
+import { useTimer } from '@/hooks/use-timer';
 
 interface RoutineDashboardCardProps {
   routine: Routine;
@@ -16,34 +14,10 @@ interface RoutineDashboardCardProps {
 
 export function RoutineDashboardCard({ routine }: RoutineDashboardCardProps) {
   const { toast } = useToast();
-  const [isTimerActiveForThis, setIsTimerActiveForThis] = useState(false);
-  const [isAnyTimerActive, setIsAnyTimerActive] = useState(false);
+  const { activeItem, startTimer } = useTimer();
 
-  useEffect(() => {
-    const checkTimers = () => {
-      const taskTimer = localStorage.getItem(TASK_TIMER_KEY);
-      const routineTimerRaw = localStorage.getItem(ROUTINE_TIMER_KEY);
-      setIsAnyTimerActive(!!taskTimer || !!routineTimerRaw);
-      if (routineTimerRaw) {
-        try {
-            const routineTimer = JSON.parse(routineTimerRaw);
-            setIsTimerActiveForThis(routineTimer.routineId === routine.id);
-        } catch {
-            setIsTimerActiveForThis(false);
-        }
-      } else {
-        setIsTimerActiveForThis(false);
-      }
-    };
-    checkTimers();
-    const interval = setInterval(checkTimers, 1000);
-    window.addEventListener('storage', checkTimers);
-
-    return () => {
-        clearInterval(interval);
-        window.removeEventListener('storage', checkTimers);
-    };
-  }, [routine.id]);
+  const isTimerActiveForThis = activeItem?.type === 'routine' && activeItem.item.id === routine.id;
+  const isAnyTimerActive = !!activeItem;
 
   const handleStartTimer = () => {
     if (isAnyTimerActive) {
@@ -54,13 +28,7 @@ export function RoutineDashboardCard({ routine }: RoutineDashboardCardProps) {
       });
       return;
     }
-    const routineTimer = {
-      routineId: routine.id,
-      startTime: Date.now(),
-      isPaused: false,
-      pausedDuration: 0,
-    };
-    localStorage.setItem(ROUTINE_TIMER_KEY, JSON.stringify(routineTimer));
+    startTimer(routine);
     toast({
         title: "Routine Started!",
         description: `Timer for "${routine.title}" is now running.`

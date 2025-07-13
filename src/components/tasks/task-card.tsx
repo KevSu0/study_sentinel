@@ -1,4 +1,4 @@
-import React, {useState, lazy, Suspense, memo, useEffect} from 'react';
+import React, {useState, lazy, Suspense, memo} from 'react';
 import {
   Card,
   CardContent,
@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {useConfetti} from '@/components/providers/confetti-provider';
+import { useTimer } from '@/hooks/use-timer';
 
 const TimerDialog = lazy(() =>
   import('./timer-dialog').then(module => ({default: module.TimerDialog}))
@@ -69,7 +70,6 @@ const priorityConfig: Record<
   },
 };
 
-const TIMER_STORAGE_KEY = 'studySentinelActiveTimer';
 
 export const TaskCard = memo(function TaskCard({
   task,
@@ -80,30 +80,10 @@ export const TaskCard = memo(function TaskCard({
   onEdit,
 }: TaskCardProps) {
   const [isTimerOpen, setTimerOpen] = useState(false);
-  const [isTimerActive, setIsTimerActive] = useState(false);
   const {toast} = useToast();
   const {fire} = useConfetti();
-
-  useEffect(() => {
-    const checkTimerStatus = () => {
-      const savedTimerRaw = localStorage.getItem(TIMER_STORAGE_KEY);
-      if (savedTimerRaw) {
-        const savedTimer = JSON.parse(savedTimerRaw);
-        setIsTimerActive(savedTimer.taskId === task.id);
-      } else {
-        setIsTimerActive(false);
-      }
-    };
-
-    checkTimerStatus();
-    const interval = setInterval(checkTimerStatus, 2000); // Check periodically
-    window.addEventListener('storage', checkTimerStatus); // Listen for changes in other tabs
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('storage', checkTimerStatus);
-    };
-  }, [task.id]);
+  const { activeItem } = useTimer();
+  const isTimerActive = activeItem?.type === 'task' && activeItem.item.id === task.id;
 
   const handleStatusChange = (newStatus: TaskStatus) => {
     const oldStatus = task.status;
@@ -120,7 +100,7 @@ export const TaskCard = memo(function TaskCard({
   };
 
   const handleTimerComplete = () => {
-    handleStatusChange('completed');
+    // This is now handled by the useTimer hook
   };
 
   const formattedDate = format(parseISO(task.date), 'MMM d, yyyy');
