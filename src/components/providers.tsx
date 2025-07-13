@@ -39,10 +39,10 @@ import {BottomNav} from './bottom-nav';
 import {cn} from '@/lib/utils';
 import { TasksProvider, useTasks } from '@/hooks/use-tasks';
 
-const ChatWidget = dynamic(
-  () => import('@/components/coach/chat-widget').then(m => m.ChatWidget),
-  {ssr: false}
-);
+// const ChatWidget = dynamic(
+//   () => import('@/components/coach/chat-widget').then(m => m.ChatWidget),
+//   {ssr: false}
+// );
 
 function AppLayout({children}: {children: ReactNode}) {
   const pathname = usePathname();
@@ -148,7 +148,7 @@ function AppLayout({children}: {children: ReactNode}) {
       </SidebarInset>
       <Toaster />
       <BottomNav />
-      <ChatWidget />
+      {/* <ChatWidget /> */}
     </>
   );
 }
