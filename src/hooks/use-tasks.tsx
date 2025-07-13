@@ -89,6 +89,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
   const [activeTimer, setActiveTimer] = useState<StoredTimer | null>(null);
   const [timeDisplay, setTimeDisplay] = useState('00:00');
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isOvertime, setIsOvertime] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -435,36 +436,44 @@ export function TasksProvider({children}: {children: ReactNode}) {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setActiveTimer(currentTimer => {
-        if (!currentTimer || currentTimer.isPaused) return currentTimer;
+      if (!activeTimer || activeTimer.isPaused) {
+        return;
+      }
 
-        let newTimerState = {...currentTimer};
-        if (newTimerState.item.type === 'task') {
-          if (!newTimerState.endTime) return newTimerState;
-          const remaining = Math.round((newTimerState.endTime - Date.now()) / 1000);
-          setTimeDisplay(formatTime(remaining));
-
-          if (remaining <= 0 && !newTimerState.overtimeNotified) {
-            sendTimerEndNotification(newTimerState.item.item as StudyTask);
-            audioRef.current?.play().catch(e => console.error('Audio error:', e));
-            addLog('TIMER_OVERTIME_STARTED', {
-              taskId: newTimerState.item.item.id,
-              taskTitle: newTimerState.item.item.title,
-            });
-            newTimerState.overtimeNotified = true;
-            saveTimer(newTimerState); // Save immediately after notifying
-          }
-        } else {
-          if (!newTimerState.startTime) return newTimerState;
-          const elapsed = Date.now() - newTimerState.startTime;
-          setTimeDisplay(formatTime(Math.round(elapsed / 1000)));
-        }
-        return newTimerState;
-      });
+      if (activeTimer.item.type === 'task') {
+        if (!activeTimer.endTime) return;
+        const remaining = Math.round((activeTimer.endTime - Date.now()) / 1000);
+        setTimeDisplay(formatTime(remaining));
+        setIsOvertime(remaining < 0);
+      } else {
+        if (!activeTimer.startTime) return;
+        const elapsed = Date.now() - activeTimer.startTime;
+        setTimeDisplay(formatTime(Math.round(elapsed / 1000)));
+      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [addLog, saveTimer]);
+  }, [activeTimer]);
+
+  // Effect to handle overtime notification side-effect
+  useEffect(() => {
+    if (
+      isOvertime &&
+      activeTimer &&
+      activeTimer.item.type === 'task' &&
+      !activeTimer.overtimeNotified
+    ) {
+      const task = activeTimer.item.item as StudyTask;
+      sendTimerEndNotification(task);
+      audioRef.current?.play().catch(e => console.error('Audio error:', e));
+      addLog('TIMER_OVERTIME_STARTED', {
+        taskId: task.id,
+        taskTitle: task.title,
+      });
+      // Mark as notified to prevent re-triggering
+      saveTimer({...activeTimer, overtimeNotified: true});
+    }
+  }, [isOvertime, activeTimer, addLog, saveTimer]);
 
   const value: TasksContextType = {
     tasks,
@@ -477,10 +486,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
     activeItem: activeTimer?.item ?? null,
     timeDisplay,
     isPaused: activeTimer?.isPaused ?? true,
-    isOvertime:
-      activeTimer?.item.type === 'task' && activeTimer.endTime
-        ? activeTimer.endTime < Date.now()
-        : false,
+    isOvertime,
     startTimer,
     togglePause,
     completeTimer,
