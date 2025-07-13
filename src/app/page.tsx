@@ -40,7 +40,17 @@ import {
   useDashboardLayout,
   type DashboardWidgetType,
 } from '@/hooks/use-dashboard-layout';
-import {DragDropContext, Droppable, Draggable} from 'react-beautiful-dnd';
+import {
+  DndContext,
+  closestCenter,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import {CSS} from '@dnd-kit/utilities';
 
 const ProductivityChart = lazy(
   () => import('@/components/dashboard/productivity-chart')
@@ -271,6 +281,22 @@ const motivationalQuotes = [
   },
 ];
 
+function SortableWidget({id, children}: {id: string; children: React.ReactNode}) {
+  const {attributes, listeners, setNodeRef, transform, transition} =
+    useSortable({id});
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {children}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const {
     tasks,
@@ -483,16 +509,17 @@ export default function DashboardPage() {
     );
   };
   
-  const onDragEnd = (result: any) => {
-    const { destination, source } = result;
-    if (!destination) return;
-    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+  const handleDragEnd = (event: DragEndEvent) => {
+    const {active, over} = event;
 
-    const newLayout = [...layout];
-    const [reorderedItem] = newLayout.splice(source.index, 1);
-    newLayout.splice(destination.index, 0, reorderedItem);
-
-    setLayout(newLayout);
+    if (over && active.id !== over.id) {
+      const oldIndex = layout.findIndex(w => w.id === active.id);
+      const newIndex = layout.findIndex(w => w.id === over.id);
+      const newLayout = [...layout];
+      const [reorderedItem] = newLayout.splice(oldIndex, 1);
+      newLayout.splice(newIndex, 0, reorderedItem);
+      setLayout(newLayout);
+    }
   };
 
   const widgetMap: Record<DashboardWidgetType, React.ReactNode> = {
@@ -696,58 +723,53 @@ export default function DashboardPage() {
           </div>
         ) : (
           hasMounted && (
-            <DragDropContext onDragEnd={onDragEnd}>
-              <Droppable droppableId="dashboard-widgets" isDropDisabled={false} isCombineEnabled={false}>
-                {(provided) => (
-                  <div
-                    {...provided.droppableProps}
-                    ref={provided.innerRef}
-                    className="space-y-6"
-                  >
-                    {visibleWidgets.map((widget, index) => (
-                      <Draggable key={widget.id} draggableId={widget.id} index={index}>
-                        {(provided) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                          >
-                            {widgetMap[widget.id]}
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                    
-                    {visibleWidgets.length === 0 ? (
-                       <div className="flex items-center justify-center h-full pt-16">
-                          <EmptyState
-                            onAddTask={() => setCustomizeOpen(true)}
-                            title="Dashboard is Empty"
-                            message="Customize your dashboard to show the widgets that matter most to you."
-                            buttonText="Customize Dashboard"
-                          />
-                        </div>
-                    ) : (todaysTasks.length === 0 && todaysRoutines.length === 0 && !layout.find(w => w.id === 'todays_plan')?.isVisible && !layout.find(w => w.id === 'todays_routines')?.isVisible) && (
-                       <div className="flex items-center justify-center h-full">
-                          <EmptyState
-                            onAddTask={() => {}}
-                            title="A Fresh Start!"
-                            message="No tasks scheduled for today. Let's plan your day and make it a productive one!"
-                            buttonText="Plan Your Day"
-                          >
-                            <Button asChild className="mt-6">
-                              <Link href="/tasks">
-                                <PlusCircle /> Plan Your Day
-                              </Link>
-                            </Button>
-                          </EmptyState>
-                        </div>
-                    )}
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
+            <DndContext
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={visibleWidgets.map(w => w.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-6">
+                  {visibleWidgets.map(widget => (
+                    <SortableWidget key={widget.id} id={widget.id}>
+                      {widgetMap[widget.id]}
+                    </SortableWidget>
+                  ))}
+
+                  {visibleWidgets.length === 0 ? (
+                    <div className="flex items-center justify-center h-full pt-16">
+                      <EmptyState
+                        onAddTask={() => setCustomizeOpen(true)}
+                        title="Dashboard is Empty"
+                        message="Customize your dashboard to show the widgets that matter most to you."
+                        buttonText="Customize Dashboard"
+                      />
+                    </div>
+                  ) : (todaysTasks.length === 0 &&
+                      todaysRoutines.length === 0 &&
+                      !layout.find(w => w.id === 'todays_plan')?.isVisible &&
+                      !layout.find(w => w.id === 'todays_routines')
+                        ?.isVisible) && (
+                    <div className="flex items-center justify-center h-full">
+                      <EmptyState
+                        onAddTask={() => {}}
+                        title="A Fresh Start!"
+                        message="No tasks scheduled for today. Let's plan your day and make it a productive one!"
+                        buttonText="Plan Your Day"
+                      >
+                        <Button asChild className="mt-6">
+                          <Link href="/tasks">
+                            <PlusCircle /> Plan Your Day
+                          </Link>
+                        </Button>
+                      </EmptyState>
+                    </div>
+                  )}
+                </div>
+              </SortableContext>
+            </DndContext>
           )
         )}
       </main>
