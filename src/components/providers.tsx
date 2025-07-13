@@ -37,8 +37,7 @@ import {SplashScreen} from '@/components/splash-screen';
 import {GlobalTimerBar} from './tasks/global-timer-bar';
 import {BottomNav} from './bottom-nav';
 import {cn} from '@/lib/utils';
-import { TasksProvider } from '@/hooks/use-tasks';
-import { useTasks } from '@/hooks/use-tasks';
+import { TasksProvider, useTasks } from '@/hooks/use-tasks';
 
 const ChatWidget = dynamic(
   () => import('@/components/coach/chat-widget').then(m => m.ChatWidget),

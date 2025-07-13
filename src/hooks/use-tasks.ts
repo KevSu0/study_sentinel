@@ -16,9 +16,6 @@ import {useLogger} from './use-logger';
 import {useConfetti} from '@/components/providers/confetti-provider';
 import {useToast} from './use-toast';
 
-const TASKS_KEY = 'studySentinelTasks';
-const TIMER_KEY = 'studySentinelActiveTimer_v2';
-
 // --- Timer Types and Helpers ---
 type ActiveTimerItem =
   | {type: 'task'; item: StudyTask}
@@ -58,7 +55,6 @@ const sendTimerEndNotification = (task: StudyTask) => {
   }
 };
 
-
 // --- Context Setup ---
 interface TasksContextType {
   // Task state
@@ -92,9 +88,11 @@ export const useTasks = () => {
   return context;
 };
 
-
 // --- Provider Component ---
 export function TasksProvider({children}: {children: ReactNode}) {
+  const TASKS_KEY = 'studySentinelTasks';
+  const TIMER_KEY = 'studySentinelActiveTimer_v2';
+  
   const [tasks, setTasks] = useState<StudyTask[]>([]);
   const {addLog} = useLogger();
   const {fire} = useConfetti();
@@ -286,10 +284,10 @@ export function TasksProvider({children}: {children: ReactNode}) {
       if (newTimerState.item.type === 'task' && newTimerState.pausedTime > 0) {
         newTimerState.endTime = Date.now() + newTimerState.pausedTime * 1000;
       } else if(newTimerState.item.type === 'routine' && newTimerState.startTime) {
-        // Correctly calculate new start time when resuming a stopwatch
         const timePaused = Date.now() - newTimerState.pausedDuration;
-        newTimerState.startTime = timePaused;
-        newTimerState.pausedDuration = activeTimer.pausedDuration;
+        newTimerState.startTime = newTimerState.pausedDuration; // This is a bugfix. It should be based on startTime + paused duration. Let's fix.
+        newTimerState.startTime = Date.now() - (activeTimer.pausedDuration - activeTimer.startTime);
+
       }
       addLog('TIMER_START', { ...logPayload, resumed: true });
     } else { // Pausing
@@ -297,8 +295,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
       if (newTimerState.item.type === 'task' && newTimerState.endTime) {
         newTimerState.pausedTime = Math.max(0, Math.round((newTimerState.endTime - Date.now()) / 1000));
       } else if (newTimerState.item.type === 'routine' && newTimerState.startTime) {
-        // Store current time in pausedDuration to calculate total later
-        newTimerState.pausedDuration = Date.now();
+        newTimerState.pausedDuration = newTimerState.pausedDuration + (Date.now() - newTimerState.startTime);
       }
        addLog('TIMER_PAUSE', logPayload);
     }
@@ -331,10 +328,15 @@ export function TasksProvider({children}: {children: ReactNode}) {
       toast({ title: 'Task Completed!', description: `You've earned ${item.item.points} points!` });
 
     } else { // Routine
-      let finalDuration = activeTimer.pausedDuration;
-      if (!activeTimer.isPaused && activeTimer.startTime) {
-        finalDuration += Date.now() - activeTimer.startTime;
+      let finalDuration;
+      if(activeTimer.isPaused){
+        finalDuration = activeTimer.pausedDuration;
+      } else if (activeTimer.startTime) {
+        finalDuration = activeTimer.pausedDuration + (Date.now() - activeTimer.startTime);
+      } else {
+        finalDuration = 0;
       }
+
       const durationInSeconds = Math.round(finalDuration / 1000);
       const durationInMinutes = Math.floor(durationInSeconds / 60);
       // Award 1 point per 10 minutes of routine study
@@ -394,8 +396,6 @@ export function TasksProvider({children}: {children: ReactNode}) {
     completeTimer,
     stopTimer,
   };
-
-  return (
-    <TasksContext.Provider value={value}>{children}</TasksContext.Provider>
-  );
+  
+  return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>;
 }
