@@ -36,7 +36,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
 interface RoutineListItemProps {
@@ -54,7 +53,7 @@ export const RoutineListItem = React.memo(function RoutineListItem({
   onDelete,
 }: RoutineListItemProps) {
   const {toast} = useToast();
-  const {activeItem, startTimer} = useTasks();
+  const {activeItem, startTimer, stopTimer} = useTasks();
   const [isAlertOpen, setAlertOpen] = useState(false);
 
   const isTimerActiveForThis =
@@ -62,7 +61,7 @@ export const RoutineListItem = React.memo(function RoutineListItem({
   const isAnyTimerActive = !!activeItem;
 
   const handleStartTimer = () => {
-    if (isAnyTimerActive) {
+    if (isAnyTimerActive && !isTimerActiveForThis) {
       toast({
         variant: 'destructive',
         title: 'Another Timer is Active',
@@ -71,11 +70,19 @@ export const RoutineListItem = React.memo(function RoutineListItem({
       });
       return;
     }
-    startTimer(routine);
-    toast({
-      title: 'Routine Started!',
-      description: `Timer for "${routine.title}" is now running.`,
-    });
+    
+    if (isTimerActiveForThis) {
+       stopTimer('Stopped routine timer manually');
+       toast({
+        title: 'Routine Timer Stopped',
+      });
+    } else {
+      startTimer(routine);
+      toast({
+        title: 'Routine Started!',
+        description: `Timer for "${routine.title}" is now running.`,
+      });
+    }
   };
 
   const sortedDays = dayOrder.filter(d => routine.days.includes(d));
@@ -129,13 +136,14 @@ export const RoutineListItem = React.memo(function RoutineListItem({
         <CardFooter>
           <Button
             onClick={handleStartTimer}
-            disabled={isAnyTimerActive}
+            disabled={isAnyTimerActive && !isTimerActiveForThis}
             className="w-full"
+            variant={isTimerActiveForThis ? 'destructive' : 'default'}
           >
             {isTimerActiveForThis ? (
               <>
-                <Timer className="mr-2 animate-pulse text-green-400" />
-                Timer Active
+                <Timer className="mr-2 animate-pulse" />
+                Stop Timer
               </>
             ) : (
               <>
@@ -166,3 +174,5 @@ export const RoutineListItem = React.memo(function RoutineListItem({
     </>
   );
 });
+
+    

@@ -20,14 +20,22 @@ export function GlobalTimerBar() {
 
   const [isStopDialogOpen, setStopDialogOpen] = useState(false);
 
+  if (!activeItem) {
+    return null;
+  }
+
+  const isTask = activeItem.type === 'task';
+  const item = activeItem.item as StudyTask | Routine;
+
   const handleStop = () => {
-    if (activeItem?.type === 'task') {
+    if (isTask) {
       if (!isPaused) {
         togglePause();
       }
       setStopDialogOpen(true);
     } else {
-      stopTimer('Stopped routine timer');
+      // For routines, stop immediately without a dialog
+      stopTimer('Stopped routine timer from global bar');
     }
   };
 
@@ -36,12 +44,6 @@ export function GlobalTimerBar() {
     setStopDialogOpen(false);
   };
 
-  if (!activeItem) {
-    return null;
-  }
-
-  const isTask = activeItem.type === 'task';
-  const item = activeItem.item as StudyTask | Routine;
 
   return (
     <>
@@ -87,17 +89,17 @@ export function GlobalTimerBar() {
               <CheckCircle />
               <span className="hidden sm:inline">Complete</span>
             </Button>
-            {isTask && (
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={handleStop}
-                className="px-2 sm:px-3"
-              >
-                <XCircle />
-                <span className="hidden sm:inline">Stop</span>
-              </Button>
-            )}
+            
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={handleStop}
+              className="px-2 sm:px-3"
+            >
+              <XCircle />
+              <span className="hidden sm:inline">Stop</span>
+            </Button>
+            
           </div>
         </div>
       </div>
@@ -111,3 +113,5 @@ export function GlobalTimerBar() {
     </>
   );
 }
+
+    

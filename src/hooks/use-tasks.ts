@@ -26,8 +26,8 @@ type StoredTimer = {
   endTime?: number; // For countdown
   startTime?: number; // For stopwatch
   isPaused: boolean;
-  pausedTime: number; // For countdown
-  pausedDuration: number; // For stopwatch
+  pausedTime: number; // For countdown, stores remaining seconds when paused. For stopwatch, stores the timestamp of when pause began.
+  pausedDuration: number; // For stopwatch, stores total elapsed milliseconds when paused
   overtimeNotified?: boolean;
 };
 
@@ -109,8 +109,8 @@ export function TasksProvider({children}: {children: ReactNode}) {
     }
   }, []);
 
-  const saveTasks = (tasks: StudyTask[]) => {
-    const sortedTasks = [...tasks].sort(
+  const saveTasks = (tasksToSave: StudyTask[]) => {
+    const sortedTasks = [...tasksToSave].sort(
       (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
     );
     try {
@@ -310,8 +310,8 @@ export function TasksProvider({children}: {children: ReactNode}) {
         newTimerState.item.type === 'routine' &&
         newTimerState.startTime
       ) {
-        // Correctly calculate new start time to account for the pause duration
-        newTimerState.startTime = Date.now() - (activeTimer.pausedDuration);
+        const pauseDuration = Date.now() - newTimerState.pausedTime;
+        newTimerState.startTime = newTimerState.startTime + pauseDuration;
       }
       addLog('TIMER_START', {...logPayload, resumed: true});
     } else {
@@ -322,11 +322,8 @@ export function TasksProvider({children}: {children: ReactNode}) {
           0,
           Math.round((newTimerState.endTime - Date.now()) / 1000)
         );
-      } else if (
-        newTimerState.item.type === 'routine' &&
-        newTimerState.startTime
-      ) {
-        newTimerState.pausedDuration = newTimerState.pausedDuration + (Date.now() - newTimerState.startTime);
+      } else if (newTimerState.item.type === 'routine') {
+        newTimerState.pausedTime = Date.now();
       }
       addLog('TIMER_PAUSE', logPayload);
     }
@@ -351,6 +348,22 @@ export function TasksProvider({children}: {children: ReactNode}) {
           timeSpentSeconds: Math.round(timeSpent),
         });
         updateTask({...activeTimer.item.item, status: 'todo'});
+      } else {
+         let finalDurationMs;
+         if (activeTimer.isPaused) {
+           finalDurationMs = activeTimer.pausedDuration;
+         } else if (activeTimer.startTime) {
+           finalDurationMs = Date.now() - activeTimer.startTime;
+         } else {
+           finalDurationMs = 0;
+         }
+        const durationInSeconds = Math.round(finalDurationMs / 1000);
+         addLog('TIMER_STOP', {
+          routineId: activeTimer.item.item.id,
+          routineTitle: activeTimer.item.item.title,
+          reason,
+          timeSpentSeconds: durationInSeconds,
+         });
       }
       saveTimer(null);
     },
@@ -383,16 +396,16 @@ export function TasksProvider({children}: {children: ReactNode}) {
       });
     } else {
       // Routine
-      let finalDuration;
-      if (activeTimer.isPaused) {
-        finalDuration = activeTimer.pausedDuration;
+      let finalDurationMs;
+      if(activeTimer.isPaused) {
+        finalDurationMs = activeTimer.pausedDuration;
       } else if (activeTimer.startTime) {
-        finalDuration = activeTimer.pausedDuration + (Date.now() - activeTimer.startTime);
+        finalDurationMs = Date.now() - activeTimer.startTime;
       } else {
-        finalDuration = 0;
+        finalDurationMs = 0;
       }
 
-      const durationInSeconds = Math.round(finalDuration / 1000);
+      const durationInSeconds = Math.round(finalDurationMs / 1000);
       const durationInMinutes = Math.floor(durationInSeconds / 60);
       const points = Math.floor(durationInMinutes / 10);
 
@@ -437,8 +450,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
       } else {
         // Routine
         if (!newTimerState.startTime) return;
-        const elapsed =
-          Date.now() - newTimerState.startTime + newTimerState.pausedDuration;
+        const elapsed = Date.now() - newTimerState.startTime;
         setTimeDisplay(formatTime(Math.round(elapsed / 1000)));
       }
     }, 1000);
@@ -468,7 +480,5 @@ export function TasksProvider({children}: {children: ReactNode}) {
     stopTimer,
   };
 
-  return (
-    <TasksContext.Provider value={value}>{children}</TasksContext.Provider>
-  );
+  return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>;
 }
