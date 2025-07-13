@@ -522,7 +522,7 @@ export default function DashboardPage() {
     }
   };
 
-  const widgetMap: Record<DashboardWidgetType, React.ReactNode> = useMemo(() => ({
+  const widgetMap: Record<DashboardWidgetType, React.ReactNode> = {
     daily_briefing: (
       <>
         {isSummaryLoading ? (
@@ -600,7 +600,7 @@ export default function DashboardPage() {
         </div>
       </section>
     ),
-    unlocked_badges: todaysBadges.length > 0 && (
+    unlocked_badges: todaysBadges.length > 0 ? (
       <section>
         <h2 className="text-xl font-semibold text-primary mb-3">
           Badges Unlocked Today
@@ -611,8 +611,8 @@ export default function DashboardPage() {
           ))}
         </div>
       </section>
-    ),
-    todays_routines: todaysRoutines.length > 0 && (
+    ) : null,
+    todays_routines: todaysRoutines.length > 0 ? (
       <section>
         <h2 className="text-xl font-semibold text-primary mb-3">
           Today's Routines
@@ -623,17 +623,17 @@ export default function DashboardPage() {
           ))}
         </div>
       </section>
-    ),
-    todays_plan: pendingTasks.length > 0 && (
+    ) : null,
+    todays_plan: pendingTasks.length > 0 ? (
       <section>
         <h2 className="text-xl font-semibold text-primary mb-3">
           Today's Plan
         </h2>
         {renderTaskList(pendingTasks)}
       </section>
-    ),
+    ) : null,
     completed_today: (todaysCompletedTasks.length > 0 ||
-      todaysCompletedRoutines.length > 0) && (
+      todaysCompletedRoutines.length > 0) ? (
       <section>
         <h2 className="text-xl font-semibold text-primary mb-3">
           Completed Today
@@ -658,10 +658,10 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
-    ),
-  }), [isSummaryLoading, dailySummary, dailyQuote, pointsToday, todaysBadges, productivityData, todaysRoutines, pendingTasks, todaysCompletedTasks, todaysCompletedRoutines, viewMode, renderTaskList]);
+    ) : null,
+  };
   
-  const visibleWidgets = useMemo(() => layout.filter(w => w.isVisible), [layout]);
+  const visibleWidgets = useMemo(() => layout.filter(w => w.isVisible && widgetMap[w.id]), [layout, widgetMap]);
 
   return (
     <div className="flex flex-col h-full">

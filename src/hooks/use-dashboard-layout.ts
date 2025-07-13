@@ -15,7 +15,7 @@ export interface DashboardWidget {
   isVisible: boolean;
 }
 
-const LAYOUT_KEY = 'studySentinelDashboardLayout_v1';
+const LAYOUT_KEY = 'studySentinelDashboardLayout_v2';
 
 export const WIDGET_NAMES: Record<DashboardWidgetType, string> = {
   daily_briefing: 'Daily Briefing / Quote',
@@ -36,58 +36,66 @@ const DEFAULT_LAYOUT: DashboardWidget[] = [
 ];
 
 export function useDashboardLayout() {
-  const [layout, setLayout] = useState<DashboardWidget[]>([]);
+  const [layout, setLayoutState] = useState<DashboardWidget[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
+    let initialLayout: DashboardWidget[] = [];
     try {
-      const savedLayout = localStorage.getItem(LAYOUT_KEY);
-      if (savedLayout) {
-        const parsedLayout = JSON.parse(savedLayout);
-        // Sync with default layout to add new widgets if any
-        const newLayout = DEFAULT_LAYOUT.map(defaultWidget => {
-            const savedWidget = parsedLayout.find((w: DashboardWidget) => w.id === defaultWidget.id);
-            return savedWidget || defaultWidget;
-        });
-        // Ensure order is preserved for saved items
-        const orderedLayout = parsedLayout.map((saved: DashboardWidget) => newLayout.find(w => w.id === saved.id)).filter(Boolean);
-        // Add any new widgets that were not in the saved layout
-        DEFAULT_LAYOUT.forEach(defaultWidget => {
-            if (!orderedLayout.some(w => w.id === defaultWidget.id)) {
-                orderedLayout.push(defaultWidget);
-            }
-        });
-        setLayout(orderedLayout as DashboardWidget[]);
+      const savedLayoutJSON = localStorage.getItem(LAYOUT_KEY);
+      if (savedLayoutJSON) {
+        const savedLayout = JSON.parse(savedLayoutJSON) as DashboardWidget[];
+        
+        // Create a map for efficient lookup of saved widgets
+        const savedWidgetMap = new Map(savedLayout.map(w => [w.id, w]));
+        
+        // Merge saved layout with default layout to handle new widgets
+        const mergedLayout = DEFAULT_LAYOUT.map(defaultWidget => 
+          savedWidgetMap.has(defaultWidget.id)
+            ? savedWidgetMap.get(defaultWidget.id)!
+            : defaultWidget
+        );
+
+        // Ensure the order from the saved layout is respected, and new widgets are appended
+        const finalLayout = [
+          ...savedLayout.map(saved => mergedLayout.find(m => m.id === saved.id)).filter(Boolean),
+          ...mergedLayout.filter(merged => !savedLayout.some(saved => saved.id === merged.id))
+        ] as DashboardWidget[];
+        
+        initialLayout = finalLayout;
 
       } else {
-        setLayout(DEFAULT_LAYOUT);
+        initialLayout = DEFAULT_LAYOUT;
       }
     } catch (error) {
-      console.error('Failed to load dashboard layout', error);
-      setLayout(DEFAULT_LAYOUT);
+      console.error('Failed to load dashboard layout, using default.', error);
+      initialLayout = DEFAULT_LAYOUT;
     } finally {
+      setLayoutState(initialLayout);
       setIsLoaded(true);
     }
   }, []);
 
-  useEffect(() => {
-    if(isLoaded) {
-      try {
-        localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout));
+  const setLayout = useCallback((newLayout: DashboardWidget[] | ((prev: DashboardWidget[]) => DashboardWidget[])) => {
+    const updatedLayout = typeof newLayout === 'function' ? newLayout(layout) : newLayout;
+    setLayoutState(updatedLayout);
+     try {
+        localStorage.setItem(LAYOUT_KEY, JSON.stringify(updatedLayout));
       } catch (error) {
         console.error('Failed to save dashboard layout', error);
       }
-    }
-  }, [layout, isLoaded]);
+  }, [layout]);
 
 
   const toggleWidgetVisibility = useCallback((widgetId: DashboardWidgetType) => {
-    setLayout(prevLayout => prevLayout.map(widget =>
-      widget.id === widgetId
-        ? {...widget, isVisible: !widget.isVisible}
-        : widget
-    ));
-  }, []);
+    setLayout(prevLayout =>
+      prevLayout.map(widget =>
+        widget.id === widgetId
+          ? {...widget, isVisible: !widget.isVisible}
+          : widget
+      )
+    );
+  }, [setLayout]);
 
   return {layout, setLayout, toggleWidgetVisibility, isLoaded};
 }
