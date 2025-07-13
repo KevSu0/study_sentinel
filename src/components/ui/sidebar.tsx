@@ -206,6 +206,7 @@ const Sidebar = React.forwardRef<
               } as React.CSSProperties
             }
           >
+            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
             <div data-sidebar="sidebar" className="flex h-full flex-col">
               {children}
             </div>
