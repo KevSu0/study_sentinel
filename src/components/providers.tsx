@@ -112,7 +112,6 @@ function AppLayout({children}: {children: ReactNode}) {
         </div>
         <GlobalTimerBar />
         {children}
-        <ChatWidget />
       </SidebarInset>
       <Toaster />
     </>
