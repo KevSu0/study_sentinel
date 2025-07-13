@@ -26,8 +26,8 @@ type StoredTimer = {
   endTime?: number; // For countdown
   startTime?: number; // For stopwatch
   isPaused: boolean;
-  pausedTime: number; // For countdown, stores remaining seconds when paused. For stopwatch, stores the timestamp of when pause began.
-  pausedDuration: number; // For stopwatch, stores total elapsed milliseconds when paused
+  pausedTime: number; // For countdown, stores remaining seconds. For stopwatch, stores timestamp of pause.
+  pausedDuration: number; // For stopwatch, stores total elapsed ms when paused
   overtimeNotified?: boolean;
 };
 
@@ -122,7 +122,6 @@ export function TasksProvider({children}: {children: ReactNode}) {
     }
   };
 
-  // Load tasks and timer from localStorage on initial mount
   useEffect(() => {
     setIsLoaded(false);
     try {
@@ -139,25 +138,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
       setIsLoaded(true);
     }
   }, []);
-
-  // --- Task Actions ---
-  const addTask = useCallback(
-    (task: Omit<StudyTask, 'id' | 'status'>) => {
-      const newTask: StudyTask = {
-        ...task,
-        id: crypto.randomUUID(),
-        status: 'todo',
-        description: task.description || '',
-      };
-      setTasks(prevTasks => {
-        const updatedTasks = [...prevTasks, newTask];
-        addLog('TASK_ADD', {taskId: newTask.id, title: newTask.title});
-        return saveTasks(updatedTasks);
-      });
-    },
-    [addLog]
-  );
-
+  
   const updateTask = useCallback(
     (updatedTask: StudyTask) => {
       let oldTask: StudyTask | undefined;
@@ -188,6 +169,23 @@ export function TasksProvider({children}: {children: ReactNode}) {
           title: updatedTask.title,
         });
       }
+    },
+    [addLog]
+  );
+  
+  const addTask = useCallback(
+    (task: Omit<StudyTask, 'id' | 'status'>) => {
+      const newTask: StudyTask = {
+        ...task,
+        id: crypto.randomUUID(),
+        status: 'todo',
+        description: task.description || '',
+      };
+      setTasks(prevTasks => {
+        const updatedTasks = [...prevTasks, newTask];
+        addLog('TASK_ADD', {taskId: newTask.id, title: newTask.title});
+        return saveTasks(updatedTasks);
+      });
     },
     [addLog]
   );
@@ -244,7 +242,6 @@ export function TasksProvider({children}: {children: ReactNode}) {
     [addLog]
   );
 
-  // --- Timer Actions ---
   const startTimer = useCallback(
     (item: StudyTask | Routine) => {
       if (activeTimer) {
@@ -294,7 +291,6 @@ export function TasksProvider({children}: {children: ReactNode}) {
           };
 
     if (activeTimer.isPaused) {
-      // Resuming
       newTimerState.isPaused = false;
       if (newTimerState.item.type === 'task' && newTimerState.pausedTime > 0) {
         newTimerState.endTime = Date.now() + newTimerState.pausedTime * 1000;
@@ -307,7 +303,6 @@ export function TasksProvider({children}: {children: ReactNode}) {
       }
       addLog('TIMER_START', {...logPayload, resumed: true});
     } else {
-      // Pausing
       newTimerState.isPaused = true;
       if (newTimerState.item.type === 'task' && newTimerState.endTime) {
         newTimerState.pausedTime = Math.max(
@@ -391,7 +386,6 @@ export function TasksProvider({children}: {children: ReactNode}) {
         description: `You've earned ${item.item.points} points!`,
       });
     } else {
-      // Routine
       let finalDurationMs;
       if(activeTimer.isPaused) {
         finalDurationMs = activeTimer.pausedDuration;
@@ -422,7 +416,6 @@ export function TasksProvider({children}: {children: ReactNode}) {
     saveTimer(null);
   }, [activeTimer, addLog, updateTask, fire, toast]);
 
-  // Main timer loop effect
   useEffect(() => {
     const interval = setInterval(() => {
       if (!activeTimer || activeTimer.isPaused) return;
@@ -444,7 +437,6 @@ export function TasksProvider({children}: {children: ReactNode}) {
           saveTimer(newTimerState);
         }
       } else {
-        // Routine
         if (!newTimerState.startTime) return;
         const elapsed = Date.now() - newTimerState.startTime;
         setTimeDisplay(formatTime(Math.round(elapsed / 1000)));
@@ -454,7 +446,6 @@ export function TasksProvider({children}: {children: ReactNode}) {
     return () => clearInterval(interval);
   }, [activeTimer, addLog]);
 
-  // --- Final Context Value ---
   const value: TasksContextType = {
     tasks,
     isLoaded,
