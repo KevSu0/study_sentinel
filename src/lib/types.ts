@@ -27,14 +27,28 @@ export type Routine = {
 
 export type BadgeCategory = 'daily' | 'weekly' | 'monthly' | 'overall';
 
+export type BadgeCondition = {
+  type:
+    | 'TOTAL_STUDY_TIME'
+    | 'TASKS_COMPLETED'
+    | 'DAY_STREAK'
+    | 'ROUTINES_COMPLETED';
+  target: number;
+  timeframe: 'TOTAL' | 'DAY' | 'WEEK' | 'MONTH';
+};
+
 export type Badge = {
   id: string;
   name: string;
   description: string;
   motivationalMessage: string;
   category: BadgeCategory;
-  Icon: LucideIcon;
-  checker: (data: {completedTasks: StudyTask[]; logs: LogEvent[]}) => boolean;
+  icon: string;
+  color: string;
+  isCustom: boolean;
+  isEnabled: boolean;
+  conditions: BadgeCondition[];
+  // The checker function is now derived from conditions, not stored.
 };
 
 export type LogEventType =

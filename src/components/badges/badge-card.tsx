@@ -3,6 +3,8 @@ import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {cn} from '@/lib/utils';
 import type {Badge} from '@/lib/types';
 import {Lock} from 'lucide-react';
+import * as Icons from 'lucide-react';
+
 
 interface BadgeCardProps {
   badge: Badge;
@@ -10,26 +12,34 @@ interface BadgeCardProps {
 }
 
 export const BadgeCard = memo(function BadgeCard({badge, isEarned}: BadgeCardProps) {
-  const {Icon} = badge;
+  const Icon = (Icons as any)[badge.icon] || Icons.Award;
+
   return (
     <Card
       className={cn(
         'transition-all duration-300 flex flex-col items-center text-center p-4',
         isEarned
-          ? 'border-accent/80 bg-accent/10'
+          ? 'bg-opacity-10'
           : 'border-dashed bg-card/50'
       )}
+      style={{
+        borderColor: isEarned ? badge.color : undefined,
+        backgroundColor: isEarned ? `${badge.color}1A` : undefined,
+      }}
     >
       <div
         className={cn(
           'relative rounded-full p-4 mb-3 w-20 h-20 flex items-center justify-center',
-          isEarned ? 'bg-accent text-accent-foreground' : 'bg-muted'
+          isEarned ? 'text-white' : 'bg-muted'
         )}
+        style={{
+            backgroundColor: isEarned ? badge.color : undefined
+        }}
       >
         <Icon
           className={cn(
             'h-10 w-10',
-            isEarned ? 'text-accent-foreground' : 'text-muted-foreground'
+            !isEarned && 'text-muted-foreground'
           )}
         />
         {!isEarned && (
