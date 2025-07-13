@@ -79,26 +79,26 @@ export const RoutineListItem = React.memo(function RoutineListItem({
   const sortedDays = dayOrder.filter(d => routine.days.includes(d));
 
   return (
-    <Card className="flex flex-col">
-      <CardHeader>
-        <div className="flex justify-between items-start gap-2">
-          <div>
-            <CardTitle>{routine.title}</CardTitle>
-            <CardDescription className="mt-1">
-              {routine.description || 'No description'}
-            </CardDescription>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => onEdit(routine)}>
-                <Pencil className="mr-2 h-4 w-4" /> Edit
-              </DropdownMenuItem>
-              <AlertDialog>
+    <AlertDialog>
+      <Card className="flex flex-col">
+        <CardHeader>
+          <div className="flex justify-between items-start gap-2">
+            <div>
+              <CardTitle>{routine.title}</CardTitle>
+              <CardDescription className="mt-1">
+                {routine.description || 'No description'}
+              </CardDescription>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => onEdit(routine)}>
+                  <Pencil className="mr-2 h-4 w-4" /> Edit
+                </DropdownMenuItem>
                 <AlertDialogTrigger asChild>
                   <DropdownMenuItem
                     onSelect={e => e.preventDefault()}
@@ -107,60 +107,59 @@ export const RoutineListItem = React.memo(function RoutineListItem({
                     <Trash2 className="mr-2 h-4 w-4" /> Delete
                   </DropdownMenuItem>
                 </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete the routine "{routine.title}
-                      ".
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => onDelete(routine.id)}>
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </CardHeader>
-      <CardContent className="flex-grow space-y-4">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Clock className="h-4 w-4" />
-          <span>
-            {routine.startTime} - {routine.endTime}
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-1">
-          {sortedDays.map(dayIndex => (
-            <Badge key={dayIndex} variant="secondary">
-              {daysMap[dayIndex]}
-            </Badge>
-          ))}
-        </div>
-      </CardContent>
-      <CardFooter>
-        <Button
-          onClick={handleStartTimer}
-          disabled={isAnyTimerActive}
-          className="w-full"
-        >
-          {isTimerActiveForThis ? (
-            <>
-              <Timer className="mr-2 animate-pulse text-green-400" />
-              Timer Active
-            </>
-          ) : (
-            <>
-              <PlayCircle className="mr-2" />
-              Start Infinity Timer
-            </>
-          )}
-        </Button>
-      </CardFooter>
-    </Card>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardHeader>
+        <CardContent className="flex-grow space-y-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Clock className="h-4 w-4" />
+            <span>
+              {routine.startTime} - {routine.endTime}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {sortedDays.map(dayIndex => (
+              <Badge key={dayIndex} variant="secondary">
+                {daysMap[dayIndex]}
+              </Badge>
+            ))}
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button
+            onClick={handleStartTimer}
+            disabled={isAnyTimerActive}
+            className="w-full"
+          >
+            {isTimerActiveForThis ? (
+              <>
+                <Timer className="mr-2 animate-pulse text-green-400" />
+                Timer Active
+              </>
+            ) : (
+              <>
+                <PlayCircle className="mr-2" />
+                Start Infinity Timer
+              </>
+            )}
+          </Button>
+        </CardFooter>
+      </Card>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This will permanently delete the routine "{routine.title}".
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={() => onDelete(routine.id)}>
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 });
