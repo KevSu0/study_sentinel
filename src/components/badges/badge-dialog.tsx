@@ -38,6 +38,8 @@ const conditionSchema = z.object({
     'ROUTINES_COMPLETED',
     'POINTS_EARNED',
     'TIME_ON_SUBJECT',
+    'SINGLE_SESSION_TIME',
+    'ALL_TASKS_COMPLETED_ON_DAY',
   ]),
   target: z.coerce
     .number()
@@ -71,11 +73,13 @@ interface BadgeDialogProps {
 
 const conditionOptions = [
   {value: 'TOTAL_STUDY_TIME', label: 'Total Study Time (Minutes)'},
-  {value: 'TIME_ON_SUBJECT', label: 'Productive Time on Subject'},
+  {value: 'TIME_ON_SUBJECT', label: 'Time on Specific Subject'},
   {value: 'POINTS_EARNED', label: 'Points Earned'},
   {value: 'TASKS_COMPLETED', label: 'Tasks Completed'},
   {value: 'ROUTINES_COMPLETED', label: 'Routines Completed'},
   {value: 'DAY_STREAK', label: 'Study Day Streak'},
+  {value: 'SINGLE_SESSION_TIME', label: 'Single Session Time (Minutes)'},
+  {value: 'ALL_TASKS_COMPLETED_ON_DAY', label: 'Complete All Tasks on a Day'},
 ];
 
 const timeframeOptions = [
@@ -229,11 +233,13 @@ export function BadgeDialog({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {iconList.map(iconName => (
-                              <SelectItem key={iconName} value={iconName}>
-                                {iconName}
-                              </SelectItem>
-                            ))}
+                            <ScrollArea className="h-72">
+                              {iconList.map(iconName => (
+                                <SelectItem key={iconName} value={iconName}>
+                                  {iconName}
+                                </SelectItem>
+                              ))}
+                            </ScrollArea>
                           </SelectContent>
                         </Select>
                       )}
@@ -290,7 +296,13 @@ export function BadgeDialog({
 
               <div className="space-y-4">
                 <Label>Conditions to Earn</Label>
-                {fields.map((field, index) => (
+                {fields.map((field, index) => {
+                  const watchedType = watchedConditions[index]?.type;
+                  const disableTimeframe = ['DAY_STREAK', 'SINGLE_SESSION_TIME', 'ALL_TASKS_COMPLETED_ON_DAY'].includes(watchedType);
+                  const showTargetInput = watchedType !== 'ALL_TASKS_COMPLETED_ON_DAY';
+
+
+                  return(
                   <div
                     key={field.id}
                     className="flex gap-2 items-end p-3 border rounded-lg bg-muted/50"
@@ -320,7 +332,7 @@ export function BadgeDialog({
                           )}
                         />
                       </div>
-                      {watchedConditions[index]?.type === 'TIME_ON_SUBJECT' && (
+                      {watchedType === 'TIME_ON_SUBJECT' && (
                         <div className="space-y-1">
                           <Label className="text-xs">Subject</Label>
                           <Controller
@@ -346,14 +358,14 @@ export function BadgeDialog({
                           />
                         </div>
                       )}
-                      <div className="space-y-1">
+                      {showTargetInput && <div className="space-y-1">
                         <Label className="text-xs">Target</Label>
                         <Input
                           type="number"
                           {...register(`conditions.${index}.target`)}
                           placeholder="e.g., 10"
                         />
-                      </div>
+                      </div>}
                       <div className="space-y-1">
                         <Label className="text-xs">Timeframe</Label>
                         <Controller
@@ -363,10 +375,7 @@ export function BadgeDialog({
                             <Select
                               onValueChange={field.onChange}
                               defaultValue={field.value}
-                              disabled={
-                                watch(`conditions.${index}.type`) ===
-                                'DAY_STREAK'
-                              }
+                              disabled={disableTimeframe}
                             >
                               <SelectTrigger>
                                 <SelectValue />
@@ -393,7 +402,7 @@ export function BadgeDialog({
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                ))}
+                )})}
                 {errors.conditions?.root && (
                   <p className="text-sm text-destructive">
                     {errors.conditions.root.message}

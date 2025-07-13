@@ -21,11 +21,27 @@ export const SYSTEM_BADGES: readonly Omit<Badge, 'id' | 'isCustom' | 'isEnabled'
     motivationalMessage:
       "The journey of a thousand miles begins with a single step. You've taken yours. Keep going!",
     category: 'overall',
-    icon: 'Award',
+    icon: 'Footprints',
     color: '#f59e0b', // amber-500
     conditions: [
       {
         type: 'TASKS_COMPLETED',
+        target: 1,
+        timeframe: 'TOTAL',
+      },
+    ],
+  },
+  {
+    name: 'Routine Rookie',
+    description: 'Complete your first timed routine session.',
+    motivationalMessage:
+      'You started your first routine! Building consistent habits is the key to long-term success. Keep it up!',
+    category: 'overall',
+    icon: 'PlayCircle',
+    color: '#6366f1', // indigo-500
+    conditions: [
+      {
+        type: 'ROUTINES_COMPLETED',
         target: 1,
         timeframe: 'TOTAL',
       },
@@ -63,47 +79,109 @@ export const SYSTEM_BADGES: readonly Omit<Badge, 'id' | 'isCustom' | 'isEnabled'
       },
     ],
   },
+    {
+    name: 'Deep Work Novice',
+    description: 'Study for 90 minutes in a single session.',
+    motivationalMessage:
+      'A full 90-minute session! You tapped into a state of deep focus, which is where real learning happens. Fantastic work!',
+    category: 'daily',
+    icon: 'BookLock',
+    color: '#22d3ee', // cyan-400
+    conditions: [
+      {
+        type: 'SINGLE_SESSION_TIME',
+        target: 90, // minutes
+        timeframe: 'TOTAL', // this checks any single session ever
+      },
+    ],
+  },
+  {
+    name: 'Momentum Builder',
+    description: 'Study every day for 3 days in a row.',
+    motivationalMessage:
+      'Three days in a row! You\'re building a powerful habit. Don\'t break the chain now, you\'re just getting started!',
+    category: 'weekly',
+    icon: 'ChevronsUp',
+    color: '#f97316', // orange-500
+    conditions: [
+      {
+        type: 'DAY_STREAK',
+        target: 3,
+        timeframe: 'TOTAL',
+      },
+    ],
+  },
   {
     name: 'Consistent Week',
     description: 'Study every day for 7 days in a row.',
     motivationalMessage:
       'A full week of consistent effort! This is how habits are forged and greatness is built. You are on the right path.',
     category: 'weekly',
-    icon: 'Calendar',
+    icon: 'CalendarCheck',
     color: '#3b82f6', // blue-500
     conditions: [
       {
         type: 'DAY_STREAK',
         target: 7,
-        timeframe: 'TOTAL', // Timeframe is ignored for streak
+        timeframe: 'TOTAL',
       },
     ],
   },
   {
-    name: 'Weekend Warrior',
-    description: 'Study for at least 3 hours over a single weekend.',
+    name: 'Flawless Finisher',
+    description: 'Complete all planned tasks for a single day.',
     motivationalMessage:
-      'No days off! You used your weekend to get ahead. This commitment is your secret weapon. Amazing job!',
-    category: 'weekly',
-    icon: 'Sparkles',
+      'You planned your day and executed it flawlessly. This level of discipline is rare and incredibly powerful. Well done!',
+    category: 'daily',
+    icon: 'Trophy',
+    color: '#eab308', // yellow-500
+    conditions: [
+      {
+        type: 'ALL_TASKS_COMPLETED_ON_DAY',
+        target: 1, // This is a flag, target is not used
+        timeframe: 'DAY',
+      },
+    ],
+  },
+  {
+    name: 'Productivity Powerhouse',
+    description: 'Complete 10 tasks in a single day.',
+    motivationalMessage:
+      '10 tasks in one day! Your productivity is off the charts. You didn\'t just have a good day; you had a great day.',
+    category: 'daily',
+    icon: 'Workflow',
     color: '#a855f7', // purple-500
+     conditions: [
+      {
+        type: 'TASKS_COMPLETED',
+        target: 10,
+        timeframe: 'DAY',
+      },
+    ],
+  },
+    {
+    name: 'Monthly Marathon',
+    description: 'Study for a total of 40 hours in a month.',
+    motivationalMessage:
+      '40 hours in a month! That\'s equivalent to a full work week dedicated to your growth. Your long-term commitment is truly inspiring.',
+    category: 'monthly',
+    icon: 'TrendingUp',
+    color: '#ec4899', // pink-500
     conditions: [
       {
         type: 'TOTAL_STUDY_TIME',
-        target: 180,
-        timeframe: 'WEEK',
+        target: 2400, // minutes
+        timeframe: 'MONTH',
       },
     ],
-    // Note: This badge's logic in the checker is more complex and would check for weekends.
-    // The simplified custom badge system might not fully replicate this nuance without a "weekend" timeframe.
   },
   {
     name: 'Task Master',
-    description: 'Complete 50 tasks.',
+    description: 'Complete 50 tasks in total.',
     motivationalMessage:
       '50 tasks completed! You are no longer an apprentice; you are a master of your routine. Your knowledge is compounding!',
     category: 'overall',
-    icon: 'Brain',
+    icon: 'BrainCircuit',
     color: '#14b8a6', // teal-500
     conditions: [
       {
@@ -113,18 +191,18 @@ export const SYSTEM_BADGES: readonly Omit<Badge, 'id' | 'isCustom' | 'isEnabled'
       },
     ],
   },
-  {
-    name: 'Routine Rookie',
-    description: 'Complete your first timed routine session.',
+    {
+    name: 'Point Collector',
+    description: 'Earn a total of 1,000 points.',
     motivationalMessage:
-      'You started your first routine! Building consistent habits is the key to long-term success. Keep it up!',
+      '1,000 points! Each point represents a moment of effort and dedication. Look how far you\'ve come. Keep collecting!',
     category: 'overall',
-    icon: 'PlayCircle',
-    color: '#6366f1', // indigo-500
+    icon: 'Star',
+    color: '#facc15', // yellow-400
     conditions: [
       {
-        type: 'ROUTINES_COMPLETED',
-        target: 1,
+        type: 'POINTS_EARNED',
+        target: 1000,
         timeframe: 'TOTAL',
       },
     ],
@@ -223,8 +301,23 @@ export function checkBadge(
   for (const condition of badge.conditions) {
     let conditionMet = false;
 
-    // Total timeframe logic
-    if (condition.timeframe === 'TOTAL') {
+    // Handle special, non-standard condition types first
+    if (condition.type === 'SINGLE_SESSION_TIME') {
+        conditionMet = allWork.some(w => w.duration >= condition.target);
+    } else if (condition.type === 'ALL_TASKS_COMPLETED_ON_DAY') {
+        const tasksByDay = data.tasks.reduce((acc, task) => {
+            if (task.status !== 'archived') {
+                (acc[task.date] = acc[task.date] || []).push(task);
+            }
+            return acc;
+        }, {} as Record<string, StudyTask[]>);
+
+        conditionMet = Object.values(tasksByDay).some(dayTasks => 
+            dayTasks.length > 0 && dayTasks.every(t => t.status === 'completed')
+        );
+    }
+    // Handle TOTAL timeframe logic
+    else if (condition.timeframe === 'TOTAL') {
       let currentValue = 0;
       if (condition.type === 'TASKS_COMPLETED') {
         currentValue = allCompletedTasks.length;
@@ -272,7 +365,11 @@ export function checkBadge(
 
         let currentValue = 0;
         if (condition.type === 'TASKS_COMPLETED') {
-          currentValue = workInTimeframe.filter(w => w.type === 'task').length;
+          const completedTasksInTimeframe = data.tasks.filter(t => {
+            const tDate = parseISO(t.date);
+            return t.status === 'completed' && tDate >= start && tDate <= end;
+          });
+          currentValue = completedTasksInTimeframe.length;
         } else if (condition.type === 'ROUTINES_COMPLETED') {
           currentValue = workInTimeframe.filter(w => w.type === 'routine')
             .length;

@@ -34,7 +34,10 @@ export type BadgeCondition = {
     | 'DAY_STREAK'
     | 'ROUTINES_COMPLETED'
     | 'POINTS_EARNED'
-    | 'TIME_ON_SUBJECT';
+    | 'TIME_ON_SUBJECT'
+    // Special types that don't fit the standard model
+    | 'SINGLE_SESSION_TIME' 
+    | 'ALL_TASKS_COMPLETED_ON_DAY';
   target: number;
   timeframe: 'TOTAL' | 'DAY' | 'WEEK' | 'MONTH';
   subjectId?: string; // For TIME_ON_SUBJECT
