@@ -128,10 +128,12 @@ export function LoggerProvider({children}: {children: ReactNode}) {
       }
     }
     // Sort by timestamp to ensure chronological order
-    allLogs.sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    allLogs.sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
     return allLogs;
   }, []);
-  
+
   const value = {
     logs,
     isLoaded,

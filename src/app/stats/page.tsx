@@ -1,5 +1,5 @@
 'use client';
-import React, {useMemo, lazy, Suspense, useState} from 'react';
+import React, {useMemo, lazy, Suspense, useState, useCallback} from 'react';
 import {
   Card,
   CardContent,
@@ -64,41 +64,50 @@ export default function StatsPage() {
       points: number;
       priority?: TaskPriority;
     }[] = [];
-    
+
     // Get all completed sessions (tasks and routines) from logs
     const sessionLogs = getAllLogs().filter(
-      l => l.type === 'ROUTINE_SESSION_COMPLETE' || l.type === 'TIMER_SESSION_COMPLETE'
+      l =>
+        l.type === 'ROUTINE_SESSION_COMPLETE' ||
+        l.type === 'TIMER_SESSION_COMPLETE'
     );
 
-    const timedTaskIds = new Set(sessionLogs.map(l => l.payload.taskId).filter(Boolean));
+    const timedTaskIds = new Set(
+      sessionLogs.map(l => l.payload.taskId).filter(Boolean)
+    );
 
-    workItems.push(...sessionLogs.map(l => {
+    workItems.push(
+      ...sessionLogs.map(l => {
         const isRoutine = l.type === 'ROUTINE_SESSION_COMPLETE';
-        const task = isRoutine ? null : tasks.find(t => t.id === l.payload.taskId);
-        
-        return {
-            date: format(parseISO(l.timestamp), 'yyyy-MM-dd'),
-            duration: Math.round(l.payload.duration / 60), // convert seconds to minutes
-            type: isRoutine ? 'routine' : 'task',
-            title: l.payload.title,
-            points: l.payload.points || 0,
-            priority: task?.priority
-        }
-    }));
+        const task = isRoutine
+          ? null
+          : tasks.find(t => t.id === l.payload.taskId);
 
+        return {
+          date: format(parseISO(l.timestamp), 'yyyy-MM-dd'),
+          duration: Math.round(l.payload.duration / 60), // convert seconds to minutes
+          type: isRoutine ? 'routine' : 'task',
+          title: l.payload.title,
+          points: l.payload.points || 0,
+          priority: task?.priority,
+        };
+      })
+    );
 
     // Add completed tasks that were NOT timed sessions
-    const manuallyCompletedTasks = tasks.filter(t => t.status === 'completed' && !timedTaskIds.has(t.id));
+    const manuallyCompletedTasks = tasks.filter(
+      t => t.status === 'completed' && !timedTaskIds.has(t.id)
+    );
 
     workItems.push(
       ...manuallyCompletedTasks.map(t => ({
-          date: t.date,
-          duration: t.duration,
-          type: 'task' as const,
-          title: t.title,
-          points: t.points,
-          priority: t.priority,
-        }))
+        date: t.date,
+        duration: t.duration,
+        type: 'task' as const,
+        title: t.title,
+        points: t.points,
+        priority: t.priority,
+      }))
     );
 
     return workItems;
