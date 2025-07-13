@@ -16,19 +16,6 @@ interface RoutinesContextType {
 
 const RoutinesContext = createContext<RoutinesContextType | null>(null);
 
-
-const saveRoutines = (routines: Routine[]) => {
-  const sortedRoutines = [...routines].sort(
-    (a, b) => a.startTime.localeCompare(b.startTime)
-  );
-  try {
-    localStorage.setItem(ROUTINES_KEY, JSON.stringify(sortedRoutines));
-  } catch (error) {
-    console.error('Failed to save routines to localStorage', error);
-  }
-  return sortedRoutines;
-};
-
 export function RoutinesProvider({children}: {children: ReactNode}) {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -57,7 +44,11 @@ export function RoutinesProvider({children}: {children: ReactNode}) {
       };
       setRoutines(prevRoutines => {
         const updatedRoutines = [...prevRoutines, newRoutine];
-        return saveRoutines(updatedRoutines);
+        const sortedRoutines = [...updatedRoutines].sort(
+            (a, b) => a.startTime.localeCompare(b.startTime)
+        );
+        localStorage.setItem(ROUTINES_KEY, JSON.stringify(sortedRoutines));
+        return sortedRoutines;
       });
     },
     []
@@ -69,7 +60,11 @@ export function RoutinesProvider({children}: {children: ReactNode}) {
         const newRoutines = prevRoutines.map(routine =>
           routine.id === updatedRoutine.id ? updatedRoutine : routine
         );
-        return saveRoutines(newRoutines);
+        const sortedRoutines = [...newRoutines].sort(
+            (a, b) => a.startTime.localeCompare(b.startTime)
+        );
+        localStorage.setItem(ROUTINES_KEY, JSON.stringify(sortedRoutines));
+        return sortedRoutines;
       });
     },
     []
@@ -79,7 +74,11 @@ export function RoutinesProvider({children}: {children: ReactNode}) {
     (routineId: string) => {
       setRoutines(prevRoutines => {
         const newRoutines = prevRoutines.filter(routine => routine.id !== routineId);
-        return saveRoutines(newRoutines);
+        const sortedRoutines = [...newRoutines].sort(
+            (a, b) => a.startTime.localeCompare(b.startTime)
+        );
+        localStorage.setItem(ROUTINES_KEY, JSON.stringify(sortedRoutines));
+        return sortedRoutines;
       });
     },
     []
