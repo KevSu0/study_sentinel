@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, {
@@ -121,6 +120,14 @@ export const TimerProvider = ({children}: {children: ReactNode}) => {
   };
 
   const startTimer = useCallback((item: StudyTask | Routine) => {
+    if(activeTimer) {
+      toast({
+        title: 'Timer Already Active',
+        description: `Please stop or complete the timer for "${activeTimer.item.item.title}" first.`,
+        variant: 'destructive',
+      });
+      return;
+    }
       const type = 'duration' in item ? 'task' : 'routine';
       const timerData: StoredTimer = {
           item: { type, item },
@@ -139,7 +146,7 @@ export const TimerProvider = ({children}: {children: ReactNode}) => {
       }
 
       saveTimer(timerData);
-  }, [addLog]);
+  }, [addLog, activeTimer, toast]);
 
   const togglePause = useCallback(() => {
     if (!activeTimer) return;
@@ -147,17 +154,17 @@ export const TimerProvider = ({children}: {children: ReactNode}) => {
     let newTimerState = { ...activeTimer };
     if (activeTimer.isPaused) { // Resuming
       newTimerState.isPaused = false;
-      if (newTimerState.item.type === 'task') {
+      if (newTimerState.item.type === 'task' && newTimerState.pausedTime > 0) {
         newTimerState.endTime = Date.now() + newTimerState.pausedTime * 1000;
         addLog('TIMER_START', { taskId: newTimerState.item.item.id, taskTitle: newTimerState.item.item.title, resumed: true });
-      } else {
+      } else if(newTimerState.item.type === 'routine') {
         newTimerState.startTime = Date.now();
         addLog('TIMER_START', { routineId: newTimerState.item.item.id, routineTitle: newTimerState.item.item.title, resumed: true });
       }
     } else { // Pausing
       newTimerState.isPaused = true;
       if (newTimerState.item.type === 'task' && newTimerState.endTime) {
-        newTimerState.pausedTime = Math.round((newTimerState.endTime - Date.now()) / 1000);
+        newTimerState.pausedTime = Math.max(0, Math.round((newTimerState.endTime - Date.now()) / 1000));
         addLog('TIMER_PAUSE', { taskId: newTimerState.item.item.id, taskTitle: newTimerState.item.item.title });
       } else if (newTimerState.item.type === 'routine' && newTimerState.startTime) {
         newTimerState.pausedDuration += Date.now() - newTimerState.startTime;
