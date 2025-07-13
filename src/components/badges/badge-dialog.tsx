@@ -72,13 +72,13 @@ interface BadgeDialogProps {
 }
 
 const conditionOptions = [
-  {value: 'TOTAL_STUDY_TIME', label: 'Total Study Time (Minutes)'},
+  {value: 'TOTAL_STUDY_TIME', label: 'Total Study Time'},
   {value: 'TIME_ON_SUBJECT', label: 'Time on Specific Subject'},
   {value: 'POINTS_EARNED', label: 'Points Earned'},
   {value: 'TASKS_COMPLETED', label: 'Tasks Completed'},
   {value: 'ROUTINES_COMPLETED', label: 'Routines Completed'},
   {value: 'DAY_STREAK', label: 'Study Day Streak'},
-  {value: 'SINGLE_SESSION_TIME', label: 'Single Session Time (Minutes)'},
+  {value: 'SINGLE_SESSION_TIME', label: 'Single Session Time'},
   {value: 'ALL_TASKS_COMPLETED_ON_DAY', label: 'Complete All Tasks on a Day'},
 ];
 
@@ -298,6 +298,7 @@ export function BadgeDialog({
                 <Label>Conditions to Earn</Label>
                 {fields.map((field, index) => {
                   const watchedType = watchedConditions[index]?.type;
+                  const isTimeBased = ['TOTAL_STUDY_TIME', 'TIME_ON_SUBJECT', 'SINGLE_SESSION_TIME'].includes(watchedType);
                   const disableTimeframe = ['DAY_STREAK', 'SINGLE_SESSION_TIME', 'ALL_TASKS_COMPLETED_ON_DAY'].includes(watchedType);
                   const showTargetInput = watchedType !== 'ALL_TASKS_COMPLETED_ON_DAY';
 
@@ -307,7 +308,7 @@ export function BadgeDialog({
                     key={field.id}
                     className="flex gap-2 items-end p-3 border rounded-lg bg-muted/50"
                   >
-                    <div className="grid flex-1 gap-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
+                    <div className="grid flex-1 gap-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
                       <div className="space-y-1">
                         <Label className="text-xs">Type</Label>
                         <Controller
@@ -332,6 +333,7 @@ export function BadgeDialog({
                           )}
                         />
                       </div>
+
                       {watchedType === 'TIME_ON_SUBJECT' && (
                         <div className="space-y-1">
                           <Label className="text-xs">Subject</Label>
@@ -358,15 +360,24 @@ export function BadgeDialog({
                           />
                         </div>
                       )}
-                      {showTargetInput && <div className="space-y-1">
-                        <Label className="text-xs">Target</Label>
-                        <Input
-                          type="number"
-                          {...register(`conditions.${index}.target`)}
-                          placeholder="e.g., 10"
-                        />
-                      </div>}
-                      <div className="space-y-1">
+                      
+                      {showTargetInput && (
+                        <div className="space-y-1">
+                          <Label className="text-xs">
+                            {isTimeBased ? 'Target (Minutes)' : 'Target'}
+                          </Label>
+                          <Input
+                            type="number"
+                            {...register(`conditions.${index}.target`)}
+                            placeholder={isTimeBased ? "e.g., 120" : "e.g., 10"}
+                          />
+                        </div>
+                      )}
+                      
+                      <div className={cn(
+                          "space-y-1",
+                          watchedType === 'TIME_ON_SUBJECT' ? "md:col-span-3" : "md:col-span-1"
+                      )}>
                         <Label className="text-xs">Timeframe</Label>
                         <Controller
                           name={`conditions.${index}.timeframe`}
