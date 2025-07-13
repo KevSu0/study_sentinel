@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -34,6 +35,8 @@ import {
 import {ConfettiProvider} from './providers/confetti-provider';
 import {SplashScreen} from '@/components/splash-screen';
 import {GlobalTimerBar} from './tasks/global-timer-bar';
+import {BottomNav} from './bottom-nav';
+import {cn} from '@/lib/utils';
 
 const ChatWidget = dynamic(
   () => import('@/components/coach/chat-widget').then(m => m.ChatWidget),
@@ -51,14 +54,50 @@ function AppLayout({children}: {children: ReactNode}) {
   };
 
   const menuItems = [
-    {href: '/', label: 'Dashboard', icon: LayoutDashboard},
-    {href: '/briefing', label: 'Daily Briefing', icon: Sparkles},
-    {href: '/tasks', label: 'All Tasks', icon: ListChecks},
-    {href: '/timetable', label: 'Timetable', icon: CalendarDays},
-    {href: '/stats', label: 'Stats', icon: TrendingUp},
-    {href: '/badges', label: 'Badges', icon: Award},
-    {href: '/archive', label: 'Archived Tasks', icon: Archive},
-    {href: '/logs', label: 'Activity Log', icon: ScrollText},
+    {
+      href: '/',
+      label: 'Dashboard',
+      icon: LayoutDashboard,
+      showInSidebar: true,
+    },
+    {
+      href: '/briefing',
+      label: 'Daily Briefing',
+      icon: Sparkles,
+      showInSidebar: true,
+    },
+    {
+      href: '/tasks',
+      label: 'All Tasks',
+      icon: ListChecks,
+      showInSidebar: true,
+    },
+    {
+      href: '/timetable',
+      label: 'Timetable',
+      icon: CalendarDays,
+      showInSidebar: true,
+    },
+    {
+      href: '/stats',
+      label: 'Stats',
+      icon: TrendingUp,
+      showInSidebar: true,
+    },
+    {href: '/badges', label: 'Badges', icon: Award, showInSidebar: true},
+    {
+      href: '/archive',
+      label: 'Archived Tasks',
+      icon: Archive,
+      showInSidebar: true,
+    },
+    {
+      href: '/logs',
+      label: 'Activity Log',
+      icon: ScrollText,
+      showInSidebar: true,
+    },
+    {href: '/profile', label: 'Profile', icon: User, showInSidebar: true},
   ];
 
   return (
@@ -70,39 +109,27 @@ function AppLayout({children}: {children: ReactNode}) {
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            {menuItems.map(item => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href}
-                  tooltip={item.label}
-                  onClick={handleMenuClick}
-                >
-                  <Link href={item.href} className="flex items-center gap-2">
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+            {menuItems
+              .filter(item => item.showInSidebar)
+              .map(item => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.href}
+                    tooltip={item.label}
+                    onClick={handleMenuClick}
+                  >
+                    <Link href={item.href} className="flex items-center gap-2">
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-2">
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === '/profile'}
-                tooltip="Profile"
-                onClick={handleMenuClick}
-              >
-                <Link href="/profile">
-                  <User />
-                  <span>Profile</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
+          {/* Footer items can be placed here if needed */}
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
@@ -111,9 +138,10 @@ function AppLayout({children}: {children: ReactNode}) {
           <SidebarTrigger />
         </div>
         <GlobalTimerBar />
-        {children}
+        <div className="pb-16 md:pb-0">{children}</div>
       </SidebarInset>
       <Toaster />
+      <BottomNav />
     </>
   );
 }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import {useState, useEffect, useCallback} from 'react';
@@ -52,9 +53,9 @@ export function useTasks() {
       };
       setTasks(prevTasks => {
         const updatedTasks = [...prevTasks, newTask];
+        addLog('TASK_ADD', {taskId: newTask.id, title: newTask.title});
         return saveTasks(updatedTasks);
       });
-      addLog('TASK_ADD', {taskId: newTask.id, title: newTask.title});
     },
     [addLog]
   );
@@ -76,6 +77,7 @@ export function useTasks() {
           addLog('TASK_COMPLETE', {
             taskId: updatedTask.id,
             title: updatedTask.title,
+            points: updatedTask.points
           });
         } else if (updatedTask.status === 'in_progress') {
           addLog('TASK_IN_PROGRESS', {

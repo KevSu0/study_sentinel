@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, {useState, useMemo, useEffect} from 'react';
+import React, {useState, useMemo, useEffect, lazy, Suspense} from 'react';
 import dynamic from 'next/dynamic';
 import {format, parseISO} from 'date-fns';
 import {Button} from '@/components/ui/button';
@@ -35,6 +35,10 @@ import {
   CardCompletedRoutineItem,
   SimpleCompletedRoutineItem,
 } from '@/components/dashboard/completed-routine-card';
+
+const ProductivityChart = lazy(
+  () => import('@/components/dashboard/productivity-chart')
+);
 
 const TaskDialog = dynamic(
   () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),
@@ -345,6 +349,7 @@ export default function DashboardPage() {
     todaysBadges,
     todaysRoutines,
     todaysCompletedRoutines,
+    productivityData,
   } = useMemo(() => {
     const todays = tasks.filter(
       t => t.date === todayStr && t.status !== 'archived'
@@ -353,17 +358,32 @@ export default function DashboardPage() {
       t => t.status === 'todo' || t.status === 'in_progress'
     );
     const completed = todays.filter(t => t.status === 'completed');
+
+    const todaysTimedLogs = logs.filter(
+      l =>
+        (l.type === 'ROUTINE_SESSION_COMPLETE' ||
+          l.type === 'TIMER_SESSION_COMPLETE') &&
+        l.timestamp.startsWith(todayStr)
+    );
+
     let points = completed.reduce((sum, task) => sum + task.points, 0);
 
-    // Add points from routines
-    const todaysRoutineLogs = logs.filter(
+    const routineLogs = todaysTimedLogs.filter(
       l => l.type === 'ROUTINE_SESSION_COMPLETE'
     );
-    const routinePoints = todaysRoutineLogs.reduce(
+    const routinePoints = routineLogs.reduce(
       (sum, log) => sum + (log.payload.points || 0),
       0
     );
     points += routinePoints;
+
+    const taskLogs = todaysTimedLogs.filter(
+      l => l.type === 'TIMER_SESSION_COMPLETE'
+    );
+    const manualTaskPoints = completed
+      .filter(t => !taskLogs.some(l => l.payload.taskId === t.id))
+      .reduce((sum, task) => sum + task.points, 0);
+    points += manualTaskPoints;
 
     const badges = allBadges.filter(
       badge =>
@@ -373,10 +393,31 @@ export default function DashboardPage() {
     const today = new Date().getDay(); // Sunday - 0, Monday - 1, etc.
     const todaysRoutines = routines.filter(r => r.days.includes(today));
 
-    // Sort completed routines by timestamp descending
-    const sortedCompletedRoutines = todaysRoutineLogs.sort(
+    const sortedCompletedRoutines = routineLogs.sort(
       (a, b) => parseISO(b.timestamp).getTime() - parseISO(a.timestamp).getTime()
     );
+
+    const taskTime = taskLogs.reduce(
+      (sum, log) => sum + log.payload.duration,
+      0
+    );
+    const routineTime = routineLogs.reduce(
+      (sum, log) => sum + log.payload.duration,
+      0
+    );
+
+    const prodData = [
+      {
+        name: 'Tasks',
+        value: parseFloat((taskTime / 3600).toFixed(2)),
+        fill: 'hsl(var(--chart-1))',
+      },
+      {
+        name: 'Routines',
+        value: parseFloat((routineTime / 3600).toFixed(2)),
+        fill: 'hsl(var(--chart-2))',
+      },
+    ].filter(d => d.value > 0);
 
     return {
       todaysTasks: todays,
@@ -386,6 +427,7 @@ export default function DashboardPage() {
       todaysBadges: badges,
       todaysRoutines,
       todaysCompletedRoutines: sortedCompletedRoutines,
+      productivityData: prodData,
     };
   }, [tasks, todayStr, allBadges, earnedBadges, routines, logs]);
 
@@ -512,7 +554,7 @@ export default function DashboardPage() {
               </Card>
             )}
 
-            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">
@@ -537,6 +579,11 @@ export default function DashboardPage() {
                   </div>
                 </CardContent>
               </Card>
+              <div className="sm:col-span-2 lg:col-span-1">
+                <Suspense fallback={<Skeleton className="h-full w-full" />}>
+                  <ProductivityChart data={productivityData} />
+                </Suspense>
+              </div>
             </section>
 
             <div className="space-y-6">

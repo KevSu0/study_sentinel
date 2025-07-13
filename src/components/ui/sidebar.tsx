@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -181,7 +182,7 @@ const Sidebar = React.forwardRef<
       return (
         <div
           className={cn(
-            "flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground",
+            "hidden md:flex h-full w-[--sidebar-width] flex-col bg-sidebar text-sidebar-foreground",
             className
           )}
           ref={ref}
@@ -191,26 +192,11 @@ const Sidebar = React.forwardRef<
         </div>
       )
     }
-
+    
+    // On mobile, this will render as a sheet.
+    // For this app, we handle mobile nav with BottomNav, so sidebar is hidden on mobile.
     if (isMobile) {
-      return (
-        <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
-          <SheetContent
-            data-sidebar="sidebar"
-            data-mobile="true"
-            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
-            style={
-              {
-                "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-              } as React.CSSProperties
-            }
-            side={side}
-          >
-            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-            <div className="flex h-full w-full flex-col">{children}</div>
-          </SheetContent>
-        </Sheet>
-      )
+        return null;
     }
 
     return (
