@@ -10,6 +10,8 @@ import {useConfetti} from '@/components/providers/confetti-provider';
 
 const EARNED_BADGES_KEY = 'studySentinelEarnedBadges_v3';
 const CUSTOM_BADGES_KEY = 'studySentinelCustomBadges_v1';
+const SYSTEM_BADGES_CONFIG_KEY = 'studySentinelSystemBadgesConfig_v1';
+
 
 export function useBadges() {
   const {tasks, isLoaded: tasksLoaded} = useTasks();
@@ -41,7 +43,7 @@ export function useBadges() {
       }
 
       // Load system badge configurations (or initialize them)
-      const systemBadgeConfigs = localStorage.getItem('studySentinelSystemBadgesConfig_v1');
+      const systemBadgeConfigs = localStorage.getItem(SYSTEM_BADGES_CONFIG_KEY);
       if (systemBadgeConfigs) {
           setSystemBadges(JSON.parse(systemBadgeConfigs));
       } else {
@@ -53,7 +55,7 @@ export function useBadges() {
               isEnabled: true,
           }));
           setSystemBadges(initialSystemBadges);
-          localStorage.setItem('studySentinelSystemBadgesConfig_v1', JSON.stringify(initialSystemBadges));
+          localStorage.setItem(SYSTEM_BADGES_CONFIG_KEY, JSON.stringify(initialSystemBadges));
       }
 
     } catch (error) {
@@ -67,21 +69,25 @@ export function useBadges() {
 
   const awardBadge = useCallback(
     (badge: Badge) => {
+      // Use a functional update to ensure we have the latest state
       setEarnedBadges(prev => {
+        // Double-check if the badge has been awarded in the meantime
         if (prev.has(badge.id)) {
           return prev;
         }
 
         const newEarnedBadges = new Map(prev);
-        newEarnedBadges.set(badge.id, format(new Date(), 'yyyy-MM-dd'));
+        const todayStr = format(new Date(), 'yyyy-MM-dd');
+        newEarnedBadges.set(badge.id, todayStr);
 
+        // Save to localStorage immediately
         localStorage.setItem(
           EARNED_BADGES_KEY,
           JSON.stringify(Array.from(newEarnedBadges.entries()))
         );
 
+        // Fire UI effects
         fire();
-
         setTimeout(() => {
           toast({
             title: `Badge Unlocked: ${badge.name}! 🎉`,
@@ -115,7 +121,7 @@ export function useBadges() {
       } else {
            setSystemBadges(prev => {
               const updated = prev.map(b => b.id === updatedBadge.id ? updatedBadge : b);
-              localStorage.setItem('studySentinelSystemBadgesConfig_v1', JSON.stringify(updated));
+              localStorage.setItem(SYSTEM_BADGES_CONFIG_KEY, JSON.stringify(updated));
               return updated;
           });
       }
@@ -141,10 +147,14 @@ export function useBadges() {
   useEffect(() => {
     if (!tasksLoaded || !isLoaded || !loggerLoaded) return;
 
+    // We only need to get all logs once for this evaluation cycle
     const allLogs = getAllLogs();
+    
+    // Create a stable copy of earnedBadges to check against
+    const currentEarnedBadges = new Set(earnedBadges.keys());
 
     for (const badge of allBadges) {
-      if (!earnedBadges.has(badge.id)) {
+      if (!currentEarnedBadges.has(badge.id)) {
         try {
           if (checkBadge(badge, {tasks, logs: allLogs})) {
             awardBadge(badge);
@@ -154,16 +164,9 @@ export function useBadges() {
         }
       }
     }
-  }, [
-    tasks,
-    tasksLoaded,
-    isLoaded,
-    loggerLoaded,
-    earnedBadges,
-    awardBadge,
-    getAllLogs,
-    allBadges
-  ]);
+  // The dependency array is critical. We only want to re-run this when the underlying data changes.
+  // `allBadges` and `awardBadge` are stable dependencies.
+  }, [tasks, tasksLoaded, isLoaded, loggerLoaded, allBadges, earnedBadges, awardBadge, getAllLogs]);
 
   return {
     allBadges,
