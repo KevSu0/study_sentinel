@@ -13,6 +13,7 @@ import {
   Sparkles,
   LayoutGrid,
   List,
+  Settings,
 } from 'lucide-react';
 import {useTasks} from '@/hooks/use-tasks';
 import {TaskList} from '@/components/tasks/task-list';
@@ -35,6 +36,11 @@ import {
   CardCompletedRoutineItem,
   SimpleCompletedRoutineItem,
 } from '@/components/dashboard/completed-routine-card';
+import {
+  useDashboardLayout,
+  type DashboardWidgetType,
+} from '@/hooks/use-dashboard-layout';
+import {DragDropContext, Droppable, Draggable} from 'react-beautiful-dnd';
 
 const ProductivityChart = lazy(
   () => import('@/components/dashboard/productivity-chart')
@@ -42,6 +48,14 @@ const ProductivityChart = lazy(
 
 const TaskDialog = dynamic(
   () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),
+  {ssr: false}
+);
+
+const CustomizeDialog = dynamic(
+  () =>
+    import('@/components/dashboard/customize-dialog').then(
+      m => m.CustomizeDialog
+    ),
   {ssr: false}
 );
 
@@ -276,6 +290,12 @@ export default function DashboardPage() {
   const {profile, isLoaded: profileLoaded} = useProfile();
   const {viewMode, setViewMode, isLoaded: viewModeLoaded} = useViewMode();
   const {routines, isLoaded: routinesLoaded} = useRoutines();
+  const {
+    layout,
+    setLayout,
+    isLoaded: layoutLoaded,
+  } = useDashboardLayout();
+  const [isCustomizeOpen, setCustomizeOpen] = useState(false);
 
   const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
   const [dailySummary, setDailySummary] = useState<{
@@ -338,7 +358,8 @@ export default function DashboardPage() {
     loggerLoaded &&
     profileLoaded &&
     viewModeLoaded &&
-    routinesLoaded;
+    routinesLoaded &&
+    layoutLoaded;
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
 
   const {
@@ -456,6 +477,159 @@ export default function DashboardPage() {
       <SimpleTaskList {...props} />
     );
   };
+  
+  const onDragEnd = (result: any) => {
+    const { destination, source } = result;
+    if (!destination) return;
+    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+
+    const newLayout = [...layout];
+    const [reorderedItem] = newLayout.splice(source.index, 1);
+    newLayout.splice(destination.index, 0, reorderedItem);
+
+    setLayout(newLayout);
+  };
+
+  const widgetMap: Record<DashboardWidgetType, React.ReactNode> = {
+    daily_briefing: (
+      <>
+        {isSummaryLoading ? (
+          <Skeleton className="h-32 w-full" />
+        ) : dailySummary ? (
+          <Card className="bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-6 w-6 text-yellow-400" />
+                Your Daily Briefing
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <h3 className="font-semibold text-primary/90">
+                  Yesterday's Evaluation
+                </h3>
+                <p className="text-sm text-muted-foreground italic">
+                  {dailySummary.evaluation}
+                </p>
+              </div>
+              <div>
+                <h3 className="font-semibold text-primary/90">
+                  Today's Motivation
+                </h3>
+                <p className="text-sm text-muted-foreground italic">
+                  {dailySummary.motivationalParagraph}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-primary/5">
+            <CardContent className="p-4 flex items-center gap-4">
+              <Lightbulb className="h-8 w-8 text-yellow-400 shrink-0" />
+              <div>
+                <p className="italic text-primary/90">"{dailyQuote.quote}"</p>
+                <p className="text-sm text-right font-medium text-muted-foreground mt-1">
+                  - {dailyQuote.author}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </>
+    ),
+    stats_overview: (
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Points Earned Today
+            </CardTitle>
+            <Star className="h-4 w-4 text-yellow-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pointsToday}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Badges Unlocked Today
+            </CardTitle>
+            <BadgeIcon className="h-4 w-4 text-accent" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{todaysBadges.length}</div>
+          </CardContent>
+        </Card>
+        <div className="sm:col-span-2 lg:col-span-1">
+          <Suspense fallback={<Skeleton className="h-full w-full" />}>
+            <ProductivityChart data={productivityData} />
+          </Suspense>
+        </div>
+      </section>
+    ),
+    unlocked_badges: todaysBadges.length > 0 && (
+      <section>
+        <h2 className="text-xl font-semibold text-primary mb-3">
+          Badges Unlocked Today
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          {todaysBadges.map(badge => (
+            <BadgeCard key={badge.id} badge={badge} isEarned={true} />
+          ))}
+        </div>
+      </section>
+    ),
+    todays_routines: todaysRoutines.length > 0 && (
+      <section>
+        <h2 className="text-xl font-semibold text-primary mb-3">
+          Today's Routines
+        </h2>
+        <div className="grid gap-4 md:grid-cols-2">
+          {todaysRoutines.map(routine => (
+            <RoutineDashboardCard key={routine.id} routine={routine} />
+          ))}
+        </div>
+      </section>
+    ),
+    todays_plan: pendingTasks.length > 0 && (
+      <section>
+        <h2 className="text-xl font-semibold text-primary mb-3">
+          Today's Plan
+        </h2>
+        {renderTaskList(pendingTasks)}
+      </section>
+    ),
+    completed_today: (todaysCompletedTasks.length > 0 ||
+      todaysCompletedRoutines.length > 0) && (
+      <section>
+        <h2 className="text-xl font-semibold text-primary mb-3">
+          Completed Today
+        </h2>
+        {todaysCompletedTasks.length > 0 &&
+          renderTaskList(todaysCompletedTasks)}
+
+        {todaysCompletedRoutines.length > 0 && (
+          <div
+            className={cn(
+              viewMode === 'card' ? 'space-y-4' : 'space-y-2',
+              todaysCompletedTasks.length > 0 && 'mt-4'
+            )}
+          >
+            {todaysCompletedRoutines.map(log =>
+              viewMode === 'card' ? (
+                <CardCompletedRoutineItem key={log.id} log={log} />
+              ) : (
+                <SimpleCompletedRoutineItem key={log.id} log={log} />
+              )
+            )}
+          </div>
+        )}
+      </section>
+    ),
+  };
+  
+  const visibleWidgets = useMemo(() => layout.filter(w => w.isVisible), [layout]);
 
   return (
     <div className="flex flex-col h-full">
@@ -470,6 +644,14 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCustomizeOpen(true)}
+            >
+              <Settings className="h-4 w-4" />
+              <span className="hidden sm:inline ml-2">Customize</span>
+            </Button>
             <div className="hidden sm:flex items-center gap-1 rounded-lg bg-muted p-1">
               <Button
                 variant={viewMode === 'card' ? 'secondary' : 'ghost'}
@@ -500,7 +682,7 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main className="flex-1 p-2 sm:p-4 overflow-y-auto space-y-6">
+      <main className="flex-1 p-2 sm:p-4 overflow-y-auto">
         {!isLoaded ? (
           <div className="space-y-4">
             <Skeleton className="h-24 w-full" />
@@ -508,176 +690,58 @@ export default function DashboardPage() {
             <Skeleton className="h-28 w-full" />
           </div>
         ) : (
-          <>
-            {isSummaryLoading ? (
-              <Skeleton className="h-32 w-full" />
-            ) : dailySummary ? (
-              <Card className="bg-primary/5">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Sparkles className="h-6 w-6 text-yellow-400" />
-                    Your Daily Briefing
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <h3 className="font-semibold text-primary/90">
-                      Yesterday's Evaluation
-                    </h3>
-                    <p className="text-sm text-muted-foreground italic">
-                      {dailySummary.evaluation}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-primary/90">
-                      Today's Motivation
-                    </h3>
-                    <p className="text-sm text-muted-foreground italic">
-                      {dailySummary.motivationalParagraph}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="bg-primary/5">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <Lightbulb className="h-8 w-8 text-yellow-400 shrink-0" />
-                  <div>
-                    <p className="italic text-primary/90">
-                      "{dailyQuote.quote}"
-                    </p>
-                    <p className="text-sm text-right font-medium text-muted-foreground mt-1">
-                      - {dailyQuote.author}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Points Earned Today
-                  </CardTitle>
-                  <Star className="h-4 w-4 text-yellow-400" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{pointsToday}</div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Badges Unlocked Today
-                  </CardTitle>
-                  <BadgeIcon className="h-4 w-4 text-accent" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {todaysBadges.length}
-                  </div>
-                </CardContent>
-              </Card>
-              <div className="sm:col-span-2 lg:col-span-1">
-                <Suspense fallback={<Skeleton className="h-full w-full" />}>
-                  <ProductivityChart data={productivityData} />
-                </Suspense>
-              </div>
-            </section>
-
-            <div className="space-y-6">
-              {todaysBadges.length > 0 && (
-                <section>
-                  <h2 className="text-xl font-semibold text-primary mb-3">
-                    Badges Unlocked Today
-                  </h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                    {todaysBadges.map(badge => (
-                      <BadgeCard
-                        key={badge.id}
-                        badge={badge}
-                        isEarned={true}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {todaysTasks.length > 0 || todaysRoutines.length > 0 ? (
-                <>
-                  {todaysRoutines.length > 0 && (
-                    <section>
-                      <h2 className="text-xl font-semibold text-primary mb-3">
-                        Today's Routines
-                      </h2>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        {todaysRoutines.map(routine => (
-                          <RoutineDashboardCard
-                            key={routine.id}
-                            routine={routine}
-                          />
-                        ))}
-                      </div>
-                    </section>
-                  )}
-                  {pendingTasks.length > 0 && (
-                    <section>
-                      <h2 className="text-xl font-semibold text-primary mb-3">
-                        Today's Plan
-                      </h2>
-                      {renderTaskList(pendingTasks)}
-                    </section>
-                  )}
-                  {(todaysCompletedTasks.length > 0 ||
-                    todaysCompletedRoutines.length > 0) && (
-                    <section>
-                      <h2 className="text-xl font-semibold text-primary mb-3">
-                        Completed Today
-                      </h2>
-                      {todaysCompletedTasks.length > 0 &&
-                        renderTaskList(todaysCompletedTasks)}
-
-                      {todaysCompletedRoutines.length > 0 && (
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="dashboard-widgets">
+              {(provided) => (
+                <div
+                  {...provided.droppableProps}
+                  ref={provided.innerRef}
+                  className="space-y-6"
+                >
+                  {visibleWidgets.map((widget, index) => (
+                    <Draggable key={widget.id} draggableId={widget.id} index={index}>
+                      {(provided) => (
                         <div
-                          className={cn(
-                            viewMode === 'card' ? 'space-y-4' : 'space-y-2',
-                            todaysCompletedTasks.length > 0 && 'mt-4'
-                          )}
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
                         >
-                          {todaysCompletedRoutines.map(log =>
-                            viewMode === 'card' ? (
-                              <CardCompletedRoutineItem key={log.id} log={log} />
-                            ) : (
-                              <SimpleCompletedRoutineItem
-                                key={log.id}
-                                log={log}
-                              />
-                            )
-                          )}
+                          {widgetMap[widget.id]}
                         </div>
                       )}
-                    </section>
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                  
+                  {visibleWidgets.length === 0 ? (
+                     <div className="flex items-center justify-center h-full pt-16">
+                        <EmptyState
+                          onAddTask={() => setCustomizeOpen(true)}
+                          title="Dashboard is Empty"
+                          message="Customize your dashboard to show the widgets that matter most to you."
+                          buttonText="Customize Dashboard"
+                        />
+                      </div>
+                  ) : (todaysTasks.length === 0 && todaysRoutines.length === 0 && !layout.find(w => w.id === 'todays_plan')?.isVisible && !layout.find(w => w.id === 'todays_routines')?.isVisible) && (
+                     <div className="flex items-center justify-center h-full">
+                        <EmptyState
+                          onAddTask={() => {}}
+                          title="A Fresh Start!"
+                          message="No tasks scheduled for today. Let's plan your day and make it a productive one!"
+                          buttonText="Plan Your Day"
+                        >
+                          <Button asChild className="mt-6">
+                            <Link href="/tasks">
+                              <PlusCircle /> Plan Your Day
+                            </Link>
+                          </Button>
+                        </EmptyState>
+                      </div>
                   )}
-                </>
-              ) : (
-                <div className="flex items-center justify-center h-full">
-                  <EmptyState
-                    onAddTask={() => {}}
-                    title="A Fresh Start!"
-                    message="No tasks scheduled for today. Let's plan your day and make it a productive one!"
-                    buttonText="Plan Your Day"
-                  >
-                    <Button asChild className="mt-6">
-                      <Link href="/tasks">
-                        <PlusCircle /> Plan Your Day
-                      </Link>
-                    </Button>
-                  </EmptyState>
                 </div>
               )}
-            </div>
-          </>
+            </Droppable>
+          </DragDropContext>
         )}
       </main>
       <TaskDialog
@@ -686,6 +750,10 @@ export default function DashboardPage() {
         onAddTask={addTask}
         onUpdateTask={updateTask}
         taskToEdit={editingTask}
+      />
+      <CustomizeDialog
+        isOpen={isCustomizeOpen}
+        onOpenChange={setCustomizeOpen}
       />
     </div>
   );
