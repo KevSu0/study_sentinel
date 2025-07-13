@@ -35,45 +35,54 @@ const DEFAULT_LAYOUT: DashboardWidget[] = [
   {id: 'completed_today', isVisible: true},
 ];
 
+// This is a helper function to ensure localStorage is only accessed on the client
+const getLayoutFromStorage = (): DashboardWidget[] | null => {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+    try {
+        const savedLayoutJSON = localStorage.getItem(LAYOUT_KEY);
+        if (savedLayoutJSON) {
+            return JSON.parse(savedLayoutJSON);
+        }
+    } catch (error) {
+        console.error('Failed to parse layout from storage', error);
+        localStorage.removeItem(LAYOUT_KEY);
+    }
+    return null;
+}
+
+
 export function useDashboardLayout() {
   const [layout, setLayoutState] = useState<DashboardWidget[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    let initialLayout: DashboardWidget[] = [];
-    try {
-      const savedLayoutJSON = localStorage.getItem(LAYOUT_KEY);
-      if (savedLayoutJSON) {
-        const savedLayout = JSON.parse(savedLayoutJSON) as DashboardWidget[];
-        
-        // Create a map for efficient lookup of saved widgets
+    const savedLayout = getLayoutFromStorage();
+    let initialLayout: DashboardWidget[];
+
+    if (savedLayout) {
         const savedWidgetMap = new Map(savedLayout.map(w => [w.id, w]));
         
-        // Merge saved layout with default layout to handle new widgets
         const mergedLayout = DEFAULT_LAYOUT.map(defaultWidget => 
           savedWidgetMap.has(defaultWidget.id)
             ? savedWidgetMap.get(defaultWidget.id)!
             : defaultWidget
         );
 
-        // Ensure the order from the saved layout is respected, and new widgets are appended
         const finalLayout = [
           ...savedLayout.map(saved => mergedLayout.find(m => m.id === saved.id)).filter(Boolean),
           ...mergedLayout.filter(merged => !savedLayout.some(saved => saved.id === merged.id))
         ] as DashboardWidget[];
         
         initialLayout = finalLayout;
-
-      } else {
+    } else {
         initialLayout = DEFAULT_LAYOUT;
-      }
-    } catch (error) {
-      console.error('Failed to load dashboard layout, using default.', error);
-      initialLayout = DEFAULT_LAYOUT;
-    } finally {
-      setLayoutState(initialLayout);
-      setIsLoaded(true);
     }
+    
+    setLayoutState(initialLayout);
+    setIsLoaded(true);
+
   }, []);
 
   const setLayout = useCallback((newLayout: DashboardWidget[] | ((prev: DashboardWidget[]) => DashboardWidget[])) => {
