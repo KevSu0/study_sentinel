@@ -26,7 +26,7 @@ import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {BadgeCard} from '@/components/badges/badge-card';
 import Link from 'next/link';
 import {getDailySummary} from '@/lib/actions';
-import {useLogger} from '@/hooks/use-logger';
+import {useLogger} from '@/hooks/use-logger.tsx';
 import {useProfile} from '@/hooks/use-profile';
 import {useViewMode} from '@/hooks/use-view-mode';
 import {cn} from '@/lib/utils';

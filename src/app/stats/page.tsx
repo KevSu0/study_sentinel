@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import {useTasks} from '@/hooks/use-tasks.tsx';
 import {useBadges} from '@/hooks/useBadges';
-import {useLogger} from '@/hooks/use-logger';
+import {useLogger} from '@/hooks/use-logger.tsx';
 import {format, subDays, startOfDay, parseISO} from 'date-fns';
 import {Skeleton} from '@/components/ui/skeleton';
 import {BadgeCard} from '@/components/badges/badge-card';

@@ -12,7 +12,7 @@ import React, {
 } from 'react';
 import {type StudyTask, type Routine} from '@/lib/types';
 import {addDays, format} from 'date-fns';
-import {useLogger} from './use-logger';
+import {useLogger} from './use-logger.tsx';
 import {useConfetti} from '@/components/providers/confetti-provider';
 import {useToast} from './use-toast';
 
@@ -82,7 +82,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
   const TIMER_KEY = 'studySentinelActiveTimer_v2';
 
   const [tasks, setTasks] = useState<StudyTask[]>([]);
-  const {addLog} = useLogger();
+  const {addLog, isLoaded: loggerLoaded} = useLogger();
   const {fire} = useConfetti();
   const {toast} = useToast();
 
@@ -123,6 +123,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
   };
 
   useEffect(() => {
+    if (!loggerLoaded) return;
     setIsLoaded(false);
     try {
       const savedTasks = localStorage.getItem(TASKS_KEY);
@@ -137,41 +138,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
     } finally {
       setIsLoaded(true);
     }
-  }, []);
-
-  const updateTask = useCallback(
-    (updatedTask: StudyTask) => {
-      setTasks(currentTasks => {
-        const oldTask = currentTasks.find(t => t.id === updatedTask.id);
-        const newTasks = currentTasks.map(task =>
-          task.id === updatedTask.id ? updatedTask : task
-        );
-        
-        if (oldTask && oldTask.status !== updatedTask.status) {
-          if (updatedTask.status === 'completed') {
-            addLog('TASK_COMPLETE', {
-              taskId: updatedTask.id,
-              title: updatedTask.title,
-              points: updatedTask.points,
-            });
-          } else if (updatedTask.status === 'in_progress') {
-            addLog('TASK_IN_PROGRESS', {
-              taskId: updatedTask.id,
-              title: updatedTask.title,
-            });
-          }
-        } else {
-          addLog('TASK_UPDATE', {
-            taskId: updatedTask.id,
-            title: updatedTask.title,
-          });
-        }
-        
-        return saveTasks(newTasks);
-      });
-    },
-    [addLog]
-  );
+  }, [loggerLoaded]);
 
   const addTask = useCallback(
     (task: Omit<StudyTask, 'id' | 'status'>) => {
@@ -186,6 +153,41 @@ export function TasksProvider({children}: {children: ReactNode}) {
         addLog('TASK_ADD', {taskId: newTask.id, title: newTask.title});
         return saveTasks(updatedTasks);
       });
+    },
+    [addLog]
+  );
+  
+  const updateTask = useCallback(
+    (updatedTask: StudyTask) => {
+      let oldTask: StudyTask | undefined;
+      setTasks(currentTasks => {
+        oldTask = currentTasks.find(t => t.id === updatedTask.id);
+        const newTasks = currentTasks.map(task =>
+          task.id === updatedTask.id ? updatedTask : task
+        );
+        return saveTasks(newTasks);
+      });
+
+      // Log after state update is triggered
+      if (oldTask && oldTask.status !== updatedTask.status) {
+        if (updatedTask.status === 'completed') {
+          addLog('TASK_COMPLETE', {
+            taskId: updatedTask.id,
+            title: updatedTask.title,
+            points: updatedTask.points,
+          });
+        } else if (updatedTask.status === 'in_progress') {
+          addLog('TASK_IN_PROGRESS', {
+            taskId: updatedTask.id,
+            title: updatedTask.title,
+          });
+        }
+      } else {
+        addLog('TASK_UPDATE', {
+          taskId: updatedTask.id,
+          title: updatedTask.title,
+        });
+      }
     },
     [addLog]
   );
@@ -286,7 +288,6 @@ export function TasksProvider({children}: {children: ReactNode}) {
           });
         }
         
-        // Return the new timer state to be saved
         if (timerData) {
           localStorage.setItem(TIMER_KEY, JSON.stringify(timerData));
         } else {
@@ -299,47 +300,51 @@ export function TasksProvider({children}: {children: ReactNode}) {
   );
 
   const togglePause = useCallback(() => {
-    if (!activeTimer) return;
+    setActiveTimer(currentTimer => {
+      if (!currentTimer) return null;
 
-    let newTimerState = {...activeTimer};
-    const logPayload =
-      newTimerState.item.type === 'task'
-        ? {taskId: newTimerState.item.item.id, taskTitle: newTimerState.item.item.title}
-        : {
-            routineId: newTimerState.item.item.id,
-            routineTitle: newTimerState.item.item.title,
-          };
+      let newTimerState = {...currentTimer};
+      const logPayload =
+        newTimerState.item.type === 'task'
+          ? {taskId: newTimerState.item.item.id, taskTitle: newTimerState.item.item.title}
+          : {
+              routineId: newTimerState.item.item.id,
+              routineTitle: newTimerState.item.item.title,
+            };
 
-    if (activeTimer.isPaused) {
-      newTimerState.isPaused = false;
-      if (newTimerState.item.type === 'task' && newTimerState.pausedTime > 0) {
-        newTimerState.endTime = Date.now() + newTimerState.pausedTime * 1000;
-      } else if (
-        newTimerState.item.type === 'routine' &&
-        newTimerState.pausedTime && newTimerState.startTime
-      ) {
-        const pauseDuration = Date.now() - newTimerState.pausedTime;
-        newTimerState.startTime = newTimerState.startTime + pauseDuration;
-      }
-      addLog('TIMER_START', {...logPayload, resumed: true});
-    } else {
-      newTimerState.isPaused = true;
-      if (newTimerState.item.type === 'task' && newTimerState.endTime) {
-        newTimerState.pausedTime = Math.max(
-          0,
-          Math.round((newTimerState.endTime - Date.now()) / 1000)
-        );
-      } else if (newTimerState.item.type === 'routine') {
-        if (newTimerState.startTime) {
-           const elapsed = Date.now() - newTimerState.startTime;
-           newTimerState.pausedDuration = elapsed;
+      if (newTimerState.isPaused) {
+        newTimerState.isPaused = false;
+        if (newTimerState.item.type === 'task' && newTimerState.pausedTime > 0) {
+          newTimerState.endTime = Date.now() + newTimerState.pausedTime * 1000;
+        } else if (
+          newTimerState.item.type === 'routine' &&
+          newTimerState.pausedTime && newTimerState.startTime
+        ) {
+          const pauseDuration = Date.now() - newTimerState.pausedTime;
+          newTimerState.startTime = newTimerState.startTime + pauseDuration;
         }
-        newTimerState.pausedTime = Date.now();
+        addLog('TIMER_START', {...logPayload, resumed: true});
+      } else {
+        newTimerState.isPaused = true;
+        if (newTimerState.item.type === 'task' && newTimerState.endTime) {
+          newTimerState.pausedTime = Math.max(
+            0,
+            Math.round((newTimerState.endTime - Date.now()) / 1000)
+          );
+        } else if (newTimerState.item.type === 'routine') {
+          if (newTimerState.startTime) {
+            const elapsed = Date.now() - newTimerState.startTime;
+            newTimerState.pausedDuration = elapsed;
+          }
+          newTimerState.pausedTime = Date.now();
+        }
+        addLog('TIMER_PAUSE', logPayload);
       }
-      addLog('TIMER_PAUSE', logPayload);
-    }
-    saveTimer(newTimerState);
-  }, [activeTimer, addLog]);
+      
+      saveTimer(newTimerState); // This saves to localStorage
+      return newTimerState;
+    });
+  }, [addLog]);
 
   const stopTimer = useCallback(
     (reason: string) => {
@@ -438,33 +443,36 @@ export function TasksProvider({children}: {children: ReactNode}) {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!activeTimer || activeTimer.isPaused) return;
+      setActiveTimer(currentTimer => {
+        if (!currentTimer || currentTimer.isPaused) return currentTimer;
 
-      let newTimerState = {...activeTimer};
-      if (newTimerState.item.type === 'task') {
-        if (!newTimerState.endTime) return;
-        const remaining = Math.round((newTimerState.endTime - Date.now()) / 1000);
-        setTimeDisplay(formatTime(remaining));
+        let newTimerState = {...currentTimer};
+        if (newTimerState.item.type === 'task') {
+          if (!newTimerState.endTime) return newTimerState;
+          const remaining = Math.round((newTimerState.endTime - Date.now()) / 1000);
+          setTimeDisplay(formatTime(remaining));
 
-        if (remaining <= 0 && !newTimerState.overtimeNotified) {
-          sendTimerEndNotification(newTimerState.item.item as StudyTask);
-          audioRef.current?.play().catch(e => console.error('Audio error:', e));
-          addLog('TIMER_OVERTIME_STARTED', {
-            taskId: newTimerState.item.item.id,
-            taskTitle: newTimerState.item.item.title,
-          });
-          newTimerState.overtimeNotified = true;
-          saveTimer(newTimerState);
+          if (remaining <= 0 && !newTimerState.overtimeNotified) {
+            sendTimerEndNotification(newTimerState.item.item as StudyTask);
+            audioRef.current?.play().catch(e => console.error('Audio error:', e));
+            addLog('TIMER_OVERTIME_STARTED', {
+              taskId: newTimerState.item.item.id,
+              taskTitle: newTimerState.item.item.title,
+            });
+            newTimerState.overtimeNotified = true;
+            saveTimer(newTimerState);
+          }
+        } else {
+          if (!newTimerState.startTime) return newTimerState;
+          const elapsed = Date.now() - newTimerState.startTime;
+          setTimeDisplay(formatTime(Math.round(elapsed / 1000)));
         }
-      } else {
-        if (!newTimerState.startTime) return;
-        const elapsed = Date.now() - newTimerState.startTime;
-        setTimeDisplay(formatTime(Math.round(elapsed / 1000)));
-      }
+        return newTimerState;
+      });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeTimer, addLog]);
+  }, [addLog]);
 
   const value: TasksContextType = {
     tasks,

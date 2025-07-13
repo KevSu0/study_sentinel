@@ -6,7 +6,7 @@ import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Skeleton} from '@/components/ui/skeleton';
 import {Sparkles, Lightbulb} from 'lucide-react';
 import {getDailySummary} from '@/lib/actions';
-import {useLogger} from '@/hooks/use-logger';
+import {useLogger} from '@/hooks/use-logger.tsx';
 import {useProfile} from '@/hooks/use-profile';
 
 export default function DailyBriefingPage() {

@@ -1,7 +1,7 @@
 'use client';
 import {useState, useEffect, useCallback, useMemo} from 'react';
 import {useTasks} from './use-tasks.tsx';
-import {useLogger} from './use-logger';
+import {useLogger} from './use-logger.tsx';
 import {useToast} from './use-toast';
 import {SYSTEM_BADGES, checkBadge} from '@/lib/badges';
 import type {Badge} from '@/lib/types';

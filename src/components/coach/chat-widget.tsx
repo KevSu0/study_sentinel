@@ -6,7 +6,7 @@ import {Input} from '@/components/ui/input';
 import {Avatar, AvatarFallback} from '@/components/ui/avatar';
 import {Bot, User, Send, Trash2, X} from 'lucide-react';
 import {useProfile} from '@/hooks/use-profile';
-import {useLogger} from '@/hooks/use-logger';
+import {useLogger} from '@/hooks/use-logger.tsx';
 import {getDailySummary, getChatbotResponse} from '@/lib/actions';
 import {cn} from '@/lib/utils';
 import {Skeleton} from '@/components/ui/skeleton';

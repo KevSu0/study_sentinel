@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import {useLogger} from '@/hooks/use-logger';
+import {useLogger} from '@/hooks/use-logger.tsx';
 import {format, parseISO} from 'date-fns';
 import {Card, CardContent} from '@/components/ui/card';
 import {Skeleton} from '@/components/ui/skeleton';
