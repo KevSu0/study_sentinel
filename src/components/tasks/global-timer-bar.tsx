@@ -143,7 +143,7 @@ export function GlobalTimerBar() {
       });
     }
     localStorage.setItem(TASK_TIMER_KEY, JSON.stringify(savedTimer));
-    // State will be updated by the main polling effect
+    setIsTaskTimerPaused(savedTimer.isPaused);
   }, [activeTask, addLog, timeRemaining]);
 
   const handleConfirmStopTask = (reason: string) => {
@@ -203,6 +203,7 @@ export function GlobalTimerBar() {
       };
     }
     localStorage.setItem(ROUTINE_TIMER_KEY, JSON.stringify(savedTimer));
+    setIsRoutineTimerPaused(savedTimer.isPaused);
   }, [activeRoutine]);
 
   const handleCompleteRoutine = useCallback(() => {
