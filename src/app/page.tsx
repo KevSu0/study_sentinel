@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, {useState, useMemo, useEffect, lazy, Suspense} from 'react';
+import React, {useState, useMemo, useEffect, lazy, Suspense, useCallback} from 'react';
 import dynamic from 'next/dynamic';
 import {format, parseISO} from 'date-fns';
 import {Button} from '@/components/ui/button';
@@ -132,27 +132,38 @@ function SortableWidget({id, children}: {id: string; children: React.ReactNode})
 export default function DashboardPage() {
   const {
     tasks,
-    addTask,
-    updateTask,
-    archiveTask,
-    unarchiveTask,
-    pushTaskToNextDay,
+    addTask: rawAddTask,
+    updateTask: rawUpdateTask,
+    archiveTask: rawArchiveTask,
+    unarchiveTask: rawUnarchiveTask,
+    pushTaskToNextDay: rawPushTaskToNextDay,
     isLoaded: tasksLoaded,
   } = useTasks();
+
+  // Wrap functions in useCallback to ensure stable references
+  const addTask = useCallback(rawAddTask, [rawAddTask]);
+  const updateTask = useCallback(rawUpdateTask, [rawUpdateTask]);
+  const archiveTask = useCallback(rawArchiveTask, [rawArchiveTask]);
+  const unarchiveTask = useCallback(rawUnarchiveTask, [rawUnarchiveTask]);
+  const pushTaskToNextDay = useCallback(rawPushTaskToNextDay, [rawPushTaskToNextDay]);
+
   const {allBadges, earnedBadges, isLoaded: badgesLoaded} = useBadges();
   const {
     logs,
-    getPreviousDayLogs,
+    getPreviousDayLogs: rawGetPreviousDayLogs,
     isLoaded: loggerLoaded,
   } = useLogger();
+  const getPreviousDayLogs = useCallback(rawGetPreviousDayLogs, [rawGetPreviousDayLogs]);
+
   const {profile, isLoaded: profileLoaded} = useProfile();
   const {viewMode, isLoaded: viewModeLoaded} = useViewMode();
   const {routines, isLoaded: routinesLoaded} = useRoutines();
   const {
     layout,
-    setLayout,
+    setLayout: rawSetLayout,
     isLoaded: layoutLoaded,
   } = useDashboardLayout();
+  const setLayout = useCallback(rawSetLayout, [rawSetLayout]);
   const [isCustomizeOpen, setCustomizeOpen] = useState(false);
 
   const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
@@ -202,13 +213,13 @@ export default function DashboardPage() {
     fetchDailySummary();
   }, [loggerLoaded, profileLoaded, getPreviousDayLogs, profile]);
 
-  const openEditTaskDialog = (task: StudyTask) => {
+  const openEditTaskDialog = useCallback((task: StudyTask) => {
     setEditingTask(task);
-  };
+  }, []);
 
-  const closeTaskFormDialog = () => {
+  const closeTaskFormDialog = useCallback(() => {
     setEditingTask(null);
-  };
+  }, []);
 
   const isLoaded =
     tasksLoaded &&
@@ -218,94 +229,73 @@ export default function DashboardPage() {
     viewModeLoaded &&
     routinesLoaded &&
     layoutLoaded;
-  
+
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+  const today = useMemo(() => new Date().getDay(), []);
 
-  const {
-    todaysTasks,
-    pendingTasks,
-    todaysCompletedTasks,
-    pointsToday,
-    todaysBadges,
-    todaysRoutines,
-    todaysCompletedRoutines,
-    productivityData,
-  } = useMemo(() => {
-    const todays = tasks.filter(
-      t => t.date === todayStr && t.status !== 'archived'
-    );
-    const pending = todays.filter(
-      t => t.status === 'todo' || t.status === 'in_progress'
-    );
-    const completed = todays.filter(t => t.status === 'completed');
+  // --- Data processing, moved from the large useMemo block ---
 
-    const todaysTimedLogs = logs.filter(
-      l =>
-        (l.type === 'ROUTINE_SESSION_COMPLETE' ||
-          l.type === 'TIMER_SESSION_COMPLETE') &&
-        l.timestamp.startsWith(todayStr)
-    );
+  const todaysTasks = tasks.filter(
+    t => t.date === todayStr && t.status !== 'archived'
+  );
+  const pendingTasks = todaysTasks.filter(
+    t => t.status === 'todo' || t.status === 'in_progress'
+  );
+  const todaysCompletedTasks = todaysTasks.filter(t => t.status === 'completed');
 
-    let points = completed.reduce((sum, task) => sum + task.points, 0);
+  const todaysTimedLogs = logs.filter(
+    l =>
+      (l.type === 'ROUTINE_SESSION_COMPLETE' ||
+        l.type === 'TIMER_SESSION_COMPLETE') &&
+      l.timestamp.startsWith(todayStr)
+  );
 
-    const routineLogs = todaysTimedLogs.filter(
-      l => l.type === 'ROUTINE_SESSION_COMPLETE'
-    );
-    
-    // Points from routines are calculated and stored in the log, so sum them up.
-    const routinePoints = routineLogs.reduce(
-      (sum, log) => sum + (log.payload.points || 0),
-      0
-    );
-    points += routinePoints;
+  const routineLogs = todaysTimedLogs.filter(
+    l => l.type === 'ROUTINE_SESSION_COMPLETE'
+  );
 
+  const routinePoints = routineLogs.reduce(
+    (sum, log) => sum + (log.payload.points || 0),
+    0
+  );
 
-    const badges = allBadges.filter(
-      badge =>
-        earnedBadges.has(badge.id) &&
-        earnedBadges.get(badge.id) === todayStr
-    );
-    
-    const today = new Date().getDay(); // Sunday - 0, Monday - 1, etc.
-    const todaysRoutines = routines.filter(r => r.days.includes(today));
+  const pointsToday =
+    todaysCompletedTasks.reduce((sum, task) => sum + task.points, 0) +
+    routinePoints;
 
-    const sortedCompletedRoutines = routineLogs.sort(
-      (a, b) => parseISO(b.timestamp).getTime() - parseISO(a.timestamp).getTime()
-    );
+  const todaysBadges = allBadges.filter(
+    badge =>
+      earnedBadges.has(badge.id) &&
+      earnedBadges.get(badge.id) === todayStr
+  );
 
-    const taskTime = todaysTimedLogs
-      .filter(l => l.type === 'TIMER_SESSION_COMPLETE')
-      .reduce((sum, log) => sum + log.payload.duration, 0);
-      
-    const routineTime = routineLogs.reduce(
-      (sum, log) => sum + log.payload.duration,
-      0
-    );
+  const todaysRoutines = routines.filter(r => r.days.includes(today));
 
-    const prodData = [
-      {
-        name: 'Tasks',
-        value: parseFloat((taskTime / 3600).toFixed(2)),
-        fill: 'hsl(var(--chart-1))',
-      },
-      {
-        name: 'Routines',
-        value: parseFloat((routineTime / 3600).toFixed(2)),
-        fill: 'hsl(var(--chart-2))',
-      },
-    ].filter(d => d.value > 0);
+  const todaysCompletedRoutines = routineLogs.sort(
+    (a, b) => parseISO(b.timestamp).getTime() - parseISO(a.timestamp).getTime()
+  );
 
-    return {
-      todaysTasks: todays,
-      pendingTasks: pending,
-      todaysCompletedTasks: completed,
-      pointsToday: points,
-      todaysBadges: badges,
-      todaysRoutines,
-      todaysCompletedRoutines: sortedCompletedRoutines,
-      productivityData: prodData,
-    };
-  }, [tasks, logs, todayStr, allBadges, earnedBadges, routines]);
+  const taskTime = todaysTimedLogs
+    .filter(l => l.type === 'TIMER_SESSION_COMPLETE')
+    .reduce((sum, log) => sum + log.payload.duration, 0);
+
+  const routineTime = routineLogs.reduce(
+    (sum, log) => sum + log.payload.duration,
+    0
+  );
+
+  const productivityData = [
+    {
+      name: 'Tasks',
+      value: parseFloat((taskTime / 3600).toFixed(2)),
+      fill: 'hsl(var(--chart-1))',
+    },
+    {
+      name: 'Routines',
+      value: parseFloat((routineTime / 3600).toFixed(2)),
+      fill: 'hsl(var(--chart-2))',
+    },
+  ].filter(d => d.value > 0);
 
   const dailyQuote = useMemo(() => {
     const now = new Date();
@@ -316,24 +306,33 @@ export default function DashboardPage() {
     return motivationalQuotes[dayOfYear % motivationalQuotes.length];
   }, []);
 
-  const renderTaskList = (tasksToRender: StudyTask[]) => {
-    const props = {
-      tasks: tasksToRender,
-      onUpdate: updateTask,
-      onArchive: archiveTask,
-      onUnarchive: unarchiveTask,
-      onPushToNextDay: pushTaskToNextDay,
-      onEdit: openEditTaskDialog,
-    };
-
-    return viewMode === 'card' ? (
-      <TaskList {...props} />
-    ) : (
-      <SimpleTaskList {...props} />
-    );
-  };
+  const renderTaskList = useCallback(
+    (tasksToRender: StudyTask[]) => {
+      const props = {
+        tasks: tasksToRender,
+        onUpdate: updateTask,
+        onArchive: archiveTask,
+        onUnarchive: unarchiveTask,
+        onPushToNextDay: pushTaskToNextDay,
+        onEdit: openEditTaskDialog,
+      };
+      return viewMode === 'card' ? (
+        <TaskList {...props} />
+      ) : (
+        <SimpleTaskList {...props} />
+      );
+    },
+    [
+      viewMode,
+      updateTask,
+      archiveTask,
+      unarchiveTask,
+      pushTaskToNextDay,
+      openEditTaskDialog,
+    ]
+  );
   
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     const {active, over} = event;
 
     if (over && active.id !== over.id) {
@@ -343,12 +342,11 @@ export default function DashboardPage() {
         return arrayMove(prevLayout, oldIndex, newIndex);
       });
     }
-  };
+  }, [setLayout]);
 
-  const widgetMap: Record<DashboardWidgetType, React.ReactNode> = {
+  const widgetMap: Record<DashboardWidgetType, React.ReactNode> = useMemo(() => ({
     daily_briefing: (
-      <>
-        {isSummaryLoading ? (
+        isSummaryLoading ? (
           <Skeleton className="h-32 w-full" />
         ) : dailySummary ? (
           <Card className="bg-primary/5">
@@ -389,8 +387,7 @@ export default function DashboardPage() {
               </div>
             </CardContent>
           </Card>
-        )}
-      </>
+        )
     ),
     stats_overview: (
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -482,7 +479,11 @@ export default function DashboardPage() {
         )}
       </section>
     ) : null,
-  };
+  }), [
+      isSummaryLoading, dailySummary, dailyQuote, pointsToday, todaysBadges, 
+      productivityData, todaysRoutines, pendingTasks, renderTaskList, 
+      todaysCompletedTasks, todaysCompletedRoutines, viewMode
+  ]);
   
   const visibleWidgets = useMemo(() => {
     return layout.filter(w => w.isVisible && widgetMap[w.id] !== null);
