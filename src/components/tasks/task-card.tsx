@@ -1,3 +1,4 @@
+
 import React, {useState, lazy, Suspense, memo} from 'react';
 import {
   Card,
@@ -34,7 +35,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {useConfetti} from '@/components/providers/confetti-provider';
-import { useTimer } from '@/hooks/use-timer';
+import { useTasks } from '@/hooks/use-tasks';
 
 const TimerDialog = lazy(() =>
   import('./timer-dialog').then(module => ({default: module.TimerDialog}))
@@ -82,7 +83,7 @@ export const TaskCard = memo(function TaskCard({
   const [isTimerOpen, setTimerOpen] = useState(false);
   const {toast} = useToast();
   const {fire} = useConfetti();
-  const { activeItem } = useTimer();
+  const { activeItem } = useTasks();
   const isTimerActive = activeItem?.type === 'task' && activeItem.item.id === task.id;
 
   const handleStatusChange = (newStatus: TaskStatus) => {
@@ -100,7 +101,7 @@ export const TaskCard = memo(function TaskCard({
   };
 
   const handleTimerComplete = () => {
-    // This is now handled by the useTimer hook
+    // This is now handled by the useTasks hook
   };
 
   const formattedDate = format(parseISO(task.date), 'MMM d, yyyy');

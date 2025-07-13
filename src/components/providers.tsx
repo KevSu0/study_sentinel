@@ -37,7 +37,8 @@ import {SplashScreen} from '@/components/splash-screen';
 import {GlobalTimerBar} from './tasks/global-timer-bar';
 import {BottomNav} from './bottom-nav';
 import {cn} from '@/lib/utils';
-import {TimerProvider} from '@/hooks/use-timer';
+import { TasksProvider } from '@/hooks/use-tasks';
+import { useTasks } from '@/hooks/use-tasks';
 
 const ChatWidget = dynamic(
   () => import('@/components/coach/chat-widget').then(m => m.ChatWidget),
@@ -47,6 +48,7 @@ const ChatWidget = dynamic(
 function AppLayout({children}: {children: ReactNode}) {
   const pathname = usePathname();
   const {isMobile, setOpenMobile} = useSidebar();
+  const { isLoaded } = useTasks();
 
   const handleMenuClick = () => {
     if (isMobile) {
@@ -100,6 +102,10 @@ function AppLayout({children}: {children: ReactNode}) {
     },
     {href: '/profile', label: 'Profile', icon: User, showInSidebar: true},
   ];
+  
+  if (!isLoaded) {
+    return <SplashScreen />;
+  }
 
   return (
     <>
@@ -143,32 +149,19 @@ function AppLayout({children}: {children: ReactNode}) {
       </SidebarInset>
       <Toaster />
       <BottomNav />
+      <ChatWidget />
     </>
   );
 }
 
 export function Providers({children}: {children: ReactNode}) {
-  const [showSplash, setShowSplash] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowSplash(false);
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (showSplash) {
-    return <SplashScreen />;
-  }
-
   return (
     <ConfettiProvider>
-      <TimerProvider>
+      <TasksProvider>
         <SidebarProvider>
           <AppLayout>{children}</AppLayout>
         </SidebarProvider>
-      </TimerProvider>
+      </TasksProvider>
     </ConfettiProvider>
   );
 }

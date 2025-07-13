@@ -21,7 +21,7 @@ import type {StudyTask} from '@/lib/types';
 import {useConfetti} from '@/components/providers/confetti-provider';
 import {useToast} from '@/hooks/use-toast';
 import {format} from 'date-fns';
-import { useTimer } from '@/hooks/use-timer';
+import { useTasks } from '@/hooks/use-tasks';
 
 const TimerDialog = lazy(() =>
   import('./timer-dialog').then(module => ({default: module.TimerDialog}))
@@ -44,7 +44,7 @@ export const SimpleTaskItem = memo(function SimpleTaskItem({
   onPushToNextDay,
   onEdit,
 }: SimpleTaskItemProps) {
-  const { activeItem } = useTimer();
+  const { activeItem } = useTasks();
   const isTimerActive = activeItem?.type === 'task' && activeItem.item.id === task.id;
 
   const isCompleted = task.status === 'completed';
@@ -67,7 +67,7 @@ export const SimpleTaskItem = memo(function SimpleTaskItem({
   };
 
   const handleTimerComplete = () => {
-    // The useTimer hook handles updating the task status now.
+    // The useTasks hook handles updating the task status now.
     // We just need to make sure the UI reflects it.
     // This could involve refetching or relying on the hook's state management.
   };

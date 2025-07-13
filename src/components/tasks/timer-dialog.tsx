@@ -1,5 +1,6 @@
+
 'use client';
-import React, {useState, useEffect} from 'react';
+import React, {useState} from 'react';
 import {
   Dialog,
   DialogContent,
@@ -12,7 +13,7 @@ import {Button} from '@/components/ui/button';
 import {Pause, Play, CheckCircle, XCircle} from 'lucide-react';
 import type {StudyTask} from '@/lib/types';
 import {cn} from '@/lib/utils';
-import {useTimer} from '@/hooks/use-timer';
+import { useTasks } from '@/hooks/use-tasks';
 import {StopTimerDialog} from './stop-timer-dialog';
 
 interface TimerDialogProps {
@@ -32,7 +33,7 @@ export function TimerDialog({task, isOpen, onOpenChange, onComplete}: TimerDialo
     togglePause,
     completeTimer,
     stopTimer,
-  } = useTimer();
+  } = useTasks();
 
   const [isStopDialogOpen, setStopDialogOpen] = useState(false);
 

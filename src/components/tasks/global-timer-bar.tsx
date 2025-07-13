@@ -1,6 +1,7 @@
+
 'use client';
 import React, {useState} from 'react';
-import {useTimer} from '@/hooks/use-timer';
+import { useTasks } from '@/hooks/use-tasks';
 import type {StudyTask, Routine} from '@/lib/types';
 import {Button} from '@/components/ui/button';
 import {Timer, CheckCircle, XCircle, Pause, Play} from 'lucide-react';
@@ -15,20 +16,17 @@ export function GlobalTimerBar() {
     togglePause,
     completeTimer,
     stopTimer,
-  } = useTimer();
+  } = useTasks();
 
   const [isStopDialogOpen, setStopDialogOpen] = useState(false);
 
   const handleStop = () => {
-    // For task timers, we need to ask for a reason.
     if (activeItem?.type === 'task') {
-      // Pause timer before opening dialog if it's running.
       if (!isPaused) {
         togglePause();
       }
       setStopDialogOpen(true);
     } else {
-      // For routines, just stop it.
       stopTimer('Stopped routine timer');
     }
   };

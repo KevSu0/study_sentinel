@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { PlayCircle, Timer, Clock } from 'lucide-react';
 import { Routine } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import { useTimer } from '@/hooks/use-timer';
+import { useTasks } from '@/hooks/use-tasks';
 
 interface RoutineDashboardCardProps {
   routine: Routine;
@@ -14,7 +15,7 @@ interface RoutineDashboardCardProps {
 
 export function RoutineDashboardCard({ routine }: RoutineDashboardCardProps) {
   const { toast } = useToast();
-  const { activeItem, startTimer } = useTimer();
+  const { activeItem, startTimer } = useTasks();
 
   const isTimerActiveForThis = activeItem?.type === 'routine' && activeItem.item.id === routine.id;
   const isAnyTimerActive = !!activeItem;

@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, {useState} from 'react';
 import {
   Card,
   CardHeader,
@@ -25,7 +26,7 @@ import {
 import {Badge} from '@/components/ui/badge';
 import {Routine} from '@/lib/types';
 import {useToast} from '@/hooks/use-toast';
-import {useTimer} from '@/hooks/use-timer';
+import {useTasks} from '@/hooks/use-tasks';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,7 +54,8 @@ export const RoutineListItem = React.memo(function RoutineListItem({
   onDelete,
 }: RoutineListItemProps) {
   const {toast} = useToast();
-  const {activeItem, startTimer} = useTimer();
+  const {activeItem, startTimer} = useTasks();
+  const [isAlertOpen, setAlertOpen] = useState(false);
 
   const isTimerActiveForThis =
     activeItem?.type === 'routine' && activeItem.item.id === routine.id;
@@ -79,7 +81,7 @@ export const RoutineListItem = React.memo(function RoutineListItem({
   const sortedDays = dayOrder.filter(d => routine.days.includes(d));
 
   return (
-    <AlertDialog>
+    <>
       <Card className="flex flex-col">
         <CardHeader>
           <div className="flex justify-between items-start gap-2">
@@ -99,14 +101,12 @@ export const RoutineListItem = React.memo(function RoutineListItem({
                 <DropdownMenuItem onSelect={() => onEdit(routine)}>
                   <Pencil className="mr-2 h-4 w-4" /> Edit
                 </DropdownMenuItem>
-                <AlertDialogTrigger asChild>
-                  <DropdownMenuItem
-                    onSelect={e => e.preventDefault()}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                  </DropdownMenuItem>
-                </AlertDialogTrigger>
+                <DropdownMenuItem
+                  onSelect={() => setAlertOpen(true)}
+                  className="text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -146,20 +146,23 @@ export const RoutineListItem = React.memo(function RoutineListItem({
           </Button>
         </CardFooter>
       </Card>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will permanently delete the routine "{routine.title}".
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={() => onDelete(routine.id)}>
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+
+      <AlertDialog open={isAlertOpen} onOpenChange={setAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the routine "{routine.title}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => onDelete(routine.id)}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 });
