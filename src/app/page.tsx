@@ -514,13 +514,15 @@ export default function DashboardPage() {
     const {active, over} = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = layout.findIndex(w => w.id === active.id);
-      const newIndex = layout.findIndex(w => w.id === over.id);
-      setLayout(arrayMove(layout, oldIndex, newIndex));
+      setLayout(prevLayout => {
+        const oldIndex = prevLayout.findIndex(w => w.id === active.id);
+        const newIndex = prevLayout.findIndex(w => w.id === over.id);
+        return arrayMove(prevLayout, oldIndex, newIndex);
+      });
     }
   };
 
-  const widgetMap: Record<DashboardWidgetType, React.ReactNode> = {
+  const widgetMap: Record<DashboardWidgetType, React.ReactNode> = useMemo(() => ({
     daily_briefing: (
       <>
         {isSummaryLoading ? (
@@ -657,7 +659,7 @@ export default function DashboardPage() {
         )}
       </section>
     ),
-  };
+  }), [isSummaryLoading, dailySummary, dailyQuote, pointsToday, todaysBadges, productivityData, todaysRoutines, pendingTasks, todaysCompletedTasks, todaysCompletedRoutines, viewMode, renderTaskList]);
   
   const visibleWidgets = useMemo(() => layout.filter(w => w.isVisible), [layout]);
 

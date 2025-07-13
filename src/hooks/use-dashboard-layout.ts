@@ -36,7 +36,7 @@ const DEFAULT_LAYOUT: DashboardWidget[] = [
 ];
 
 export function useDashboardLayout() {
-  const [layout, setLayoutState] = useState<DashboardWidget[]>([]);
+  const [layout, setLayout] = useState<DashboardWidget[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -57,36 +57,37 @@ export function useDashboardLayout() {
                 orderedLayout.push(defaultWidget);
             }
         });
-        setLayoutState(orderedLayout as DashboardWidget[]);
+        setLayout(orderedLayout as DashboardWidget[]);
 
       } else {
-        setLayoutState(DEFAULT_LAYOUT);
+        setLayout(DEFAULT_LAYOUT);
       }
     } catch (error) {
       console.error('Failed to load dashboard layout', error);
-      setLayoutState(DEFAULT_LAYOUT);
+      setLayout(DEFAULT_LAYOUT);
     } finally {
       setIsLoaded(true);
     }
   }, []);
 
-  const setLayout = useCallback((newLayout: DashboardWidget[]) => {
-    setLayoutState(newLayout);
-    try {
-      localStorage.setItem(LAYOUT_KEY, JSON.stringify(newLayout));
-    } catch (error) {
-      console.error('Failed to save dashboard layout', error);
+  useEffect(() => {
+    if(isLoaded) {
+      try {
+        localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout));
+      } catch (error) {
+        console.error('Failed to save dashboard layout', error);
+      }
     }
-  }, []);
+  }, [layout, isLoaded]);
+
 
   const toggleWidgetVisibility = useCallback((widgetId: DashboardWidgetType) => {
-    const newLayout = layout.map(widget =>
+    setLayout(prevLayout => prevLayout.map(widget =>
       widget.id === widgetId
         ? {...widget, isVisible: !widget.isVisible}
         : widget
-    );
-    setLayout(newLayout);
-  }, [layout, setLayout]);
+    ));
+  }, []);
 
   return {layout, setLayout, toggleWidgetVisibility, isLoaded};
 }
