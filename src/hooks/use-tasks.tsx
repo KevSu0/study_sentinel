@@ -165,29 +165,29 @@ export function TasksProvider({children}: {children: ReactNode}) {
         const newTasks = currentTasks.map(task =>
           task.id === updatedTask.id ? updatedTask : task
         );
-        return saveTasks(newTasks);
-      });
 
-      // Log after state update is triggered
-      if (oldTask && oldTask.status !== updatedTask.status) {
-        if (updatedTask.status === 'completed') {
-          addLog('TASK_COMPLETE', {
-            taskId: updatedTask.id,
-            title: updatedTask.title,
-            points: updatedTask.points,
-          });
-        } else if (updatedTask.status === 'in_progress') {
-          addLog('TASK_IN_PROGRESS', {
+        // Log specific status changes
+        if (oldTask && oldTask.status !== updatedTask.status) {
+          if (updatedTask.status === 'completed') {
+            addLog('TASK_COMPLETE', {
+              taskId: updatedTask.id,
+              title: updatedTask.title,
+              points: updatedTask.points,
+            });
+          } else if (updatedTask.status === 'in_progress') {
+            addLog('TASK_IN_PROGRESS', {
+              taskId: updatedTask.id,
+              title: updatedTask.title,
+            });
+          }
+        } else if (oldTask) {
+          addLog('TASK_UPDATE', {
             taskId: updatedTask.id,
             title: updatedTask.title,
           });
         }
-      } else {
-        addLog('TASK_UPDATE', {
-          taskId: updatedTask.id,
-          title: updatedTask.title,
-        });
-      }
+        return saveTasks(newTasks);
+      });
     },
     [addLog]
   );
@@ -195,16 +195,17 @@ export function TasksProvider({children}: {children: ReactNode}) {
   const archiveTask = useCallback(
     (taskId: string) => {
       setTasks(prevTasks => {
-        let taskTitle = '';
-        const taskToArchive = prevTasks.find(t => t.id === taskId);
-        if (taskToArchive) taskTitle = taskToArchive.title;
-
-        const newTasks = prevTasks.map(task =>
-          task.id === taskId ? {...task, status: 'archived'} : task
-        );
+        let taskToArchive: StudyTask | undefined;
+        const newTasks = prevTasks.map(task => {
+          if (task.id === taskId) {
+            taskToArchive = task;
+            return {...task, status: 'archived'};
+          }
+          return task;
+        });
 
         if (taskToArchive) {
-          addLog('TASK_ARCHIVE', {taskId, title: taskTitle});
+          addLog('TASK_ARCHIVE', {taskId, title: taskToArchive.title});
         }
         return saveTasks(newTasks);
       });
@@ -215,16 +216,17 @@ export function TasksProvider({children}: {children: ReactNode}) {
   const unarchiveTask = useCallback(
     (taskId: string) => {
       setTasks(prevTasks => {
-        let taskTitle = '';
-        const taskToUnarchive = prevTasks.find(t => t.id === taskId);
-        if (taskToUnarchive) taskTitle = taskToUnarchive.title;
+        let taskToUnarchive: StudyTask | undefined;
+        const newTasks = prevTasks.map(task => {
+          if (task.id === taskId) {
+            taskToUnarchive = task;
+            return {...task, status: 'todo'};
+          }
+          return task;
+        });
         
-        const newTasks = prevTasks.map(task =>
-          task.id === taskId ? {...task, status: 'todo'} : task
-        );
-
         if (taskToUnarchive) {
-          addLog('TASK_UNARCHIVE', {taskId, title: taskTitle});
+          addLog('TASK_UNARCHIVE', {taskId, title: taskToUnarchive.title});
         }
         return saveTasks(newTasks);
       });
@@ -235,19 +237,19 @@ export function TasksProvider({children}: {children: ReactNode}) {
   const pushTaskToNextDay = useCallback(
     (taskId: string) => {
       setTasks(prevTasks => {
-        let taskTitle = '';
+        let pushedTask: StudyTask | undefined;
         const newTasks = prevTasks.map(task => {
           if (task.id === taskId) {
-            taskTitle = task.title;
             const taskDate = new Date(`${task.date}T00:00:00`);
             const nextDay = addDays(taskDate, 1);
+            pushedTask = task;
             return {...task, date: format(nextDay, 'yyyy-MM-dd')};
           }
           return task;
         });
 
-        if (taskTitle) {
-          addLog('TASK_PUSH_NEXT_DAY', {taskId, title: taskTitle});
+        if (pushedTask) {
+          addLog('TASK_PUSH_NEXT_DAY', {taskId, title: pushedTask.title});
         }
         return saveTasks(newTasks);
       });
@@ -257,46 +259,39 @@ export function TasksProvider({children}: {children: ReactNode}) {
 
   const startTimer = useCallback(
     (item: StudyTask | Routine) => {
-      setActiveTimer(currentTimer => {
-        if (currentTimer) {
-          toast({
-            title: 'Timer Already Active',
-            description: `Please stop or complete the timer for "${currentTimer.item.item.title}" first.`,
-            variant: 'destructive',
-          });
-          return currentTimer;
-        }
+      if (activeTimer) {
+        toast({
+          title: 'Timer Already Active',
+          description: `Please stop or complete the timer for "${activeTimer.item.item.title}" first.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      const type = 'duration' in item ? 'task' : 'routine';
+      const timerData: StoredTimer = {
+        item: {type, item},
+        isPaused: false,
+        pausedTime: 0,
+        pausedDuration: 0,
+      };
 
-        const type = 'duration' in item ? 'task' : 'routine';
-        const timerData: StoredTimer = {
-          item: {type, item},
-          isPaused: false,
-          pausedTime: 0,
-          pausedDuration: 0,
-        };
-
-        if (type === 'task') {
-          timerData.endTime = Date.now() + item.duration * 60 * 1000;
-          timerData.pausedTime = item.duration * 60;
-          addLog('TIMER_START', {taskId: item.id, taskTitle: item.title});
-          updateTask({...item, status: 'in_progress'});
-        } else {
-          timerData.startTime = Date.now();
-          addLog('TIMER_START', {
-            routineId: item.id,
-            routineTitle: item.title,
-          });
-        }
+      if (type === 'task') {
+        timerData.endTime = Date.now() + item.duration * 60 * 1000;
+        timerData.pausedTime = item.duration * 60;
+        addLog('TIMER_START', {taskId: item.id, taskTitle: item.title});
+        updateTask({...item, status: 'in_progress'});
+      } else {
+        timerData.startTime = Date.now();
+        addLog('TIMER_START', {
+          routineId: item.id,
+          routineTitle: item.title,
+        });
+      }
         
-        if (timerData) {
-          localStorage.setItem(TIMER_KEY, JSON.stringify(timerData));
-        } else {
-          localStorage.removeItem(TIMER_KEY);
-        }
-        return timerData;
-      });
+      saveTimer(timerData);
     },
-    [toast, addLog, updateTask]
+    [activeTimer, toast, addLog, updateTask]
   );
 
   const togglePause = useCallback(() => {
