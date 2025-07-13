@@ -303,6 +303,11 @@ export default function DashboardPage() {
     motivationalParagraph: string;
   } | null>(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   const isTaskFormOpen = !!editingTask;
 
@@ -690,58 +695,60 @@ export default function DashboardPage() {
             <Skeleton className="h-28 w-full" />
           </div>
         ) : (
-          <DragDropContext onDragEnd={onDragEnd}>
-            <Droppable droppableId="dashboard-widgets">
-              {(provided) => (
-                <div
-                  {...provided.droppableProps}
-                  ref={provided.innerRef}
-                  className="space-y-6"
-                >
-                  {visibleWidgets.map((widget, index) => (
-                    <Draggable key={widget.id} draggableId={widget.id} index={index}>
-                      {(provided) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                        >
-                          {widgetMap[widget.id]}
+          hasMounted && (
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId="dashboard-widgets">
+                {(provided) => (
+                  <div
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className="space-y-6"
+                  >
+                    {visibleWidgets.map((widget, index) => (
+                      <Draggable key={widget.id} draggableId={widget.id} index={index}>
+                        {(provided) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                          >
+                            {widgetMap[widget.id]}
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                    
+                    {visibleWidgets.length === 0 ? (
+                       <div className="flex items-center justify-center h-full pt-16">
+                          <EmptyState
+                            onAddTask={() => setCustomizeOpen(true)}
+                            title="Dashboard is Empty"
+                            message="Customize your dashboard to show the widgets that matter most to you."
+                            buttonText="Customize Dashboard"
+                          />
                         </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                  
-                  {visibleWidgets.length === 0 ? (
-                     <div className="flex items-center justify-center h-full pt-16">
-                        <EmptyState
-                          onAddTask={() => setCustomizeOpen(true)}
-                          title="Dashboard is Empty"
-                          message="Customize your dashboard to show the widgets that matter most to you."
-                          buttonText="Customize Dashboard"
-                        />
-                      </div>
-                  ) : (todaysTasks.length === 0 && todaysRoutines.length === 0 && !layout.find(w => w.id === 'todays_plan')?.isVisible && !layout.find(w => w.id === 'todays_routines')?.isVisible) && (
-                     <div className="flex items-center justify-center h-full">
-                        <EmptyState
-                          onAddTask={() => {}}
-                          title="A Fresh Start!"
-                          message="No tasks scheduled for today. Let's plan your day and make it a productive one!"
-                          buttonText="Plan Your Day"
-                        >
-                          <Button asChild className="mt-6">
-                            <Link href="/tasks">
-                              <PlusCircle /> Plan Your Day
-                            </Link>
-                          </Button>
-                        </EmptyState>
-                      </div>
-                  )}
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
+                    ) : (todaysTasks.length === 0 && todaysRoutines.length === 0 && !layout.find(w => w.id === 'todays_plan')?.isVisible && !layout.find(w => w.id === 'todays_routines')?.isVisible) && (
+                       <div className="flex items-center justify-center h-full">
+                          <EmptyState
+                            onAddTask={() => {}}
+                            title="A Fresh Start!"
+                            message="No tasks scheduled for today. Let's plan your day and make it a productive one!"
+                            buttonText="Plan Your Day"
+                          >
+                            <Button asChild className="mt-6">
+                              <Link href="/tasks">
+                                <PlusCircle /> Plan Your Day
+                              </Link>
+                            </Button>
+                          </EmptyState>
+                        </div>
+                    )}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+          )
         )}
       </main>
       <TaskDialog
