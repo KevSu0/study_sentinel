@@ -452,7 +452,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
     addTask,
     updateTask,
     archiveTask,
-    unarchiveTask,
+unarchiveTask,
     pushTaskToNextDay,
     activeItem: activeTimer?.item ?? null,
     timeDisplay,
