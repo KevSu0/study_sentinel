@@ -15,7 +15,7 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-import {useProfile, type UserProfile} from '@/hooks/use-profile';
+import {useProfile, type UserProfile} from '@/hooks/use-profile.tsx';
 import {useToast} from '@/hooks/use-toast';
 import {Skeleton} from '@/components/ui/skeleton';
 

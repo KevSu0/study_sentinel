@@ -40,12 +40,21 @@ export function LoggerProvider({children}: {children: ReactNode}) {
   const [logs, setLogs] = useState<LogEvent[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Memoize the load function to prevent re-creation
   const loadLogs = useCallback(() => {
     const sessionDate = getSessionDate();
     const logKey = getLogKeyForDate(sessionDate);
     try {
       const savedLogs = localStorage.getItem(logKey);
-      setLogs(savedLogs ? JSON.parse(savedLogs) : []);
+      const parsedLogs = savedLogs ? JSON.parse(savedLogs) : [];
+      // Use functional update to avoid stale state issues if loadLogs is called rapidly
+      setLogs(currentLogs => {
+        // Simple check to see if logs are different to prevent needless re-renders
+        if (JSON.stringify(currentLogs) !== JSON.stringify(parsedLogs)) {
+          return parsedLogs;
+        }
+        return currentLogs;
+      });
     } catch (error) {
       console.error('Failed to load logs', error);
       setLogs([]);
@@ -70,6 +79,7 @@ export function LoggerProvider({children}: {children: ReactNode}) {
         payload,
       };
 
+      // Use functional update to ensure we're always working with the latest state
       setLogs(currentLogs => {
         const updatedLogs = [...currentLogs, newLog];
         const logKey = getLogKeyForDate(getSessionDate());
@@ -117,9 +127,11 @@ export function LoggerProvider({children}: {children: ReactNode}) {
         }
       }
     }
+    // Sort by timestamp to ensure chronological order
+    allLogs.sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     return allLogs;
   }, []);
-
+  
   const value = {
     logs,
     isLoaded,

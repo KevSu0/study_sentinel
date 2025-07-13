@@ -101,7 +101,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
     }
   }, []);
 
-  const saveTasks = (tasksToSave: StudyTask[]) => {
+  const saveTasks = useCallback((tasksToSave: StudyTask[]) => {
     const sortedTasks = [...tasksToSave].sort(
       (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
     );
@@ -111,16 +111,16 @@ export function TasksProvider({children}: {children: ReactNode}) {
       console.error('Failed to save tasks to localStorage', error);
     }
     return sortedTasks;
-  };
+  }, []);
 
-  const saveTimer = (timer: StoredTimer | null) => {
+  const saveTimer = useCallback((timer: StoredTimer | null) => {
     setActiveTimer(timer);
     if (timer) {
       localStorage.setItem(TIMER_KEY, JSON.stringify(timer));
     } else {
       localStorage.removeItem(TIMER_KEY);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!loggerLoaded) return;
@@ -138,7 +138,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
     } finally {
       setIsLoaded(true);
     }
-  }, [loggerLoaded]);
+  }, [loggerLoaded, saveTimer]);
 
   const addTask = useCallback(
     (task: Omit<StudyTask, 'id' | 'status'>) => {
@@ -154,19 +154,22 @@ export function TasksProvider({children}: {children: ReactNode}) {
         return saveTasks(updatedTasks);
       });
     },
-    [addLog]
+    [addLog, saveTasks]
   );
   
   const updateTask = useCallback(
     (updatedTask: StudyTask) => {
       let oldTask: StudyTask | undefined;
       setTasks(currentTasks => {
+        // Find the original task state from before this update
         oldTask = currentTasks.find(t => t.id === updatedTask.id);
+        
+        // Create the new array of tasks
         const newTasks = currentTasks.map(task =>
           task.id === updatedTask.id ? updatedTask : task
         );
 
-        // Log specific status changes
+        // Check for status changes and log accordingly, now that we have both old and new states
         if (oldTask && oldTask.status !== updatedTask.status) {
           if (updatedTask.status === 'completed') {
             addLog('TASK_COMPLETE', {
@@ -181,15 +184,17 @@ export function TasksProvider({children}: {children: ReactNode}) {
             });
           }
         } else if (oldTask) {
+          // It was a general update, not a status change
           addLog('TASK_UPDATE', {
             taskId: updatedTask.id,
             title: updatedTask.title,
           });
         }
+        
         return saveTasks(newTasks);
       });
     },
-    [addLog]
+    [addLog, saveTasks]
   );
 
   const archiveTask = useCallback(
@@ -210,7 +215,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
         return saveTasks(newTasks);
       });
     },
-    [addLog]
+    [addLog, saveTasks]
   );
 
   const unarchiveTask = useCallback(
@@ -231,7 +236,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
         return saveTasks(newTasks);
       });
     },
-    [addLog]
+    [addLog, saveTasks]
   );
 
   const pushTaskToNextDay = useCallback(
@@ -254,7 +259,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
         return saveTasks(newTasks);
       });
     },
-    [addLog]
+    [addLog, saveTasks]
   );
 
   const startTimer = useCallback(
@@ -291,7 +296,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
         
       saveTimer(timerData);
     },
-    [activeTimer, toast, addLog, updateTask]
+    [activeTimer, toast, addLog, updateTask, saveTimer]
   );
 
   const togglePause = useCallback(() => {
@@ -336,10 +341,10 @@ export function TasksProvider({children}: {children: ReactNode}) {
         addLog('TIMER_PAUSE', logPayload);
       }
       
-      saveTimer(newTimerState); // This saves to localStorage
+      saveTimer(newTimerState);
       return newTimerState;
     });
-  }, [addLog]);
+  }, [addLog, saveTimer]);
 
   const stopTimer = useCallback(
     (reason: string) => {
@@ -378,7 +383,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
       }
       saveTimer(null);
     },
-    [activeTimer, addLog, updateTask]
+    [activeTimer, addLog, updateTask, saveTimer]
   );
 
   const completeTimer = useCallback(() => {
@@ -434,7 +439,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
       });
     }
     saveTimer(null);
-  }, [activeTimer, addLog, updateTask, fire, toast]);
+  }, [activeTimer, addLog, updateTask, fire, toast, saveTimer]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -455,7 +460,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
               taskTitle: newTimerState.item.item.title,
             });
             newTimerState.overtimeNotified = true;
-            saveTimer(newTimerState);
+            saveTimer(newTimerState); // Save immediately after notifying
           }
         } else {
           if (!newTimerState.startTime) return newTimerState;
@@ -467,7 +472,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [addLog]);
+  }, [addLog, saveTimer]);
 
   const value: TasksContextType = {
     tasks,

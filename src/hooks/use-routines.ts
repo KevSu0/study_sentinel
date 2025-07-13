@@ -1,9 +1,21 @@
+
 'use client';
 
-import {useState, useEffect, useCallback} from 'react';
+import {useState, useEffect, useCallback, createContext, useContext, ReactNode} from 'react';
 import {type Routine} from '@/lib/types';
 
 const ROUTINES_KEY = 'studySentinelRoutines';
+
+interface RoutinesContextType {
+    routines: Routine[];
+    addRoutine: (routine: Omit<Routine, 'id'>) => void;
+    updateRoutine: (routine: Routine) => void;
+    deleteRoutine: (routineId: string) => void;
+    isLoaded: boolean;
+}
+
+const RoutinesContext = createContext<RoutinesContextType | null>(null);
+
 
 const saveRoutines = (routines: Routine[]) => {
   const sortedRoutines = [...routines].sort(
@@ -17,7 +29,7 @@ const saveRoutines = (routines: Routine[]) => {
   return sortedRoutines;
 };
 
-export function useRoutines() {
+export function RoutinesProvider({children}: {children: ReactNode}) {
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -73,11 +85,25 @@ export function useRoutines() {
     []
   );
 
-  return {
+  const value = {
     routines,
     addRoutine,
     updateRoutine,
     deleteRoutine,
     isLoaded,
-  };
+  }
+
+  return (
+    <RoutinesContext.Provider value={value}>
+        {children}
+    </RoutinesContext.Provider>
+  )
+}
+
+export function useRoutines() {
+  const context = useContext(RoutinesContext);
+  if (!context) {
+    throw new Error('useRoutines must be used within a RoutinesProvider');
+  }
+  return context;
 }

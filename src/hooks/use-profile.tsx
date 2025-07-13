@@ -1,6 +1,7 @@
+
 'use client';
 
-import {useState, useEffect, useCallback} from 'react';
+import {useState, useEffect, useCallback, createContext, useContext, ReactNode} from 'react';
 
 export type UserProfile = {
   name: string;
@@ -24,7 +25,15 @@ const defaultProfile: UserProfile = {
   reasonForUsing: '',
 };
 
-export function useProfile() {
+interface ProfileContextType {
+    profile: UserProfile;
+    updateProfile: (newProfileData: Partial<UserProfile>) => void;
+    isLoaded: boolean;
+}
+
+const ProfileContext = createContext<ProfileContextType | null>(null);
+
+export function ProfileProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile>(defaultProfile);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -57,10 +66,21 @@ export function useProfile() {
       return updatedProfile;
     });
   }, []);
+  
+  const value = { profile, updateProfile, isLoaded };
 
-  return {
-    profile,
-    updateProfile,
-    isLoaded,
-  };
+  return (
+    <ProfileContext.Provider value={value}>
+        {children}
+    </ProfileContext.Provider>
+  )
+}
+
+
+export function useProfile() {
+    const context = useContext(ProfileContext);
+    if (!context) {
+        throw new Error("useProfile must be used within a ProfileProvider");
+    }
+  return context;
 }

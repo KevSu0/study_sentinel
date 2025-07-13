@@ -15,7 +15,7 @@ import {
   useDashboardLayout,
   WIDGET_NAMES,
   type DashboardWidget,
-} from '@/hooks/use-dashboard-layout';
+} from '@/hooks/use-dashboard-layout.tsx';
 import {DndContext, closestCenter, type DragEndEvent} from '@dnd-kit/core';
 import {
   arrayMove,

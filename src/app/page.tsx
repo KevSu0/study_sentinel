@@ -11,8 +11,6 @@ import {
   Award as BadgeIcon,
   Lightbulb,
   Sparkles,
-  LayoutGrid,
-  List,
   Settings,
 } from 'lucide-react';
 import {useTasks} from '@/hooks/use-tasks.tsx';
@@ -27,7 +25,7 @@ import {BadgeCard} from '@/components/badges/badge-card';
 import Link from 'next/link';
 import {getDailySummary} from '@/lib/actions';
 import {useLogger} from '@/hooks/use-logger.tsx';
-import {useProfile} from '@/hooks/use-profile';
+import {useProfile} from '@/hooks/use-profile.tsx';
 import {useViewMode} from '@/hooks/use-view-mode';
 import {cn} from '@/lib/utils';
 import {useRoutines} from '@/hooks/use-routines';
@@ -39,7 +37,7 @@ import {
 import {
   useDashboardLayout,
   type DashboardWidgetType,
-} from '@/hooks/use-dashboard-layout';
+} from '@/hooks/use-dashboard-layout.tsx';
 import {
   DndContext,
   closestCenter,
@@ -113,173 +111,6 @@ const motivationalQuotes = [
       "The harder you work for something, the greater you'll feel when you achieve it.",
     author: 'Unknown',
   },
-  {
-    quote: 'The secret to success is to start before you are ready.',
-    author: 'Marie Forleo',
-  },
-  {
-    quote: 'The only place where success comes before work is in the dictionary.',
-    author: 'Vidal Sassoon',
-  },
-  {
-    quote: 'I find that the harder I work, the more luck I seem to have.',
-    author: 'Thomas Jefferson',
-  },
-  {
-    quote:
-      'Success is not final, failure is not fatal: it is the courage to continue that counts.',
-    author: 'Winston Churchill',
-  },
-  {
-    quote: "Don't wish it were easier, wish you were better.",
-    author: 'Jim Rohn',
-  },
-  {
-    quote: 'The way to get started is to quit talking and begin doing.',
-    author: 'Walt Disney',
-  },
-  {
-    quote:
-      'I am not a product of my circumstances. I am a product of my decisions.',
-    author: 'Stephen Covey',
-  },
-  {
-    quote: 'You don’t have to be great to start, but you have to start to be great.',
-    author: 'Zig Ziglar',
-  },
-  {
-    quote: 'Procrastination makes easy things hard, and hard things harder.',
-    author: 'Mason Cooley',
-  },
-  {
-    quote: 'The future depends on what you do today.',
-    author: 'Mahatma Gandhi',
-  },
-  {
-    quote:
-      'Study while others are sleeping; work while others are loafing; prepare while others are playing; and dream while others are wishing.',
-    author: 'William Arthur Ward',
-  },
-  {
-    quote:
-      'The beautiful thing about learning is that no one can take it away from you.',
-    author: 'B.B. King',
-  },
-  {
-    quote: 'An investment in knowledge pays the best interest.',
-    author: 'Benjamin Franklin',
-  },
-  {
-    quote:
-      'The capacity to learn is a gift; the ability to learn is a skill; the willingness to learn is a choice.',
-    author: 'Brian Herbert',
-  },
-  {
-    quote: 'Learning is not a spectator sport.',
-    author: 'D. Blocher',
-  },
-  {
-    quote: 'There are no shortcuts to any place worth going.',
-    author: 'Beverly Sills',
-  },
-  {
-    quote: 'The pain you feel today is the strength you will feel tomorrow.',
-    author: 'Unknown',
-  },
-  {
-    quote: 'It’s not about having time. It’s about making time.',
-    author: 'Unknown',
-  },
-  {
-    quote: 'Discipline is the bridge between goals and accomplishment.',
-    author: 'Jim Rohn',
-  },
-  {
-    quote: 'Strive for progress, not perfection.',
-    author: 'Unknown',
-  },
-  {
-    quote: 'You are capable of more than you know.',
-    author: 'Unknown',
-  },
-  {
-    quote: "Focus on your goal. Don't look in any direction but ahead.",
-    author: 'Unknown',
-  },
-  {
-    quote: 'A little progress each day adds up to big results.',
-    author: 'Satya Nani',
-  },
-  {
-    quote: "It always seems impossible until it's done.",
-    author: 'Nelson Mandela',
-  },
-  {
-    quote: 'Wake up with determination. Go to bed with satisfaction.',
-    author: 'Unknown',
-  },
-  {
-    quote:
-      'The difference between ordinary and extraordinary is that little extra.',
-    author: 'Jimmy Johnson',
-  },
-  {
-    quote: 'The key to success is to focus on goals, not obstacles.',
-    author: 'Unknown',
-  },
-  {
-    quote: 'Your only limit is your mind.',
-    author: 'Unknown',
-  },
-  {
-    quote: 'Doubt kills more dreams than failure ever will.',
-    author: 'Suzy Kassem',
-  },
-  {
-    quote: 'Success doesn’t just find you. You have to go out and get it.',
-    author: 'Unknown',
-  },
-  {
-    quote: 'The secret of your future is hidden in your daily routine.',
-    author: 'Mike Murdock',
-  },
-  {
-    quote: 'If you can dream it, you can do it.',
-    author: 'Walt Disney',
-  },
-  {
-    quote: 'The journey of a thousand miles begins with a single step.',
-    author: 'Lao Tzu',
-  },
-  {
-    quote: "Don't stop when you're tired. Stop when you're done.",
-    author: 'Unknown',
-  },
-  {
-    quote: 'What you do today can improve all your tomorrows.',
-    author: 'Ralph Marston',
-  },
-  {
-    quote: "It's going to be hard, but hard does not mean impossible.",
-    author: 'Unknown',
-  },
-  {
-    quote: 'Success is the child of preparation and determination.',
-    author: 'Unknown',
-  },
-  {
-    quote: 'The best way to predict your future is to create it.',
-    author: 'Abraham Lincoln',
-  },
-  {
-    quote: 'Either you run the day or the day runs you.',
-    author: 'Jim Rohn',
-  },
-  {
-    quote:
-      'Believe in yourself and all that you are. Know that there is something inside you that is greater than any obstacle.',
-    author: 'Christian D. Larson',
-  },
 ];
 
 function SortableWidget({id, children}: {id: string; children: React.ReactNode}) {
@@ -330,18 +161,13 @@ export default function DashboardPage() {
     motivationalParagraph: string;
   } | null>(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
-  const [hasMounted, setHasMounted] = useState(false);
-
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
 
   const isTaskFormOpen = !!editingTask;
 
   useEffect(() => {
     const fetchDailySummary = async () => {
       // Wait for all data to be loaded
-      if (!tasksLoaded || !loggerLoaded || !profileLoaded) return;
+      if (!loggerLoaded || !profileLoaded) return;
 
       const DAILY_SUMMARY_KEY = 'dailySummaryLastShown';
       const lastShownDate = localStorage.getItem(DAILY_SUMMARY_KEY);
@@ -374,7 +200,7 @@ export default function DashboardPage() {
     };
 
     fetchDailySummary();
-  }, [tasksLoaded, loggerLoaded, profileLoaded, getPreviousDayLogs, profile]);
+  }, [loggerLoaded, profileLoaded, getPreviousDayLogs, profile]);
 
   const openEditTaskDialog = (task: StudyTask) => {
     setEditingTask(task);
@@ -392,6 +218,7 @@ export default function DashboardPage() {
     viewModeLoaded &&
     routinesLoaded &&
     layoutLoaded;
+  
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
 
   const {
@@ -424,25 +251,21 @@ export default function DashboardPage() {
     const routineLogs = todaysTimedLogs.filter(
       l => l.type === 'ROUTINE_SESSION_COMPLETE'
     );
+    
+    // Points from routines are calculated and stored in the log, so sum them up.
     const routinePoints = routineLogs.reduce(
       (sum, log) => sum + (log.payload.points || 0),
       0
     );
     points += routinePoints;
 
-    const taskLogs = todaysTimedLogs.filter(
-      l => l.type === 'TIMER_SESSION_COMPLETE'
-    );
-    const manualTaskPoints = completed
-      .filter(t => !taskLogs.some(l => l.payload.taskId === t.id))
-      .reduce((sum, task) => sum + task.points, 0);
-    points += manualTaskPoints;
 
     const badges = allBadges.filter(
       badge =>
         earnedBadges.has(badge.id) &&
         earnedBadges.get(badge.id) === todayStr
     );
+    
     const today = new Date().getDay(); // Sunday - 0, Monday - 1, etc.
     const todaysRoutines = routines.filter(r => r.days.includes(today));
 
@@ -450,10 +273,10 @@ export default function DashboardPage() {
       (a, b) => parseISO(b.timestamp).getTime() - parseISO(a.timestamp).getTime()
     );
 
-    const taskTime = taskLogs.reduce(
-      (sum, log) => sum + log.payload.duration,
-      0
-    );
+    const taskTime = todaysTimedLogs
+      .filter(l => l.type === 'TIMER_SESSION_COMPLETE')
+      .reduce((sum, log) => sum + log.payload.duration, 0);
+      
     const routineTime = routineLogs.reduce(
       (sum, log) => sum + log.payload.duration,
       0
@@ -661,7 +484,9 @@ export default function DashboardPage() {
     ) : null,
   };
   
-  const visibleWidgets = useMemo(() => layout.filter(w => w.isVisible && widgetMap[w.id]), [layout, widgetMap]);
+  const visibleWidgets = useMemo(() => {
+    return layout.filter(w => w.isVisible && widgetMap[w.id] !== null);
+  }, [layout, widgetMap]);
 
   return (
     <div className="flex flex-col h-full">
@@ -702,55 +527,47 @@ export default function DashboardPage() {
             <Skeleton className="h-28 w-full" />
           </div>
         ) : (
-          hasMounted && (
-            <DndContext
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
+          <DndContext
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={visibleWidgets.map(w => w.id)}
+              strategy={verticalListSortingStrategy}
             >
-              <SortableContext
-                items={visibleWidgets.map(w => w.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="space-y-6">
-                  {visibleWidgets.map(widget => (
-                    <SortableWidget key={widget.id} id={widget.id}>
-                      {widgetMap[widget.id]}
-                    </SortableWidget>
-                  ))}
+              <div className="space-y-6">
+                {visibleWidgets.map(widget => (
+                  <SortableWidget key={widget.id} id={widget.id}>
+                    {widgetMap[widget.id]}
+                  </SortableWidget>
+                ))}
 
-                  {visibleWidgets.length === 0 ? (
-                    <div className="flex items-center justify-center h-full pt-16">
-                      <EmptyState
-                        onAddTask={() => setCustomizeOpen(true)}
-                        title="Dashboard is Empty"
-                        message="Customize your dashboard to show the widgets that matter most to you."
-                        buttonText="Customize Dashboard"
-                      />
-                    </div>
-                  ) : (todaysTasks.length === 0 &&
-                      todaysRoutines.length === 0 &&
-                      !layout.find(w => w.id === 'todays_plan')?.isVisible &&
-                      !layout.find(w => w.id === 'todays_routines')
-                        ?.isVisible) && (
-                    <div className="flex items-center justify-center h-full">
-                      <EmptyState
-                        onAddTask={() => {}}
-                        title="A Fresh Start!"
-                        message="No tasks scheduled for today. Let's plan your day and make it a productive one!"
-                        buttonText="Plan Your Day"
-                      >
-                        <Button asChild className="mt-6">
-                          <Link href="/tasks">
-                            <PlusCircle /> Plan Your Day
-                          </Link>
-                        </Button>
-                      </EmptyState>
-                    </div>
-                  )}
-                </div>
-              </SortableContext>
-            </DndContext>
-          )
+                {todaysTasks.length === 0 &&
+                 todaysRoutines.length === 0 && (
+                   <div className="flex items-center justify-center pt-16">
+                     <EmptyState
+                       onAddTask={() => {}}
+                       title="A Fresh Start!"
+                       message="No tasks or routines scheduled for today. Let's plan your day!"
+                     >
+                       <div className="flex flex-col sm:flex-row gap-4 mt-6">
+                         <Button asChild>
+                           <Link href="/tasks">
+                             <PlusCircle /> Plan Tasks
+                           </Link>
+                         </Button>
+                          <Button asChild variant="outline">
+                           <Link href="/timetable">
+                             <PlusCircle /> Set up Routines
+                           </Link>
+                         </Button>
+                       </div>
+                     </EmptyState>
+                   </div>
+                 )}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </main>
       <TaskDialog

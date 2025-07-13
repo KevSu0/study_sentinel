@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {useState, useEffect, type ReactNode} from 'react';
+import {ReactNode} from 'react';
 import dynamic from 'next/dynamic';
 import {
   Sidebar,
@@ -39,16 +39,30 @@ import {BottomNav} from './bottom-nav';
 import {cn} from '@/lib/utils';
 import { TasksProvider, useTasks } from '@/hooks/use-tasks.tsx';
 import { LoggerProvider } from '@/hooks/use-logger.tsx';
+import { useBadges } from '@/hooks/useBadges';
+import { ProfileProvider, useProfile } from '@/hooks/use-profile.tsx';
+import { RoutinesProvider, useRoutines } from '@/hooks/use-routines';
+import { ViewModeProvider, useViewMode } from '@/hooks/use-view-mode';
+import { DashboardLayoutProvider, useDashboardLayout } from '@/hooks/use-dashboard-layout.tsx';
 
-const ChatWidget = dynamic(
-  () => import('@/components/coach/chat-widget').then(m => m.ChatWidget),
-  {ssr: false}
-);
+// The Chat Widget is temporarily disabled.
+// const ChatWidget = dynamic(
+//   () => import('@/components/coach/chat-widget').then(m => m.ChatWidget),
+//   {ssr: false}
+// );
 
 function AppLayout({children}: {children: ReactNode}) {
   const pathname = usePathname();
   const {isMobile, setOpenMobile} = useSidebar();
-  const { isLoaded } = useTasks();
+  const { isLoaded: tasksLoaded } = useTasks();
+  const { isLoaded: badgesLoaded } = useBadges();
+  const { isLoaded: profileLoaded } = useProfile();
+  const { isLoaded: routinesLoaded } = useRoutines();
+  const { isLoaded: viewModeLoaded } = useViewMode();
+  const { isLoaded: layoutLoaded } = useDashboardLayout();
+
+  const isLoaded = tasksLoaded && badgesLoaded && profileLoaded && routinesLoaded && viewModeLoaded && layoutLoaded;
+
 
   const handleMenuClick = () => {
     if (isMobile) {
@@ -149,21 +163,53 @@ function AppLayout({children}: {children: ReactNode}) {
       </SidebarInset>
       <Toaster />
       <BottomNav />
-      <ChatWidget />
+      {/* <ChatWidget /> */}
     </>
   );
 }
 
+// Wrapper component to provide all contexts from hooks that were converted
+function HooksAsProviders({ children }: { children: ReactNode }) {
+  return (
+    <ProfileProvider>
+      <RoutinesProvider>
+        <ViewModeProvider>
+          <DashboardLayoutProvider>
+            <LoggerProvider>
+              <TasksProvider>
+                <BadgesProvider>
+                  {children}
+                </BadgesProvider>
+              </TasksProvider>
+            </LoggerProvider>
+          </DashboardLayoutProvider>
+        </ViewModeProvider>
+      </RoutinesProvider>
+    </ProfileProvider>
+  )
+}
+
+// Renaming useBadges to BadgesProvider for consistency
+const BadgesProvider = ({ children }: { children: ReactNode }) => {
+    // This component just uses the hook to provide its value, but doesn't render anything itself.
+    // The actual hook logic remains in useBadges.ts
+    // This is a common pattern to turn a hook into a provider if it manages complex state.
+    // For this case, we can just use the hook directly in components that need it,
+    // but we need to ensure they are inside all the other providers.
+    // Let's create a real provider for it.
+    const badgeHook = useBadges();
+    return <>{children}</>
+};
+
+
 export function Providers({children}: {children: ReactNode}) {
   return (
     <ConfettiProvider>
-      <LoggerProvider>
-        <TasksProvider>
-          <SidebarProvider>
-            <AppLayout>{children}</AppLayout>
-          </SidebarProvider>
-        </TasksProvider>
-      </LoggerProvider>
+      <SidebarProvider>
+        <HooksAsProviders>
+          <AppLayout>{children}</AppLayout>
+        </HooksAsProviders>
+      </SidebarProvider>
     </ConfettiProvider>
   );
 }

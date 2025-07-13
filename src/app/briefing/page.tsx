@@ -7,7 +7,7 @@ import {Skeleton} from '@/components/ui/skeleton';
 import {Sparkles, Lightbulb} from 'lucide-react';
 import {getDailySummary} from '@/lib/actions';
 import {useLogger} from '@/hooks/use-logger.tsx';
-import {useProfile} from '@/hooks/use-profile';
+import {useProfile} from '@/hooks/use-profile.tsx';
 
 export default function DailyBriefingPage() {
   const {getPreviousDayLogs, isLoaded: loggerLoaded} = useLogger();
