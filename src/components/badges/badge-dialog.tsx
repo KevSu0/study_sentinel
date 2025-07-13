@@ -229,7 +229,7 @@ export function BadgeDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg overflow-y-auto max-h-[90vh]">
+      <DialogContent className="sm:max-w-2xl overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? 'Edit Badge' : 'Create Custom Badge'}
@@ -239,7 +239,7 @@ export function BadgeDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="pt-4">
-          <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
             {/* Left Column: Badge Appearance */}
             <div className="space-y-4">
               <div className="space-y-2">
