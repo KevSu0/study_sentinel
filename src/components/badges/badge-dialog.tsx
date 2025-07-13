@@ -22,12 +22,13 @@ import {useForm, Controller, useFieldArray} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
 import {z} from 'zod';
 import {useEffect, useMemo} from 'react';
-import type {Badge, BadgeCondition} from '@/lib/types';
+import type {Badge} from '@/lib/types';
 import {useToast} from '@/hooks/use-toast';
 import * as Icons from 'lucide-react';
 import {ScrollArea} from '../ui/scroll-area';
 import {cn} from '@/lib/utils';
 import {X} from 'lucide-react';
+import {useRoutines} from '@/hooks/use-routines';
 
 const conditionSchema = z.object({
   type: z.enum([
@@ -35,12 +36,15 @@ const conditionSchema = z.object({
     'TASKS_COMPLETED',
     'DAY_STREAK',
     'ROUTINES_COMPLETED',
+    'POINTS_EARNED',
+    'TIME_ON_SUBJECT',
   ]),
   target: z.coerce
     .number()
     .min(1, 'Target value must be at least 1.')
     .default(1),
   timeframe: z.enum(['TOTAL', 'DAY', 'WEEK', 'MONTH']),
+  subjectId: z.string().optional(),
 });
 
 const badgeSchema = z.object({
@@ -50,7 +54,9 @@ const badgeSchema = z.object({
     .min(10, 'Description must be at least 10 characters.'),
   icon: z.string().min(1, 'An icon is required.'),
   color: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid color'),
-  conditions: z.array(conditionSchema).min(1, 'At least one condition is required.'),
+  conditions: z
+    .array(conditionSchema)
+    .min(1, 'At least one condition is required.'),
 });
 
 type BadgeFormData = z.infer<typeof badgeSchema>;
@@ -65,9 +71,11 @@ interface BadgeDialogProps {
 
 const conditionOptions = [
   {value: 'TOTAL_STUDY_TIME', label: 'Total Study Time (Minutes)'},
+  {value: 'TIME_ON_SUBJECT', label: 'Productive Time on Subject'},
+  {value: 'POINTS_EARNED', label: 'Points Earned'},
   {value: 'TASKS_COMPLETED', label: 'Tasks Completed'},
-  {value: 'DAY_STREAK', label: 'Study Day Streak'},
   {value: 'ROUTINES_COMPLETED', label: 'Routines Completed'},
+  {value: 'DAY_STREAK', label: 'Study Day Streak'},
 ];
 
 const timeframeOptions = [
@@ -80,8 +88,7 @@ const timeframeOptions = [
 // Dynamically get a list of available Lucide icons
 const iconList = Object.keys(Icons).filter(
   key =>
-    typeof (Icons as any)[key] === 'object' &&
-    (Icons as any)[key].displayName
+    typeof (Icons as any)[key] === 'object' && (Icons as any)[key].displayName
 );
 
 export function BadgeDialog({
@@ -93,12 +100,14 @@ export function BadgeDialog({
 }: BadgeDialogProps) {
   const isEditing = !!badgeToEdit;
   const {toast} = useToast();
+  const {routines} = useRoutines();
 
   const {
     register,
     handleSubmit,
     control,
     reset,
+    watch,
     formState: {errors},
   } = useForm<BadgeFormData>({
     resolver: zodResolver(badgeSchema),
@@ -115,6 +124,8 @@ export function BadgeDialog({
     control,
     name: 'conditions',
   });
+
+  const watchedConditions = watch('conditions');
 
   useEffect(() => {
     if (isOpen) {
@@ -133,7 +144,12 @@ export function BadgeDialog({
           icon: 'Award',
           color: '#a855f7',
           conditions: [
-            {type: 'TASKS_COMPLETED', target: 1, timeframe: 'TOTAL'},
+            {
+              type: 'TASKS_COMPLETED',
+              target: 1,
+              timeframe: 'TOTAL',
+              subjectId: undefined,
+            },
           ],
         });
       }
@@ -151,24 +167,29 @@ export function BadgeDialog({
 
     if (isEditing && badgeToEdit) {
       onUpdateBadge({...badgeToEdit, ...badgeData});
-      toast({title: 'Badge Updated!', description: 'Your changes have been saved.'});
+      toast({
+        title: 'Badge Updated!',
+        description: 'Your changes have been saved.',
+      });
     } else {
       onAddBadge(badgeData);
-      toast({title: 'Badge Created!', description: 'Your new challenge is ready.'});
+      toast({
+        title: 'Badge Created!',
+        description: 'Your new challenge is ready.',
+      });
     }
     onOpenChange(false);
   };
-  
-  const selectedIconName = control._getWatch('icon');
+
+  const selectedIconName = watch('icon');
   const SelectedIcon = useMemo(
     () => (Icons as any)[selectedIconName] || Icons.Award,
     [selectedIconName]
   );
 
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? 'Edit Badge' : 'Create Custom Badge'}
@@ -182,40 +203,63 @@ export function BadgeDialog({
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <div className="space-y-2">
-                    <Label>Preview</Label>
-                    <div className="flex items-center justify-center w-20 h-20 rounded-full border-4" style={{ borderColor: control._getWatch('color')}}>
-                        <SelectedIcon className="h-10 w-10" style={{ color: control._getWatch('color') }} />
-                    </div>
+                  <Label>Preview</Label>
+                  <div
+                    className="flex items-center justify-center w-20 h-20 rounded-full border-4"
+                    style={{borderColor: watch('color')}}
+                  >
+                    <SelectedIcon
+                      className="h-10 w-10"
+                      style={{color: watch('color')}}
+                    />
+                  </div>
                 </div>
                 <div className="flex-1 grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="icon">Icon</Label>
-                        <Controller
-                            name="icon"
-                            control={control}
-                            render={({ field }) => (
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        {iconList.map(iconName => (
-                                            <SelectItem key={iconName} value={iconName}>
-                                                {iconName}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            )}
-                        />
-                         {errors.icon && <p className="text-sm text-destructive mt-1">{errors.icon.message}</p>}
-                    </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="color">Color</Label>
-                        <Input id="color" type="color" {...register('color')} className="p-1 h-10"/>
-                        {errors.color && <p className="text-sm text-destructive mt-1">{errors.color.message}</p>}
-                    </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="icon">Icon</Label>
+                    <Controller
+                      name="icon"
+                      control={control}
+                      render={({field}) => (
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {iconList.map(iconName => (
+                              <SelectItem key={iconName} value={iconName}>
+                                {iconName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.icon && (
+                      <p className="text-sm text-destructive mt-1">
+                        {errors.icon.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="color">Color</Label>
+                    <Input
+                      id="color"
+                      type="color"
+                      {...register('color')}
+                      className="p-1 h-10"
+                    />
+                    {errors.color && (
+                      <p className="text-sm text-destructive mt-1">
+                        {errors.color.message}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-
 
               <div className="space-y-2">
                 <Label htmlFor="name">Badge Name</Label>
@@ -251,53 +295,93 @@ export function BadgeDialog({
                     key={field.id}
                     className="flex gap-2 items-end p-3 border rounded-lg bg-muted/50"
                   >
-                    <div className="grid flex-1 gap-2 grid-cols-1 sm:grid-cols-3">
+                    <div className="grid flex-1 gap-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Type</Label>
+                        <Controller
+                          name={`conditions.${index}.type`}
+                          control={control}
+                          render={({field}) => (
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {conditionOptions.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                      </div>
+                      {watchedConditions[index]?.type === 'TIME_ON_SUBJECT' && (
                         <div className="space-y-1">
-                            <Label className="text-xs">Type</Label>
-                            <Controller
-                            name={`conditions.${index}.type`}
+                          <Label className="text-xs">Subject</Label>
+                          <Controller
+                            name={`conditions.${index}.subjectId`}
                             control={control}
                             render={({field}) => (
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select Subject" />
+                                </SelectTrigger>
                                 <SelectContent>
-                                    {conditionOptions.map(opt => (
-                                    <SelectItem key={opt.value} value={opt.value}>
-                                        {opt.label}
+                                  {routines.map(r => (
+                                    <SelectItem key={r.id} value={r.id}>
+                                      {r.title}
                                     </SelectItem>
-                                    ))}
+                                  ))}
                                 </SelectContent>
-                                </Select>
+                              </Select>
                             )}
-                            />
+                          />
                         </div>
-                        <div className="space-y-1">
-                            <Label className="text-xs">Target</Label>
-                            <Input
-                                type="number"
-                                {...register(`conditions.${index}.target`)}
-                                placeholder="e.g., 10"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <Label className="text-xs">Timeframe</Label>
-                             <Controller
-                            name={`conditions.${index}.timeframe`}
-                            control={control}
-                            render={({field}) => (
-                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={control._getWatch(`conditions.${index}.type`) === 'DAY_STREAK'}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    {timeframeOptions.map(opt => (
-                                    <SelectItem key={opt.value} value={opt.value}>
-                                        {opt.label}
-                                    </SelectItem>
-                                    ))}
-                                </SelectContent>
-                                </Select>
-                            )}
-                            />
-                        </div>
+                      )}
+                      <div className="space-y-1">
+                        <Label className="text-xs">Target</Label>
+                        <Input
+                          type="number"
+                          {...register(`conditions.${index}.target`)}
+                          placeholder="e.g., 10"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Timeframe</Label>
+                        <Controller
+                          name={`conditions.${index}.timeframe`}
+                          control={control}
+                          render={({field}) => (
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                              disabled={
+                                watch(`conditions.${index}.type`) ===
+                                'DAY_STREAK'
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {timeframeOptions.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                      </div>
                     </div>
                     <Button
                       type="button"
@@ -310,7 +394,11 @@ export function BadgeDialog({
                     </Button>
                   </div>
                 ))}
-                 {errors.conditions?.root && <p className="text-sm text-destructive">{errors.conditions.root.message}</p>}
+                {errors.conditions?.root && (
+                  <p className="text-sm text-destructive">
+                    {errors.conditions.root.message}
+                  </p>
+                )}
                 <Button
                   type="button"
                   variant="outline"

@@ -142,7 +142,10 @@ function getTimeframeDates(
     case 'DAY':
       return {start: date, end: date};
     case 'WEEK':
-      return {start: startOfWeek(date, {weekStartsOn: 1}), end: endOfWeek(date, {weekStartsOn: 1})};
+      return {
+        start: startOfWeek(date, {weekStartsOn: 1}),
+        end: endOfWeek(date, {weekStartsOn: 1}),
+      };
     case 'MONTH':
       return {start: startOfMonth(date), end: endOfMonth(date)};
     default: // 'TOTAL'
@@ -154,15 +157,25 @@ function getTimeframeDates(
 function getAllCompletedWork(
   tasks: StudyTask[],
   logs: LogEvent[]
-): {date: string; duration: number; type: 'task' | 'routine'}[] {
+): {
+  date: string;
+  duration: number;
+  type: 'task' | 'routine';
+  subjectId?: string;
+  points: number;
+}[] {
   const workItems: {
     date: string;
     duration: number; // minutes
     type: 'task' | 'routine';
+    subjectId?: string;
+    points: number;
   }[] = [];
 
   const sessionLogs = logs.filter(
-    l => l.type === 'ROUTINE_SESSION_COMPLETE' || l.type === 'TIMER_SESSION_COMPLETE'
+    l =>
+      l.type === 'ROUTINE_SESSION_COMPLETE' ||
+      l.type === 'TIMER_SESSION_COMPLETE'
   );
   const timedTaskIds = new Set(
     sessionLogs.map(l => l.payload.taskId).filter(Boolean)
@@ -175,6 +188,8 @@ function getAllCompletedWork(
         date: l.timestamp.split('T')[0],
         duration: Math.round(l.payload.duration / 60),
         type: isRoutine ? 'routine' : 'task',
+        subjectId: isRoutine ? l.payload.routineId : l.payload.taskId,
+        points: l.payload.points || 0,
       };
     })
   );
@@ -187,6 +202,8 @@ function getAllCompletedWork(
       date: t.date,
       duration: t.duration,
       type: 'task' as const,
+      subjectId: t.id,
+      points: t.points,
     }))
   );
 
@@ -205,70 +222,81 @@ export function checkBadge(
 
   for (const condition of badge.conditions) {
     let conditionMet = false;
-    
+
     // Total timeframe logic
     if (condition.timeframe === 'TOTAL') {
+      let currentValue = 0;
+      if (condition.type === 'TASKS_COMPLETED') {
+        currentValue = allCompletedTasks.length;
+      } else if (condition.type === 'ROUTINES_COMPLETED') {
+        currentValue = allCompletedRoutines.length;
+      } else if (condition.type === 'TOTAL_STUDY_TIME') {
+        currentValue = allWork.reduce((sum, item) => sum + item.duration, 0);
+      } else if (condition.type === 'POINTS_EARNED') {
+        currentValue = allWork.reduce((sum, item) => sum + item.points, 0);
+      } else if (condition.type === 'TIME_ON_SUBJECT') {
+        currentValue = allWork
+          .filter(w => w.subjectId === condition.subjectId)
+          .reduce((sum, item) => sum + item.duration, 0);
+      } else if (condition.type === 'DAY_STREAK') {
+        const studyDays = new Set(allWork.map(w => w.date));
+        if (studyDays.size < condition.target) return false;
+
+        let streak = 0;
+        let checkDate = new Date();
+        // Start check from yesterday if no activity today
+        if (!studyDays.has(checkDate.toISOString().split('T')[0])) {
+          checkDate = subDays(checkDate, 1);
+        }
+
+        while (studyDays.has(checkDate.toISOString().split('T')[0])) {
+          streak++;
+          checkDate = subDays(checkDate, 1);
+        }
+        currentValue = streak;
+      }
+      if (currentValue >= condition.target) {
+        conditionMet = true;
+      }
+    } else {
+      // Time-boxed timeframe logic (DAY, WEEK, MONTH)
+      const dateSet = new Set(allWork.map(w => w.date));
+      for (const dateStr of dateSet) {
+        const checkDate = parseISO(dateStr);
+        const {start, end} = getTimeframeDates(condition.timeframe, checkDate);
+
+        const workInTimeframe = allWork.filter(w => {
+          const wDate = parseISO(w.date);
+          return wDate >= start && wDate <= end;
+        });
+
         let currentValue = 0;
         if (condition.type === 'TASKS_COMPLETED') {
-            currentValue = allCompletedTasks.length;
+          currentValue = workInTimeframe.filter(w => w.type === 'task').length;
         } else if (condition.type === 'ROUTINES_COMPLETED') {
-            currentValue = allCompletedRoutines.length;
+          currentValue = workInTimeframe.filter(w => w.type === 'routine')
+            .length;
         } else if (condition.type === 'TOTAL_STUDY_TIME') {
-            currentValue = allWork.reduce((sum, item) => sum + item.duration, 0);
-        } else if (condition.type === 'DAY_STREAK') {
-            const studyDays = new Set(allWork.map(w => w.date));
-            if (studyDays.size < condition.target) return false;
-
-            let streak = 0;
-            let checkDate = new Date();
-            // Start check from yesterday if no activity today
-            if (!studyDays.has(checkDate.toISOString().split('T')[0])) {
-                checkDate = subDays(checkDate, 1);
-            }
-
-            while(studyDays.has(checkDate.toISOString().split('T')[0])) {
-                streak++;
-                checkDate = subDays(checkDate, 1);
-            }
-            currentValue = streak;
+          currentValue = workInTimeframe.reduce(
+            (sum, item) => sum + item.duration,
+            0
+          );
+        } else if (condition.type === 'POINTS_EARNED') {
+          currentValue = workInTimeframe.reduce(
+            (sum, item) => sum + item.points,
+            0
+          );
+        } else if (condition.type === 'TIME_ON_SUBJECT') {
+          currentValue = workInTimeframe
+            .filter(w => w.subjectId === condition.subjectId)
+            .reduce((sum, item) => sum + item.duration, 0);
         }
+
         if (currentValue >= condition.target) {
-            conditionMet = true;
+          conditionMet = true;
+          break; // Found a timeframe that satisfies the condition
         }
-    } else {
-    // Time-boxed timeframe logic (DAY, WEEK, MONTH)
-        const dateSet = new Set(allWork.map(w => w.date));
-        for (const dateStr of dateSet) {
-            const checkDate = parseISO(dateStr);
-            const {start, end} = getTimeframeDates(condition.timeframe, checkDate);
-            
-            const workInTimeframe = allWork.filter(w => {
-                const wDate = parseISO(w.date);
-                return wDate >= start && wDate <= end;
-            });
-            const tasksInTimeframe = allCompletedTasks.filter(t => {
-                const tDate = parseISO(t.date);
-                return tDate >= start && tDate <= end;
-            });
-            const routinesInTimeframe = allCompletedRoutines.filter(r => {
-                 const rDate = parseISO(r.date);
-                return rDate >= start && rDate <= end;
-            });
-
-            let currentValue = 0;
-            if (condition.type === 'TASKS_COMPLETED') {
-                currentValue = tasksInTimeframe.length;
-            } else if (condition.type === 'ROUTINES_COMPLETED') {
-                currentValue = routinesInTimeframe.length;
-            } else if (condition.type === 'TOTAL_STUDY_TIME') {
-                currentValue = workInTimeframe.reduce((sum, item) => sum + item.duration, 0);
-            }
-
-            if (currentValue >= condition.target) {
-                conditionMet = true;
-                break; // Found a timeframe that satisfies the condition
-            }
-        }
+      }
     }
 
     if (!conditionMet) {

@@ -32,9 +32,12 @@ export type BadgeCondition = {
     | 'TOTAL_STUDY_TIME'
     | 'TASKS_COMPLETED'
     | 'DAY_STREAK'
-    | 'ROUTINES_COMPLETED';
+    | 'ROUTINES_COMPLETED'
+    | 'POINTS_EARNED'
+    | 'TIME_ON_SUBJECT';
   target: number;
   timeframe: 'TOTAL' | 'DAY' | 'WEEK' | 'MONTH';
+  subjectId?: string; // For TIME_ON_SUBJECT
 };
 
 export type Badge = {
