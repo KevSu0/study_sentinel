@@ -117,26 +117,22 @@ export function TasksProvider({children}: {children: ReactNode}) {
     try {
       const savedTasks = localStorage.getItem(TASKS_KEY);
       if (savedTasks) setTasks(JSON.parse(savedTasks));
-    } catch (error) {
-      console.error('Failed to load tasks from localStorage', error);
-      localStorage.removeItem(TASKS_KEY);
-    }
-    try {
+
       const savedTimer = localStorage.getItem(TIMER_KEY);
       if (savedTimer) setActiveTimer(JSON.parse(savedTimer));
     } catch (error) {
-      console.error('Failed to load timer from localStorage', error);
+      console.error('Failed to load data from localStorage', error);
+      localStorage.removeItem(TASKS_KEY);
       localStorage.removeItem(TIMER_KEY);
     } finally {
       setIsLoaded(true);
     }
   }, [loggerLoaded]);
 
-  const saveTasks = useCallback((newTasks: StudyTask[]) => {
-    const sortedTasks = [...newTasks].sort(
+  const saveTasks = useCallback((tasksToSave: StudyTask[]) => {
+    const sortedTasks = [...tasksToSave].sort(
       (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
     );
-    setTasks(sortedTasks);
     localStorage.setItem(TASKS_KEY, JSON.stringify(sortedTasks));
   }, []);
 
@@ -160,9 +156,12 @@ export function TasksProvider({children}: {children: ReactNode}) {
 
   const updateTask = useCallback(
     (updatedTask: StudyTask) => {
-      let oldTask: StudyTask | undefined;
+      let oldStatus: StudyTask['status'] | undefined;
       setTasks(currentTasks => {
-        oldTask = currentTasks.find(t => t.id === updatedTask.id);
+        const taskExists = currentTasks.find(t => t.id === updatedTask.id);
+        if (taskExists) {
+            oldStatus = taskExists.status;
+        }
         const newTasks = currentTasks.map(task =>
           task.id === updatedTask.id ? updatedTask : task
         );
@@ -170,9 +169,7 @@ export function TasksProvider({children}: {children: ReactNode}) {
         return newTasks;
       });
 
-      if (oldTask) {
-        // Log if status changes
-        if (oldTask.status !== updatedTask.status) {
+      if (oldStatus && oldStatus !== updatedTask.status) {
           switch (updatedTask.status) {
             case 'completed':
               addLog('TASK_COMPLETE', {
@@ -187,7 +184,6 @@ export function TasksProvider({children}: {children: ReactNode}) {
                  title: updatedTask.title,
                });
                break;
-            // Add other status change logs if needed, e.g., for undoing completion
             case 'todo':
                addLog('TASK_UPDATE', {
                  taskId: updatedTask.id,
@@ -197,13 +193,11 @@ export function TasksProvider({children}: {children: ReactNode}) {
                break;
           }
         } else {
-          // Log if it's just a regular update without status change
           addLog('TASK_UPDATE', {
             taskId: updatedTask.id,
             title: updatedTask.title,
           });
         }
-      }
     },
     [addLog, saveTasks]
   );
@@ -309,10 +303,9 @@ export function TasksProvider({children}: {children: ReactNode}) {
           routineTitle: routine.title,
         });
       }
-
       saveTimer(timerData);
     },
-    [toast, addLog, updateTask, saveTimer, activeTimer]
+    [activeTimer, toast, addLog, updateTask, saveTimer]
   );
 
   const togglePause = useCallback(() => {
