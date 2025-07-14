@@ -148,15 +148,15 @@ function AppLayout({children}: {children: ReactNode}) {
 export function Providers({children}: {children: ReactNode}) {
   return (
     <ConfettiProvider>
-      <SidebarProvider>
-        <GlobalStateProvider>
+      <GlobalStateProvider>
+        <SidebarProvider>
           <ViewModeProvider>
             <DashboardLayoutProvider>
               <AppLayout>{children}</AppLayout>
             </DashboardLayoutProvider>
           </ViewModeProvider>
-        </GlobalStateProvider>
-      </SidebarProvider>
+        </SidebarProvider>
+      </GlobalStateProvider>
     </ConfettiProvider>
   );
 }
