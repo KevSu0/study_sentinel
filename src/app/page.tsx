@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, {useState, useCallback} from 'react';
@@ -6,7 +7,7 @@ import {format} from 'date-fns';
 import {Button} from '@/components/ui/button';
 import {PlusCircle, Settings} from 'lucide-react';
 import {useGlobalState} from '@/hooks/use-global-state';
-import {useViewMode} from '@/hooks/use-view-mode';
+import {useViewMode} from '@/hooks/use-view-mode.tsx';
 import {
   useDashboardLayout,
   type DashboardWidgetType,
@@ -69,7 +70,7 @@ function SortableWidget({
   );
 }
 
-export default function DashboardPage() {
+export default function LetsStartPage() {
   const {
     state,
     addTask,
@@ -135,7 +136,7 @@ export default function DashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
             <h1 className="text-3xl font-bold text-primary">
-              Today's Dashboard
+              Let's Start
             </h1>
             <p className="text-muted-foreground">
               Your achievements for {format(new Date(), 'MMMM d, yyyy')}.
