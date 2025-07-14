@@ -15,7 +15,7 @@ export const TodaysPlanWidget = ({
   onPushTask,
   onEditTask,
 }: any) => {
-  if (todaysPendingTasks.length === 0) {
+  if (!todaysPendingTasks || todaysPendingTasks.length === 0) {
     return null;
   }
 

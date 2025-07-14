@@ -1,67 +1,62 @@
 'use client';
-import React, {lazy, Suspense} from 'react';
+import React, {lazy, Suspense, useMemo} from 'react';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Skeleton} from '@/components/ui/skeleton';
 import {Award as BadgeIcon, Star} from 'lucide-react';
 const ProductivityChart = lazy(
   () => import('@/components/dashboard/productivity-chart')
 );
-import type {StudyTask, Badge, LogEvent} from '@/lib/types';
-import {format} from 'date-fns';
+import type {Badge, LogEvent} from '@/lib/types';
 
 interface StatsOverviewWidgetProps {
-  todaysCompletedTasks: StudyTask[];
+  todaysCompletedTasks: any[]; // Simplified for props
   todaysBadges: Badge[];
   todaysLogs: LogEvent[];
 }
 
 export const StatsOverviewWidget = ({
-  todaysCompletedTasks,
-  todaysBadges,
-  todaysLogs,
+  todaysCompletedTasks = [],
+  todaysBadges = [],
+  todaysLogs = [],
 }: StatsOverviewWidgetProps) => {
-  const safeLogs = Array.isArray(todaysLogs) ? todaysLogs : [];
-
-  const todaysTimedLogs = safeLogs.filter(
-    l =>
-      l.type === 'ROUTINE_SESSION_COMPLETE' ||
-      l.type === 'TIMER_SESSION_COMPLETE'
-  );
-
-  const routineLogs = todaysTimedLogs.filter(
-    l => l.type === 'ROUTINE_SESSION_COMPLETE'
-  );
-  const routinePoints = routineLogs.reduce(
-    (sum: number, log: any) => sum + (log.payload.points || 0),
-    0
-  );
-  const pointsToday =
-    todaysCompletedTasks.reduce(
-      (sum: number, task: any) => sum + task.points,
+  const {pointsToday, productivityData} = useMemo(() => {
+    const routineLogs = todaysLogs.filter(
+      l => l.type === 'ROUTINE_SESSION_COMPLETE'
+    );
+    const routinePoints = routineLogs.reduce(
+      (sum: number, log: any) => sum + (log.payload.points || 0),
       0
-    ) + routinePoints;
+    );
+    const taskPoints =
+      todaysCompletedTasks.reduce(
+        (sum: number, task: any) => sum + (task.points || 0),
+        0
+      );
+    const totalPoints = routinePoints + taskPoints;
 
-  const taskTime = todaysTimedLogs
-    .filter(l => l.type === 'TIMER_SESSION_COMPLETE')
-    .reduce((sum: number, log: any) => sum + log.payload.duration, 0);
+    const taskTime = todaysLogs
+      .filter(l => l.type === 'TIMER_SESSION_COMPLETE')
+      .reduce((sum: number, log: any) => sum + (log.payload.duration || 0), 0);
+    const routineTime = routineLogs.reduce(
+      (sum: number, log: any) => sum + (log.payload.duration || 0),
+      0
+    );
 
-  const routineTime = routineLogs.reduce(
-    (sum: number, log: any) => sum + log.payload.duration,
-    0
-  );
+    const data = [
+      {
+        name: 'Tasks',
+        value: parseFloat((taskTime / 3600).toFixed(2)),
+        fill: 'hsl(var(--chart-1))',
+      },
+      {
+        name: 'Routines',
+        value: parseFloat((routineTime / 3600).toFixed(2)),
+        fill: 'hsl(var(--chart-2))',
+      },
+    ].filter(d => d.value > 0);
 
-  const productivityData = [
-    {
-      name: 'Tasks',
-      value: parseFloat((taskTime / 3600).toFixed(2)),
-      fill: 'hsl(var(--chart-1))',
-    },
-    {
-      name: 'Routines',
-      value: parseFloat((routineTime / 3600).toFixed(2)),
-      fill: 'hsl(var(--chart-2))',
-    },
-  ].filter(d => d.value > 0);
+    return {pointsToday: totalPoints, productivityData: data};
+  }, [todaysLogs, todaysCompletedTasks]);
 
   return (
     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

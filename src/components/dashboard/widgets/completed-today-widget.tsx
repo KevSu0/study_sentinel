@@ -21,10 +21,10 @@ export const CompletedTodayWidget = ({
   onPushTask,
   onEditTask,
 }: any) => {
-  if (
-    todaysCompletedTasks.length === 0 &&
-    todaysCompletedRoutines.length === 0
-  ) {
+  const hasCompletedTasks = todaysCompletedTasks && todaysCompletedTasks.length > 0;
+  const hasCompletedRoutines = todaysCompletedRoutines && todaysCompletedRoutines.length > 0;
+
+  if (!hasCompletedTasks && !hasCompletedRoutines) {
     return null;
   }
 
@@ -50,14 +50,14 @@ export const CompletedTodayWidget = ({
       <h2 className="text-xl font-semibold text-primary mb-3">
         Completed Today
       </h2>
-      {todaysCompletedTasks.length > 0 &&
+      {hasCompletedTasks &&
         renderTaskList(todaysCompletedTasks)}
 
-      {todaysCompletedRoutines.length > 0 && (
+      {hasCompletedRoutines && (
         <div
           className={cn(
             viewMode === 'card' ? 'space-y-4' : 'space-y-2',
-            todaysCompletedTasks.length > 0 && 'mt-4'
+            hasCompletedTasks && 'mt-4'
           )}
         >
           {todaysCompletedRoutines.map((log: LogEvent) =>

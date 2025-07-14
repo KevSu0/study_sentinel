@@ -6,11 +6,11 @@ import {format} from 'date-fns';
 import {Button} from '@/components/ui/button';
 import {PlusCircle, Settings} from 'lucide-react';
 import {useGlobalState} from '@/hooks/use-global-state';
-import {useViewMode} from '@/hooks/use-view-mode.tsx';
+import {useViewMode} from '@/hooks/use-view-mode';
 import {
   useDashboardLayout,
   type DashboardWidgetType,
-} from '@/hooks/use-dashboard-layout.tsx';
+} from '@/hooks/use-dashboard-layout';
 import {
   DndContext,
   closestCenter,
@@ -179,6 +179,7 @@ export default function DashboardPage() {
               <div className="space-y-6">
                 {visibleWidgets.map(widget => {
                   const WidgetComponent = widgetMap[widget.id];
+                  if (!WidgetComponent) return null;
                   return (
                     <SortableWidget key={widget.id} id={widget.id}>
                       <WidgetComponent {...widgetProps} />

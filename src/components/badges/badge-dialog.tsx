@@ -138,7 +138,7 @@ export function BadgeDialog({
           description: badgeToEdit.description,
           icon: badgeToEdit.icon,
           color: badgeToEdit.color,
-          conditions: badgeToEdit.conditions,
+          conditions: badgeToEdit.conditions.map(c => ({...c, subjectId: c.subjectId || undefined}))
         });
       } else {
         reset({
@@ -183,11 +183,6 @@ export function BadgeDialog({
     }
     onOpenChange(false);
   };
-
-  const SelectedIcon = useMemo(
-    () => (Icons as any)[selectedIconName] || Icons.Award,
-    [selectedIconName]
-  );
 
   const getTargetLabel = (type?: BadgeFormData['conditions'][0]['type']) => {
     switch (type) {
@@ -358,7 +353,7 @@ export function BadgeDialog({
                             render={({field}) => (
                               <Select
                                 onValueChange={field.onChange}
-                                defaultValue={field.value}
+                                value={field.value}
                               >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select Subject" />

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, {
@@ -19,6 +18,7 @@ import {
   type Badge,
   type ActiveTimerItem,
   type CompletedWork,
+  type TaskStatus,
 } from '@/lib/types';
 import {addDays, format, formatISO, subDays, parseISO} from 'date-fns';
 import {useConfetti} from '@/components/providers/confetti-provider';
@@ -26,14 +26,14 @@ import {useToast} from './use-toast';
 import {SYSTEM_BADGES, checkBadge} from '@/lib/badges';
 
 // --- Constants for localStorage keys ---
-const TASKS_KEY = 'studySentinelTasks';
-const TIMER_KEY = 'studySentinelActiveTimer_v2';
+const TASKS_KEY = 'studySentinelTasks_v3';
+const TIMER_KEY = 'studySentinelActiveTimer_v3';
 const EARNED_BADGES_KEY = 'studySentinelEarnedBadges_v3';
-const CUSTOM_BADGES_KEY = 'studySentinelCustomBadges_v1';
-const SYSTEM_BADGES_CONFIG_KEY = 'studySentinelSystemBadgesConfig_v1';
-const PROFILE_KEY = 'studySentinelProfile';
-const ROUTINES_KEY = 'studySentinelRoutines';
-const LOG_PREFIX = 'studySentinelLogs_';
+const CUSTOM_BADGES_KEY = 'studySentinelCustomBadges_v3';
+const SYSTEM_BADGES_CONFIG_KEY = 'studySentinelSystemBadgesConfig_v3';
+const PROFILE_KEY = 'studySentinelProfile_v3';
+const ROUTINES_KEY = 'studySentinelRoutines_v3';
+const LOG_PREFIX = 'studySentinelLogs_v3_';
 
 // --- Type Definitions ---
 type StoredTimer = {
@@ -53,12 +53,12 @@ interface AppState {
   profile: UserProfile;
   routines: Routine[];
   allBadges: Badge[];
-  earnedBadges: Map<string, string>;
+  earnedBadges: Map<string, string>; // badgeId -> date string 'yyyy-MM-dd'
   activeItem: ActiveTimerItem | null;
   timeDisplay: string;
   isPaused: boolean;
   isOvertime: boolean;
-  // Derived state
+  // --- Derived state ---
   todaysLogs: LogEvent[];
   previousDayLogs: LogEvent[];
   allCompletedWork: CompletedWork[];
@@ -71,7 +71,6 @@ interface AppState {
 
 interface GlobalStateContextType {
   state: AppState;
-  // Actions
   addTask: (task: Omit<StudyTask, 'id' | 'status'>) => void;
   updateTask: (updatedTask: StudyTask) => void;
   archiveTask: (taskId: string) => void;
@@ -112,6 +111,7 @@ const initialAppState: AppState = {
   timeDisplay: '00:00',
   isPaused: true,
   isOvertime: false,
+  // Derived state starts empty
   todaysLogs: [],
   previousDayLogs: [],
   allCompletedWork: [],
@@ -122,26 +122,9 @@ const initialAppState: AppState = {
   todaysPendingTasks: [],
 };
 
-const GlobalStateContext = createContext<GlobalStateContextType>({
-    state: initialAppState,
-    addTask: () => {},
-    updateTask: () => {},
-    archiveTask: () => {},
-    unarchiveTask: () => {},
-    pushTaskToNextDay: () => {},
-    startTimer: () => {},
-    togglePause: () => {},
-    completeTimer: () => {},
-    stopTimer: () => {},
-    addRoutine: () => {},
-    updateRoutine: () => {},
-    deleteRoutine: () => {},
-    addBadge: () => {},
-    updateBadge: () => {},
-    deleteBadge: () => {},
-    updateProfile: () => {},
-});
-
+const GlobalStateContext = createContext<GlobalStateContextType | undefined>(
+  undefined
+);
 
 // --- Helper Functions ---
 const formatTime = (seconds: number) => {
@@ -169,120 +152,140 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
   const {toast} = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // --- Utility Functions for State Updates ---
-  const saveToStorage = useCallback((key: string, data: any) => {
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (error) {
-      console.error(`Failed to save to localStorage key ${key}`, error);
-    }
-  }, []);
-  
-  const saveMapToStorage = useCallback((key: string, map: Map<any, any>) => {
-    saveToStorage(key, Array.from(map.entries()));
-  }, [saveToStorage]);
-
-
-  // --- Initial Load Effect (CLIENT-SIDE ONLY) ---
+  // --- Main Hydration and State Derivation Effect (CLIENT-SIDE ONLY) ---
   useEffect(() => {
-    // This effect runs only once on mount to load and derive all state.
-    const savedTasksJSON = localStorage.getItem(TASKS_KEY);
-    const savedProfileJSON = localStorage.getItem(PROFILE_KEY);
-    const savedRoutinesJSON = localStorage.getItem(ROUTINES_KEY);
-    const savedEarnedBadgesJSON = localStorage.getItem(EARNED_BADGES_KEY);
-    const savedCustomBadgesJSON = localStorage.getItem(CUSTOM_BADGES_KEY);
-    const systemBadgeConfigsJSON = localStorage.getItem(SYSTEM_BADGES_CONFIG_KEY);
-    const savedTimerJSON = localStorage.getItem(TIMER_KEY);
+    // This effect runs only once on the client to load all data from localStorage.
+    let savedTasks: StudyTask[] = [];
+    let savedProfile: UserProfile = defaultProfile;
+    let savedRoutines: Routine[] = [];
+    let savedEarnedBadges = new Map<string, string>();
+    let savedCustomBadges: Badge[] = [];
+    let systemBadgeConfigs: Badge[] | null = null;
+    let savedTimer: StoredTimer | null = null;
+
+    try {
+      savedTasks = JSON.parse(localStorage.getItem(TASKS_KEY) || '[]');
+      savedProfile = JSON.parse(localStorage.getItem(PROFILE_KEY) || JSON.stringify(defaultProfile));
+      savedRoutines = JSON.parse(localStorage.getItem(ROUTINES_KEY) || '[]');
+      savedEarnedBadges = new Map<string, string>(JSON.parse(localStorage.getItem(EARNED_BADGES_KEY) || '[]'));
+      savedCustomBadges = JSON.parse(localStorage.getItem(CUSTOM_BADGES_KEY) || '[]');
+      systemBadgeConfigs = JSON.parse(localStorage.getItem(SYSTEM_BADGES_CONFIG_KEY) || 'null');
+      savedTimer = JSON.parse(localStorage.getItem(TIMER_KEY) || 'null');
+    } catch(error) {
+        console.error("Failed to load state from localStorage", error);
+    }
     
-    const tasks = savedTasksJSON ? JSON.parse(savedTasksJSON) : [];
-    const profile = savedProfileJSON ? JSON.parse(savedProfileJSON) : defaultProfile;
-    const routines = savedRoutinesJSON ? JSON.parse(savedRoutinesJSON) : [];
-    const earnedBadges = savedEarnedBadgesJSON
-      ? new Map(JSON.parse(savedEarnedBadgesJSON))
-      : new Map();
-    const customBadges = savedCustomBadgesJSON ? JSON.parse(savedCustomBadgesJSON) : [];
-    let systemBadges;
-    if (systemBadgeConfigsJSON) {
-      systemBadges = JSON.parse(systemBadgeConfigsJSON);
-    } else {
-      systemBadges = SYSTEM_BADGES.map((b, i) => ({
+
+    const systemBadges =
+      systemBadgeConfigs ||
+      SYSTEM_BADGES.map((b, i) => ({
         ...b,
         id: `system_${i + 1}`,
         isCustom: false,
         isEnabled: true,
       }));
-      saveToStorage(SYSTEM_BADGES_CONFIG_KEY, systemBadges);
+
+    if (!systemBadgeConfigs) {
+      localStorage.setItem(
+        SYSTEM_BADGES_CONFIG_KEY,
+        JSON.stringify(systemBadges)
+      );
     }
-    const allBadges = [...systemBadges, ...customBadges];
-    const activeTimer: StoredTimer | null = savedTimerJSON ? JSON.parse(savedTimerJSON) : null;
-    
-    // Log loading
+
+    const allBadges = [...systemBadges, ...savedCustomBadges];
+
+    // --- LOGS ---
     const sessionDate = getSessionDate();
-    const logKey = `${LOG_PREFIX}${format(sessionDate, 'yyyy-MM-dd')}`;
-    const savedLogsJSON = localStorage.getItem(logKey);
-    const logs = savedLogsJSON ? JSON.parse(savedLogsJSON) : [];
-
-    // --- Start Deriving State (client-only) ---
     const todayStr = format(sessionDate, 'yyyy-MM-dd');
-    const todaysLogs = logs;
+    const prevDayStr = format(subDays(sessionDate, 1), 'yyyy-MM-dd');
 
-    const previousDay = subDays(sessionDate, 1);
-    const prevLogKey = `${LOG_PREFIX}${format(previousDay, 'yyyy-MM-dd')}`;
-    const prevLogsJSON = localStorage.getItem(prevLogKey);
-    const previousDayLogs = prevLogsJSON ? JSON.parse(prevLogsJSON) : [];
-    
-    // Calculate all completed work
+    const logKey = `${LOG_PREFIX}${todayStr}`;
+    const todaysLogs: LogEvent[] = JSON.parse(
+      localStorage.getItem(logKey) || '[]'
+    );
+    const prevLogKey = `${LOG_PREFIX}${prevDayStr}`;
+    const previousDayLogs: LogEvent[] = JSON.parse(
+      localStorage.getItem(prevLogKey) || '[]'
+    );
+
     const allTimeLogs: LogEvent[] = [];
     for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(LOG_PREFIX)) {
-            const lsLogs = localStorage.getItem(key);
-            if (lsLogs) allTimeLogs.push(...JSON.parse(lsLogs));
-        }
+      const key = localStorage.key(i);
+      if (key && key.startsWith(LOG_PREFIX)) {
+        allTimeLogs.push(...JSON.parse(localStorage.getItem(key) || '[]'));
+      }
     }
-    allTimeLogs.sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    allTimeLogs.sort(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
 
-    const sessionLogs = allTimeLogs.filter(l => l.type === 'ROUTINE_SESSION_COMPLETE' || l.type === 'TIMER_SESSION_COMPLETE');
-    const timedTaskIds = new Set(sessionLogs.map(l => l.payload.taskId).filter(Boolean));
+    // --- DERIVED STATE CALCULATION ---
+    const sessionLogs = allTimeLogs.filter(
+      l =>
+        l.type === 'ROUTINE_SESSION_COMPLETE' ||
+        l.type === 'TIMER_SESSION_COMPLETE'
+    );
+    const timedTaskIds = new Set(
+      sessionLogs.map(l => l.payload.taskId).filter(Boolean)
+    );
+
     const workItems: CompletedWork[] = sessionLogs.map(l => ({
-        date: l.timestamp.split('T')[0],
-        duration: Math.round(l.payload.duration / 60),
-        type: l.type === 'ROUTINE_SESSION_COMPLETE' ? 'routine' : 'task',
-        title: l.payload.title,
-        points: l.payload.points || 0,
-        priority: l.payload.priority,
+      date: l.timestamp.split('T')[0],
+      duration: Math.round(l.payload.duration / 60),
+      type: l.type === 'ROUTINE_SESSION_COMPLETE' ? 'routine' : 'task',
+      title: l.payload.title,
+      points: l.payload.points || 0,
+      priority: l.payload.priority,
+      subjectId: l.payload.routineId || l.payload.taskId,
     }));
-    const manuallyCompletedTasks = tasks.filter((t: StudyTask) => t.status === 'completed' && !timedTaskIds.has(t.id));
-    workItems.push(...manuallyCompletedTasks.map((t: StudyTask) => ({
+
+    const manuallyCompletedTasks = savedTasks.filter(
+      (t: StudyTask) => t.status === 'completed' && !timedTaskIds.has(t.id)
+    );
+    workItems.push(
+      ...manuallyCompletedTasks.map((t: StudyTask) => ({
         date: t.date,
         duration: t.duration,
         type: 'task',
         title: t.title,
         points: t.points,
         priority: t.priority,
-    })));
+        subjectId: t.id,
+      }))
+    );
     const allCompletedWork = workItems;
+    const todaysBadges = allBadges.filter(
+      (b: Badge) => savedEarnedBadges.get(b.id) === todayStr
+    );
+    const todaysRoutines = savedRoutines.filter((r: Routine) =>
+      r.days.includes(sessionDate.getDay())
+    );
+    const todaysCompletedRoutines = todaysLogs.filter(
+      (l: LogEvent) => l.type === 'ROUTINE_SESSION_COMPLETE'
+    );
+    const todaysCompletedTasks = savedTasks.filter(
+      (t: StudyTask) => t.status === 'completed' && t.date === todayStr
+    );
+    const todaysPendingTasks = savedTasks.filter(
+      (t: StudyTask) =>
+        t.date === todayStr && (t.status === 'todo' || t.status === 'in_progress')
+    );
 
-    const todaysBadges = allBadges.filter((b: Badge) => earnedBadges.get(b.id) === todayStr);
-    const todaysRoutines = routines.filter((r: Routine) => r.days.includes(sessionDate.getDay()));
-    const todaysCompletedRoutines = todaysLogs.filter((l: LogEvent) => l.type === 'ROUTINE_SESSION_COMPLETE');
-    const todaysCompletedTasks = tasks.filter((t: StudyTask) => t.status === 'completed' && t.date === todayStr);
-    const todaysPendingTasks = tasks.filter((t: StudyTask) => t.date === todayStr && (t.status === 'todo' || t.status === 'in_progress'));
-
+    // --- Set final hydrated state ---
     setState({
-      ...initialAppState,
       isLoaded: true,
-      tasks,
-      profile,
-      routines,
-      earnedBadges,
+      tasks: savedTasks,
+      profile: savedProfile,
+      routines: savedRoutines,
+      earnedBadges: savedEarnedBadges,
       allBadges,
-      logs,
-      activeItem: activeTimer?.item ?? null,
-      isPaused: activeTimer?.isPaused ?? true,
-      // Derived state
-      previousDayLogs,
+      logs: todaysLogs,
+      activeItem: savedTimer?.item || null,
+      isPaused: savedTimer?.isPaused ?? true,
+      timeDisplay: '00:00',
+      isOvertime: false,
       todaysLogs,
+      previousDayLogs,
       allCompletedWork,
       todaysBadges,
       todaysRoutines,
@@ -291,15 +294,89 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
       todaysPendingTasks,
     });
 
-    audioRef.current = new Audio(
-      'https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg'
-    );
-    audioRef.current.volume = 0.5;
-  }, [saveToStorage]);
-  
+    // Initialize audio element
+    if (typeof window !== 'undefined') {
+        audioRef.current = new Audio('https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg');
+        audioRef.current.volume = 0.5;
+    }
+  }, []);
+
+  const updateDerivedState = (baseState: { tasks: StudyTask[], routines: Routine[], logs: LogEvent[], allBadges: Badge[], earnedBadges: Map<string, string> }) => {
+    const { tasks, routines, logs, allBadges, earnedBadges } = baseState;
+    
+    const sessionDate = getSessionDate();
+    const todayStr = format(sessionDate, 'yyyy-MM-dd');
+
+    const todaysLogs = logs; // Assuming logs passed in are already today's logs
+    
+    const allTimeLogs: LogEvent[] = [];
+     if (typeof window !== "undefined") {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(LOG_PREFIX)) {
+          allTimeLogs.push(...JSON.parse(localStorage.getItem(key) || '[]'));
+        }
+      }
+    }
+    allTimeLogs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    const sessionLogs = allTimeLogs.filter(l => l.type === 'ROUTINE_SESSION_COMPLETE' || l.type === 'TIMER_SESSION_COMPLETE');
+    const timedTaskIds = new Set(sessionLogs.map(l => l.payload.taskId).filter(Boolean));
+
+    const workItems: CompletedWork[] = sessionLogs.map(l => ({
+      date: l.timestamp.split('T')[0],
+      duration: Math.round(l.payload.duration / 60),
+      type: l.type === 'ROUTINE_SESSION_COMPLETE' ? 'routine' : 'task',
+      title: l.payload.title,
+      points: l.payload.points || 0,
+      priority: l.payload.priority,
+      subjectId: l.payload.routineId || l.payload.taskId,
+    }));
+
+    const manuallyCompletedTasks = tasks.filter(t => t.status === 'completed' && !timedTaskIds.has(t.id));
+    workItems.push(...manuallyCompletedTasks.map(t => ({
+      date: t.date,
+      duration: t.duration,
+      type: 'task',
+      title: t.title,
+      points: t.points,
+      priority: t.priority,
+      subjectId: t.id,
+    })));
+
+    const allCompletedWork = workItems;
+    const todaysBadges = allBadges.filter(b => earnedBadges.get(b.id) === todayStr);
+    const todaysRoutines = routines.filter(r => r.days.includes(sessionDate.getDay()));
+    const todaysCompletedRoutines = todaysLogs.filter(l => l.type === 'ROUTINE_SESSION_COMPLETE');
+    const todaysCompletedTasks = tasks.filter(t => t.status === 'completed' && t.date === todayStr);
+    const todaysPendingTasks = tasks.filter(t => t.date === todayStr && (t.status === 'todo' || t.status === 'in_progress'));
+    
+    // Previous day logs need to be read separately for briefing, can't be derived from current state easily
+    // Let's keep the initial load logic for previousDayLogs for now.
+    
+    return {
+      todaysLogs,
+      allCompletedWork,
+      todaysBadges,
+      todaysRoutines,
+      todaysCompletedRoutines,
+      todaysCompletedTasks,
+      todaysPendingTasks,
+    };
+  };
+
+  const setStateAndDerive = (updater: (prevState: AppState) => AppState) => {
+    setState(prevState => {
+      const newState = updater(prevState);
+      const derived = updateDerivedState(newState);
+      return { ...newState, ...derived };
+    });
+  };
+
+
   const addLog = useCallback(
     (type: LogEvent['type'], payload: LogEvent['payload']) => {
-      setState(prevState => {
+      setStateAndDerive(prevState => {
         const newLog: LogEvent = {
           id: crypto.randomUUID(),
           timestamp: formatISO(new Date()),
@@ -307,37 +384,144 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
           payload,
         };
         const updatedLogs = [...prevState.logs, newLog];
-        saveToStorage(`${LOG_PREFIX}${format(getSessionDate(), 'yyyy-MM-dd')}`, updatedLogs);
-        
-        // Re-derive state that depends on logs
-        const allCompletedWork = [...prevState.allCompletedWork];
-        if (type === 'ROUTINE_SESSION_COMPLETE' || type === 'TIMER_SESSION_COMPLETE') {
-             allCompletedWork.push({
-                date: newLog.timestamp.split('T')[0],
-                duration: Math.round(newLog.payload.duration / 60),
-                type: type === 'ROUTINE_SESSION_COMPLETE' ? 'routine' : 'task',
-                title: newLog.payload.title,
-                points: newLog.payload.points || 0,
-                priority: newLog.payload.priority,
-            });
-        }
-
-        return {...prevState, logs: updatedLogs, allCompletedWork, todaysLogs: updatedLogs};
+        const logKey = `${LOG_PREFIX}${format(getSessionDate(), 'yyyy-MM-dd')}`;
+        localStorage.setItem(logKey, JSON.stringify(updatedLogs));
+        return {...prevState, logs: updatedLogs};
       });
     },
-    [saveToStorage]
+    []
   );
-  
+
+  // --- TIMER EFFECT ---
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!state.activeItem || state.isPaused) return;
+
+      const savedTimer: StoredTimer | null = JSON.parse(
+        localStorage.getItem(TIMER_KEY) || 'null'
+      );
+      if (!savedTimer) return;
+
+      let newDisplay: string;
+      let newOvertime = false;
+
+      if (savedTimer.item.type === 'task') {
+        if (!savedTimer.endTime) return;
+        const remaining = Math.round((savedTimer.endTime - Date.now()) / 1000);
+        newDisplay = formatTime(remaining);
+        newOvertime = remaining < 0;
+      } else {
+        if (!savedTimer.startTime) return;
+        const elapsed =
+          Date.now() - savedTimer.startTime + (savedTimer.pausedDuration || 0);
+        newDisplay = formatTime(Math.round(elapsed / 1000));
+      }
+
+      setState(prev => ({
+        ...prev,
+        timeDisplay: newDisplay,
+        isOvertime: newOvertime,
+      }));
+
+      if (newOvertime && !savedTimer.overtimeNotified) {
+        if (
+          'Notification' in window &&
+          Notification.permission === 'granted'
+        ) {
+          new Notification(
+            `Time's up for "${savedTimer.item.item.title}"!`,
+            {body: "You're now in overtime."}
+          );
+        }
+        audioRef.current?.play().catch(console.error);
+        addLog('TIMER_OVERTIME_STARTED', {
+          taskId: savedTimer.item.item.id,
+          taskTitle: savedTimer.item.item.title,
+        });
+        localStorage.setItem(
+          TIMER_KEY,
+          JSON.stringify({...savedTimer, overtimeNotified: true})
+        );
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [state.activeItem, state.isPaused, addLog]);
+
+  // --- BADGE AWARDING EFFECT ---
+  useEffect(() => {
+    if (!state.isLoaded) return;
+
+    const {allBadges, earnedBadges, tasks} = state;
+
+    const newlyEarnedBadges: Badge[] = [];
+    for (const badge of allBadges) {
+      if (!earnedBadges.has(badge.id) && badge.isEnabled) {
+        const allTimeLogs: LogEvent[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(LOG_PREFIX)) {
+            allTimeLogs.push(...JSON.parse(localStorage.getItem(key) || '[]'));
+          }
+        }
+        if (checkBadge(badge, {tasks, logs: allTimeLogs})) {
+          newlyEarnedBadges.push(badge);
+        }
+      }
+    }
+
+    if (newlyEarnedBadges.length > 0) {
+      fire();
+      setStateAndDerive(prev => {
+        const newEarnedMap = new Map(prev.earnedBadges);
+        const todayStr = format(new Date(), 'yyyy-MM-dd');
+        newlyEarnedBadges.forEach(badge => {
+          newEarnedMap.set(badge.id, todayStr);
+          setTimeout(() => {
+            toast({
+              title: `Badge Unlocked: ${badge.name}! 🎉`,
+              description: badge.motivationalMessage,
+            });
+          }, 500);
+        });
+        localStorage.setItem(EARNED_BADGES_KEY, JSON.stringify(Array.from(newEarnedMap.entries())));
+        return {...prev, earnedBadges: newEarnedMap};
+      });
+    }
+  }, [state.isLoaded, state.allCompletedWork, state.tasks, fire, toast]);
+
+  // --- Public API ---
+  const addTask = useCallback(
+    (task: Omit<StudyTask, 'id' | 'status'>) => {
+      const newTask: StudyTask = {
+        ...task,
+        id: crypto.randomUUID(),
+        status: 'todo',
+        description: task.description || '',
+      };
+      setStateAndDerive(prev => {
+        const updatedTasks = [...prev.tasks, newTask].sort(
+          (a, b) =>
+            a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
+        );
+        localStorage.setItem(TASKS_KEY, JSON.stringify(updatedTasks));
+        addLog('TASK_ADD', {taskId: newTask.id, title: newTask.title});
+        return {...prev, tasks: updatedTasks};
+      });
+    },
+    [addLog]
+  );
+
   const updateTask = useCallback(
     (updatedTask: StudyTask) => {
-      setState(prevState => {
-        let oldStatus: StudyTask['status'] | undefined;
+      setStateAndDerive(prev => {
+        let oldStatus: TaskStatus | undefined;
         let isCompletion = false;
         
-        const newTasks = prevState.tasks.map(task => {
+        const newTasks = prev.tasks.map(task => {
           if (task.id === updatedTask.id) {
             oldStatus = task.status;
-            isCompletion = oldStatus !== 'completed' && updatedTask.status === 'completed';
+            isCompletion =
+              oldStatus !== 'completed' && updatedTask.status === 'completed';
             return updatedTask;
           }
           return task;
@@ -351,455 +535,363 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
           });
         }
         if (isCompletion) {
-             addLog('TASK_COMPLETE', {
-                taskId: updatedTask.id,
-                title: updatedTask.title,
-                points: updatedTask.points,
-            });
+          addLog('TASK_COMPLETE', {
+            taskId: updatedTask.id,
+            title: updatedTask.title,
+            points: updatedTask.points,
+          });
         }
 
-        const sortedTasks = [...newTasks].sort(
-          (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
+        const sortedTasks = newTasks.sort(
+          (a, b) =>
+            a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
         );
-        saveToStorage(TASKS_KEY, sortedTasks);
-        
-        // Re-derive lists
-        const todayStr = format(getSessionDate(), 'yyyy-MM-dd');
-        const todaysCompletedTasks = sortedTasks.filter(t => t.status === 'completed' && t.date === todayStr);
-        const todaysPendingTasks = sortedTasks.filter(t => t.date === todayStr && (t.status === 'todo' || t.status === 'in_progress'));
-
-        let newAllCompletedWork = [...prevState.allCompletedWork];
-        if (isCompletion) {
-            const timedTaskIds = new Set(prevState.allCompletedWork.map((w: any) => w.taskId).filter(Boolean));
-            if (!timedTaskIds.has(updatedTask.id)) {
-                 newAllCompletedWork.push({
-                    date: updatedTask.date,
-                    duration: updatedTask.duration,
-                    type: 'task',
-                    title: updatedTask.title,
-                    points: updatedTask.points,
-                    priority: updatedTask.priority,
-                });
-            }
-        }
-
-        return {...prevState, tasks: sortedTasks, todaysCompletedTasks, todaysPendingTasks, allCompletedWork: newAllCompletedWork };
+        localStorage.setItem(TASKS_KEY, JSON.stringify(sortedTasks));
+        return {...prev, tasks: sortedTasks};
       });
     },
-    [addLog, saveToStorage]
+    [addLog]
   );
 
-
-  // --- Timer Logic Effect ---
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (!state.activeItem || state.isPaused) return;
-
-      setState(prevState => {
-        if (!prevState.activeItem) return prevState;
-        const savedTimer: StoredTimer | null = JSON.parse(
-          localStorage.getItem(TIMER_KEY) || 'null'
+  const archiveTask = useCallback(
+    (taskId: string) => {
+      setStateAndDerive(prev => {
+        const taskToArchive = prev.tasks.find(t => t.id === taskId);
+        if (!taskToArchive) return prev;
+        const newTasks = prev.tasks.map(t =>
+          t.id === taskId ? {...t, status: 'archived' as const} : t
         );
-        if (!savedTimer) return prevState;
-
-        let newDisplay = prevState.timeDisplay;
-        let newOvertime = prevState.isOvertime;
-
-        if (savedTimer.item.type === 'task') {
-          if (!savedTimer.endTime) return prevState;
-          const remaining = Math.round(
-            (savedTimer.endTime - Date.now()) / 1000
-          );
-          newDisplay = formatTime(remaining);
-          newOvertime = remaining < 0;
-        } else {
-          if (!savedTimer.startTime) return prevState;
-          const elapsed = Date.now() - savedTimer.startTime;
-          newDisplay = formatTime(Math.round(elapsed / 1000));
-        }
-
-        if (
-          newDisplay !== prevState.timeDisplay ||
-          newOvertime !== prevState.isOvertime
-        ) {
-          return {...prevState, timeDisplay: newDisplay, isOvertime: newOvertime};
-        }
-        return prevState;
+        addLog('TASK_ARCHIVE', {taskId, title: taskToArchive.title});
+        localStorage.setItem(TASKS_KEY, JSON.stringify(newTasks));
+        return {...prev, tasks: newTasks};
       });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [state.activeItem, state.isPaused]);
+    },
+    [addLog]
+  );
 
-  // --- Overtime Notification Effect ---
-  useEffect(() => {
-    if (
-      state.isOvertime &&
-      state.activeItem?.type === 'task'
-    ) {
-      const savedTimer: StoredTimer | null = JSON.parse(localStorage.getItem(TIMER_KEY) || 'null');
-      if (savedTimer && !savedTimer.overtimeNotified) {
-         if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-            new Notification(`Time's up for "${state.activeItem.item.title}"!`, { body: "You're now in overtime." });
-         }
-         audioRef.current?.play().catch(console.error);
-         addLog('TIMER_OVERTIME_STARTED', { taskId: state.activeItem.item.id, taskTitle: state.activeItem.item.title });
-         saveToStorage(TIMER_KEY, {...savedTimer, overtimeNotified: true});
-      }
-    }
-  }, [state.isOvertime, state.activeItem, addLog, saveToStorage]);
+  const unarchiveTask = useCallback(
+    (taskId: string) => {
+      setStateAndDerive(prev => {
+        const taskToUnarchive = prev.tasks.find(t => t.id === taskId);
+        if (!taskToUnarchive) return prev;
+        const newTasks = prev.tasks.map(t =>
+          t.id === taskId ? {...t, status: 'todo' as const} : t
+        );
+        addLog('TASK_UNARCHIVE', {taskId, title: taskToUnarchive.title});
+        localStorage.setItem(TASKS_KEY, JSON.stringify(newTasks));
+        return {...prev, tasks: newTasks};
+      });
+    },
+    [addLog]
+  );
 
-  // --- Badge Awarding Effect ---
-  useEffect(() => {
-    if (!state.isLoaded) return;
-    
-    const allTimeLogs: LogEvent[] = [];
-     for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(LOG_PREFIX)) {
-            const lsLogs = localStorage.getItem(key);
-            if (lsLogs) allTimeLogs.push(...JSON.parse(lsLogs));
-        }
-    }
-    allTimeLogs.sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-    const newlyEarnedBadges: Badge[] = [];
-    for (const badge of state.allBadges) {
-        if (!state.earnedBadges.has(badge.id)) {
-            if(checkBadge(badge, {tasks: state.tasks, logs: allTimeLogs})) {
-                newlyEarnedBadges.push(badge);
-            }
-        }
-    }
-
-    if (newlyEarnedBadges.length > 0) {
-        fire();
-        setState(prevState => {
-            const newEarnedMap = new Map(prevState.earnedBadges);
-            const todayStr = format(new Date(), 'yyyy-MM-dd');
-            newlyEarnedBadges.forEach(badge => {
-                newEarnedMap.set(badge.id, todayStr);
-                setTimeout(() => {
-                    toast({
-                        title: `Badge Unlocked: ${badge.name}! 🎉`,
-                        description: badge.motivationalMessage,
-                    });
-                }, 500);
-            });
-            saveMapToStorage(EARNED_BADGES_KEY, newEarnedMap);
-            const todaysBadges = prevState.allBadges.filter(b => newEarnedMap.get(b.id) === todayStr);
-            return {...prevState, earnedBadges: newEarnedMap, todaysBadges};
+  const pushTaskToNextDay = useCallback(
+    (taskId: string) => {
+      setStateAndDerive(prev => {
+        const taskToPush = prev.tasks.find(t => t.id === taskId);
+        if (!taskToPush) return prev;
+        const newTasks = prev.tasks.map(t => {
+          if (t.id === taskId) {
+            const taskDate = parseISO(t.date);
+            return {...t, date: format(addDays(taskDate, 1), 'yyyy-MM-dd')};
+          }
+          return t;
         });
-    }
+        addLog('TASK_PUSH_NEXT_DAY', {taskId, title: taskToPush.title});
+        localStorage.setItem(TASKS_KEY, JSON.stringify(newTasks));
+        return {...prev, tasks: newTasks};
+      });
+    },
+    [addLog]
+  );
 
-  }, [state.isLoaded, state.tasks, state.logs, state.allBadges, fire, toast, saveMapToStorage]);
-
-  // --- Public API ---
-    const addTask = (task: Omit<StudyTask, 'id' | 'status'>) => {
-        setState(prevState => {
-            const newTask: StudyTask = {...task, id: crypto.randomUUID(), status: 'todo', description: task.description || ''};
-            const updatedTasks = [...prevState.tasks, newTask];
-            const sortedTasks = [...updatedTasks].sort((a,b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-            saveToStorage(TASKS_KEY, sortedTasks);
-            addLog('TASK_ADD', {taskId: newTask.id, title: newTask.title});
-
-            // Re-derive lists
-            const todayStr = format(getSessionDate(), 'yyyy-MM-dd');
-            const todaysPendingTasks = sortedTasks.filter(t => t.date === todayStr && (t.status === 'todo' || t.status === 'in_progress'));
-            return {...prevState, tasks: sortedTasks, todaysPendingTasks};
-        });
-    };
-    
-    const archiveTask = (taskId: string) => {
-        setState(prevState => {
-            let changedTask: StudyTask | undefined;
-            const newTasks = prevState.tasks.map(t => {
-                if (t.id === taskId) {
-                    changedTask = t;
-                    return {...t, status: 'archived'};
-                }
-                return t;
-            });
-            if (changedTask) {
-                addLog('TASK_ARCHIVE', {taskId, title: changedTask.title});
-                saveToStorage(TASKS_KEY, newTasks);
-
-                // Re-derive lists
-                const todayStr = format(getSessionDate(), 'yyyy-MM-dd');
-                const todaysCompletedTasks = newTasks.filter(t => t.status === 'completed' && t.date === todayStr);
-                const todaysPendingTasks = newTasks.filter(t => t.date === todayStr && (t.status === 'todo' || t.status === 'in_progress'));
-                
-                return {...prevState, tasks: newTasks, todaysCompletedTasks, todaysPendingTasks};
-            }
-            return prevState;
-        });
-    };
-    
-    const unarchiveTask = (taskId: string) => {
-        setState(prevState => {
-            let changedTask: StudyTask | undefined;
-            const newTasks = prevState.tasks.map(t => {
-                if (t.id === taskId) {
-                    changedTask = t;
-                    return {...t, status: 'todo'};
-                }
-                return t;
-            });
-            if (changedTask) {
-                addLog('TASK_UNARCHIVE', {taskId, title: changedTask.title});
-                saveToStorage(TASKS_KEY, newTasks);
-                
-                // Re-derive lists
-                const todayStr = format(getSessionDate(), 'yyyy-MM-dd');
-                const todaysPendingTasks = newTasks.filter(t => t.date === todayStr && (t.status === 'todo' || t.status === 'in_progress'));
-
-                return {...prevState, tasks: newTasks, todaysPendingTasks};
-            }
-            return prevState;
-        });
-    };
-    
-    const pushTaskToNextDay = (taskId: string) => {
-        setState(prevState => {
-            let pushedTask: StudyTask | undefined;
-            const newTasks = prevState.tasks.map(t => {
-                if (t.id === taskId) {
-                    const taskDate = parseISO(t.date);
-                    pushedTask = t;
-                    return {...t, date: format(addDays(taskDate, 1), 'yyyy-MM-dd')};
-                }
-                return t;
-            });
-            if (pushedTask) {
-                addLog('TASK_PUSH_NEXT_DAY', {taskId, title: pushedTask.title});
-                saveToStorage(TASKS_KEY, newTasks);
-                
-                // Re-derive lists
-                const todayStr = format(getSessionDate(), 'yyyy-MM-dd');
-                const todaysCompletedTasks = newTasks.filter(t => t.status === 'completed' && t.date === todayStr);
-                const todaysPendingTasks = newTasks.filter(t => t.date === todayStr && (t.status === 'todo' || t.status === 'in_progress'));
-
-                return {...prevState, tasks: newTasks, todaysCompletedTasks, todaysPendingTasks};
-            }
-            return prevState;
-        });
-    };
-    
-    const startTimer = useCallback(
+  const startTimer = useCallback(
     (item: StudyTask | Routine) => {
-      setState(prevState => {
-        if (prevState.activeItem) {
-          toast({
-            title: 'Timer Already Active',
-            description: `Please stop or complete the timer for "${prevState.activeItem.item.title}" first.`,
-            variant: 'destructive',
-          });
-          return prevState;
-        }
+      if (state.activeItem) {
+        toast({
+          title: 'Timer Already Active',
+          description: `Please stop or complete the timer for "${state.activeItem.item.title}" first.`,
+          variant: 'destructive',
+        });
+        return;
+      }
 
-        const type = 'duration' in item ? 'task' : 'routine';
-        const timerData: StoredTimer = {
-          item: {type, item},
-          isPaused: false,
-          pausedTime: 0,
-          pausedDuration: 0,
-        };
+      const type = 'duration' in item ? 'task' : 'routine';
+      const timerData: StoredTimer = {
+        item: {type, item},
+        isPaused: false,
+        pausedTime: 0,
+        pausedDuration: 0,
+      };
 
-        if (type === 'task') {
-          const task = item as StudyTask;
-          timerData.endTime = Date.now() + task.duration * 60 * 1000;
-          addLog('TIMER_START', {taskId: task.id, taskTitle: task.title});
-          updateTask({...task, status: 'in_progress'});
-        } else {
-          timerData.startTime = Date.now();
-          addLog('TIMER_START', {
-            routineId: item.id,
-            routineTitle: item.title,
-          });
-        }
-        saveToStorage(TIMER_KEY, timerData);
-        return {...prevState, activeItem: timerData.item, isPaused: false};
+      if (type === 'task') {
+        const task = item as StudyTask;
+        timerData.endTime = Date.now() + task.duration * 60 * 1000;
+        addLog('TIMER_START', {taskId: task.id, taskTitle: task.title});
+        updateTask({...task, status: 'in_progress'});
+      } else {
+        timerData.startTime = Date.now();
+        addLog('TIMER_START', {
+          routineId: item.id,
+          routineTitle: item.title,
+        });
+      }
+      localStorage.setItem(TIMER_KEY, JSON.stringify(timerData));
+      setState(prev => ({...prev, activeItem: timerData.item, isPaused: false}));
+    },
+    [state.activeItem, addLog, updateTask, toast]
+  );
+
+  const togglePause = useCallback(() => {
+    const savedTimerJSON = localStorage.getItem(TIMER_KEY);
+    if (!savedTimerJSON) return;
+    const savedTimer: StoredTimer = JSON.parse(savedTimerJSON);
+
+    const isNowPaused = !savedTimer.isPaused;
+    let newTimerState = {...savedTimer, isPaused: isNowPaused};
+
+    if (isNowPaused) {
+      // Pausing
+      if (newTimerState.item.type === 'task' && newTimerState.endTime) {
+        newTimerState.pausedTime = Math.max(0, newTimerState.endTime - Date.now());
+      } else if (
+        newTimerState.item.type === 'routine' &&
+        newTimerState.startTime
+      ) {
+        newTimerState.pausedDuration += Date.now() - newTimerState.startTime;
+      }
+      addLog('TIMER_PAUSE', {title: savedTimer.item.item.title});
+    } else {
+      // Resuming
+      if (newTimerState.item.type === 'task' && newTimerState.pausedTime > 0) {
+        newTimerState.endTime = Date.now() + newTimerState.pausedTime;
+      } else if (newTimerState.item.type === 'routine') {
+        newTimerState.startTime = Date.now();
+      }
+      addLog('TIMER_START', {title: savedTimer.item.item.title, resumed: true});
+    }
+
+    localStorage.setItem(TIMER_KEY, JSON.stringify(newTimerState));
+    setState(prev => ({...prev, isPaused: isNowPaused}));
+  }, [addLog]);
+
+  const stopTimer = useCallback(
+    (reason: string) => {
+      const savedTimerJSON = localStorage.getItem(TIMER_KEY);
+      if (!savedTimerJSON) return;
+      const savedTimer: StoredTimer = JSON.parse(savedTimerJSON);
+
+      const {item} = savedTimer;
+      let durationInSeconds = 0;
+      if (item.type === 'task') {
+        const originalDuration = item.item.duration * 60 * 1000;
+        const timeRemaining = savedTimer.isPaused
+          ? savedTimer.pausedTime
+          : savedTimer.endTime
+          ? savedTimer.endTime - Date.now()
+          : 0;
+        durationInSeconds = Math.round((originalDuration - timeRemaining) / 1000);
+        updateTask({...item.item, status: 'todo'});
+      } else {
+        const elapsed = savedTimer.isPaused
+          ? savedTimer.pausedDuration
+          : savedTimer.startTime
+          ? Date.now() - savedTimer.startTime + savedTimer.pausedDuration
+          : 0;
+        durationInSeconds = Math.round(elapsed / 1000);
+      }
+
+      addLog('TIMER_STOP', {
+        title: item.item.title,
+        reason,
+        timeSpentSeconds: Math.max(0, durationInSeconds),
+      });
+      localStorage.removeItem(TIMER_KEY);
+      setStateAndDerive(prev => ({
+        ...prev,
+        activeItem: null,
+        isPaused: true,
+        isOvertime: false,
+        timeDisplay: '00:00',
+      }));
+    },
+    [updateTask, addLog]
+  );
+
+  const completeTimer = useCallback(() => {
+    const savedTimerJSON = localStorage.getItem(TIMER_KEY);
+    if (!savedTimerJSON) return;
+    const savedTimer: StoredTimer = JSON.parse(savedTimerJSON);
+    const {item} = savedTimer;
+
+    if (item.type === 'task') {
+      const overtimeElapsed =
+        savedTimer.isPaused || !savedTimer.endTime || savedTimer.endTime > Date.now()
+          ? 0
+          : Math.round((Date.now() - savedTimer.endTime) / 1000);
+      const totalDurationSecs = item.item.duration * 60 + overtimeElapsed;
+
+      updateTask({...item.item, status: 'completed' as const});
+      addLog('TIMER_SESSION_COMPLETE', {
+        taskId: item.item.id,
+        title: item.item.title,
+        duration: totalDurationSecs,
+        points: item.item.points,
+        priority: item.item.priority,
+      });
+
+      fire();
+      toast({
+        title: 'Task Completed!',
+        description: `You've earned ${item.item.points} points!`,
+      });
+    } else {
+      const elapsed = savedTimer.isPaused
+        ? savedTimer.pausedDuration
+        : savedTimer.startTime
+        ? Date.now() - savedTimer.startTime + savedTimer.pausedDuration
+        : 0;
+      const durationInSeconds = Math.round(elapsed / 1000);
+      const points = Math.floor(durationInSeconds / 60 / 10);
+      addLog('ROUTINE_SESSION_COMPLETE', {
+        routineId: item.item.id,
+        title: item.item.title,
+        duration: durationInSeconds,
+        points,
+      });
+      fire();
+      toast({
+        title: 'Routine Completed!',
+        description: `You logged ${formatTime(
+          durationInSeconds
+        )} and earned ${points} points.`,
+      });
+    }
+    localStorage.removeItem(TIMER_KEY);
+    setStateAndDerive(prev => ({
+      ...prev,
+      activeItem: null,
+      isPaused: true,
+      isOvertime: false,
+      timeDisplay: '00:00',
+    }));
+  }, [updateTask, addLog, fire, toast]);
+
+  const addRoutine = useCallback(
+    (routine: Omit<Routine, 'id'>) => {
+      const newRoutine: Routine = {
+        ...routine,
+        id: crypto.randomUUID(),
+        description: routine.description || '',
+      };
+      setStateAndDerive(prev => {
+        const updated = [...prev.routines, newRoutine].sort((a, b) =>
+          a.startTime.localeCompare(b.startTime)
+        );
+        localStorage.setItem(ROUTINES_KEY, JSON.stringify(updated));
+        return {...prev, routines: updated};
       });
     },
-    [addLog, updateTask, saveToStorage, toast]
+    []
   );
-    
-    const togglePause = () => {
-        const savedTimer: StoredTimer | null = JSON.parse(localStorage.getItem(TIMER_KEY) || 'null');
-        if (!savedTimer) return;
-        
-        const isPaused = !savedTimer.isPaused;
-        let newTimerState = {...savedTimer, isPaused};
-        
-        if (isPaused) { // Pausing
-            if (newTimerState.item.type === 'task' && newTimerState.endTime) {
-                newTimerState.pausedTime = Math.max(0, Math.round((newTimerState.endTime - Date.now()) / 1000));
-            } else if (newTimerState.item.type === 'routine' && newTimerState.startTime) {
-                 newTimerState.pausedDuration += Date.now() - newTimerState.startTime;
-                 newTimerState.pausedTime = Date.now();
-            }
-             addLog('TIMER_PAUSE', {title: savedTimer.item.item.title});
-        } else { // Resuming
-            if (newTimerState.item.type === 'task' && newTimerState.pausedTime > 0) {
-                 newTimerState.endTime = Date.now() + newTimerState.pausedTime * 1000;
-            } else if (newTimerState.item.type === 'routine' && newTimerState.pausedTime) {
-                 newTimerState.startTime = Date.now();
-            }
-            addLog('TIMER_START', {title: savedTimer.item.item.title, resumed: true});
-        }
-        
-        saveToStorage(TIMER_KEY, newTimerState);
-        setState(prev => ({...prev, isPaused}));
-    };
 
-    const stopTimer = (reason: string) => {
-        const savedTimer: StoredTimer | null = JSON.parse(localStorage.getItem(TIMER_KEY) || 'null');
-        if (!savedTimer) return;
-        
-        const {item} = savedTimer;
-        let durationInSeconds = 0;
-        if(item.type === 'task') {
-            const originalDuration = item.item.duration * 60;
-            const timeRemaining = savedTimer.isPaused ? savedTimer.pausedTime : savedTimer.endTime ? Math.round((savedTimer.endTime - Date.now())/1000) : 0;
-            durationInSeconds = originalDuration - timeRemaining;
-            updateTask({...item.item, status: 'todo'});
-        } else {
-             durationInSeconds = savedTimer.isPaused ? Math.round(savedTimer.pausedDuration / 1000) : savedTimer.startTime ? Math.round((Date.now() - savedTimer.startTime + savedTimer.pausedDuration) / 1000) : 0;
-        }
+  const updateRoutine = useCallback((routine: Routine) => {
+    setStateAndDerive(prev => {
+      const updated = prev.routines
+        .map(r => (r.id === routine.id ? routine : r))
+        .sort((a, b) => a.startTime.localeCompare(b.startTime));
+      localStorage.setItem(ROUTINES_KEY, JSON.stringify(updated));
+      return {...prev, routines: updated};
+    });
+  }, []);
 
-        addLog('TIMER_STOP', {title: item.item.title, reason, timeSpentSeconds: Math.max(0, durationInSeconds)});
-        localStorage.removeItem(TIMER_KEY);
-        setState(prev => ({...prev, activeItem: null, isPaused: true, isOvertime: false, timeDisplay: '00:00'}));
-    };
+  const deleteRoutine = useCallback((routineId: string) => {
+    setStateAndDerive(prev => {
+      const updated = prev.routines
+        .filter(r => r.id !== routineId)
+        .sort((a, b) => a.startTime.localeCompare(b.startTime));
+      localStorage.setItem(ROUTINES_KEY, JSON.stringify(updated));
+      return {...prev, routines: updated};
+    });
+  }, []);
 
-    const completeTimer = () => {
-        const savedTimer: StoredTimer | null = JSON.parse(localStorage.getItem(TIMER_KEY) || 'null');
-        if (!savedTimer) return;
-        const {item} = savedTimer;
+  const addBadge = useCallback((badgeData: Omit<Badge, 'id'>) => {
+    const newBadge: Badge = {
+      ...badgeData,
+      id: `custom_${crypto.randomUUID()}`,
+    };
+    setStateAndDerive(prev => {
+        const newAllBadges = [...prev.allBadges, newBadge];
+        const customBadges = newAllBadges.filter(b => b.isCustom);
+        localStorage.setItem(CUSTOM_BADGES_KEY, JSON.stringify(customBadges));
+        return {...prev, allBadges: newAllBadges};
+    });
+  }, []);
 
-        if (item.type === 'task') {
-             const overtimeElapsed = (savedTimer.isPaused || !savedTimer.endTime || savedTimer.endTime > Date.now()) ? 0 : Math.round((Date.now() - savedTimer.endTime) / 1000);
-             const totalDurationSecs = item.item.duration * 60 + overtimeElapsed;
-             
-             // Directly call updateTask and addLog here instead of relying on state batching
-             const updatedTask = {...item.item, status: 'completed' as const};
-             updateTask(updatedTask);
-             addLog('TIMER_SESSION_COMPLETE', {taskId: item.item.id, title: item.item.title, duration: totalDurationSecs, points: item.item.points});
+  const updateBadge = useCallback((updatedBadge: Badge) => {
+    setStateAndDerive(prev => {
+      const newAllBadges = prev.allBadges.map(b =>
+        b.id === updatedBadge.id ? updatedBadge : b
+      );
+      if (updatedBadge.isCustom) {
+        const customBadges = newAllBadges.filter(b => b.isCustom);
+        localStorage.setItem(CUSTOM_BADGES_KEY, JSON.stringify(customBadges));
+      } else {
+        const systemBadges = newAllBadges.filter(b => !b.isCustom);
+        localStorage.setItem(SYSTEM_BADGES_CONFIG_KEY, JSON.stringify(systemBadges));
+      }
+      return {...prev, allBadges: newAllBadges};
+    });
+  }, []);
 
-             fire();
-             toast({title: 'Task Completed!', description: `You've earned ${item.item.points} points!`});
-        } else {
-            const durationInSeconds = savedTimer.isPaused ? Math.round(savedTimer.pausedDuration / 1000) : savedTimer.startTime ? Math.round((Date.now() - savedTimer.startTime + savedTimer.pausedDuration) / 1000) : 0;
-            const points = Math.floor(durationInSeconds / 60 / 10);
-            addLog('ROUTINE_SESSION_COMPLETE', {routineId: item.item.id, title: item.item.title, duration: durationInSeconds, points});
-            fire();
-            toast({title: 'Routine Completed!', description: `You logged ${formatTime(durationInSeconds)} and earned ${points} points.`});
-        }
-        localStorage.removeItem(TIMER_KEY);
-        setState(prev => ({...prev, activeItem: null, isPaused: true, isOvertime: false, timeDisplay: '00:00'}));
-    };
-    
-    const addRoutine = (routine: Omit<Routine, 'id'>) => {
-        setState(prevState => {
-            const newRoutine: Routine = {...routine, id: crypto.randomUUID(), description: routine.description || ''};
-            const updatedRoutines = [...prevState.routines, newRoutine];
-            const sorted = [...updatedRoutines].sort((a,b) => a.startTime.localeCompare(b.startTime));
-            saveToStorage(ROUTINES_KEY, sorted);
-            
-            // Re-derive lists
-            const todaysRoutines = sorted.filter(r => r.days.includes(getSessionDate().getDay()));
-            return {...prevState, routines: sorted, todaysRoutines};
-        });
-    };
+  const deleteBadge = useCallback((badgeId: string) => {
+    setStateAndDerive(prev => {
+      const updatedAllBadges = prev.allBadges.filter(b => b.id !== badgeId);
+      const updatedEarned = new Map(prev.earnedBadges);
+      if (updatedEarned.has(badgeId)) {
+        updatedEarned.delete(badgeId);
+      }
+      const customBadges = updatedAllBadges.filter(b => b.isCustom);
+      localStorage.setItem(CUSTOM_BADGES_KEY, JSON.stringify(customBadges));
+      localStorage.setItem(EARNED_BADGES_KEY, JSON.stringify(Array.from(updatedEarned.entries())));
+      return {
+        ...prev,
+        allBadges: updatedAllBadges,
+        earnedBadges: updatedEarned,
+      };
+    });
+  }, []);
 
-    const updateRoutine = (routine: Routine) => {
-        setState(prevState => {
-            const newRoutines = prevState.routines.map(r => r.id === routine.id ? routine : r);
-            const sorted = [...newRoutines].sort((a,b) => a.startTime.localeCompare(b.startTime));
-            saveToStorage(ROUTINES_KEY, sorted);
+  const updateProfile = useCallback((newProfileData: Partial<UserProfile>) => {
+    setStateAndDerive(prev => {
+      const newProfile = {...prev.profile, ...newProfileData};
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(newProfile));
+      return {...prev, profile: newProfile};
+    });
+  }, []);
 
-            // Re-derive lists
-            const todaysRoutines = sorted.filter(r => r.days.includes(getSessionDate().getDay()));
-            return {...prevState, routines: sorted, todaysRoutines};
-        });
-    };
-    
-    const deleteRoutine = (routineId: string) => {
-        setState(prevState => {
-            const newRoutines = prevState.routines.filter(r => r.id !== routineId);
-            const sorted = [...newRoutines].sort((a,b) => a.startTime.localeCompare(b.startTime));
-            saveToStorage(ROUTINES_KEY, sorted);
-            
-            // Re-derive lists
-            const todaysRoutines = sorted.filter(r => r.days.includes(getSessionDate().getDay()));
-            return {...prevState, routines: sorted, todaysRoutines};
-        });
-    };
-    
-    const addBadge = (badgeData: Omit<Badge, 'id'>) => {
-        const newBadge: Badge = {...badgeData, id: `custom_${crypto.randomUUID()}`};
-        setState(prevState => {
-            const updatedBadges = [...prevState.allBadges, newBadge];
-            saveToStorage(CUSTOM_BADGES_KEY, updatedBadges.filter(b => b.isCustom));
-            return {...prevState, allBadges: updatedBadges};
-        });
-    };
-    
-    const updateBadge = (updatedBadge: Badge) => {
-        setState(prevState => {
-            const updatedAllBadges = prevState.allBadges.map(b => b.id === updatedBadge.id ? updatedBadge : b);
-            if (updatedBadge.isCustom) {
-                saveToStorage(CUSTOM_BADGES_KEY, updatedAllBadges.filter(b => b.isCustom));
-            } else {
-                saveToStorage(SYSTEM_BADGES_CONFIG_KEY, updatedAllBadges.filter(b => !b.isCustom));
-            }
-            return {...prevState, allBadges: updatedAllBadges};
-        });
-    };
-    
-    const deleteBadge = (badgeId: string) => {
-        setState(prevState => {
-            const updatedAllBadges = prevState.allBadges.filter(b => b.id !== badgeId);
-            const updatedEarned = new Map(prevState.earnedBadges);
-            if (updatedEarned.has(badgeId)) {
-                updatedEarned.delete(badgeId);
-                saveMapToStorage(EARNED_BADGES_KEY, updatedEarned);
-            }
-            saveToStorage(CUSTOM_BADGES_KEY, updatedAllBadges.filter(b => b.isCustom));
-            return {...prevState, allBadges: updatedAllBadges, earnedBadges: updatedEarned};
-        });
-    };
-
-    const updateProfile = useCallback(
-      (newProfileData: Partial<UserProfile>) => {
-        setState(prevState => {
-          const updatedProfile = {...prevState.profile, ...newProfileData};
-          saveToStorage(PROFILE_KEY, updatedProfile);
-          return {...prevState, profile: updatedProfile};
-        });
-      },
-      [saveToStorage]
-    );
+  const contextValue = useMemo(() => ({
+    state,
+    addTask,
+    updateTask,
+    archiveTask,
+    unarchiveTask,
+    pushTaskToNextDay,
+    startTimer,
+    togglePause,
+    completeTimer,
+    stopTimer,
+    addRoutine,
+    updateRoutine,
+    deleteRoutine,
+    addBadge,
+    updateBadge,
+    deleteBadge,
+    updateProfile,
+  }), [state, addTask, updateTask, archiveTask, unarchiveTask, pushTaskToNextDay, startTimer, togglePause, completeTimer, stopTimer, addRoutine, updateRoutine, deleteRoutine, addBadge, updateBadge, deleteBadge, updateProfile]);
 
   return (
-    <GlobalStateContext.Provider value={{
-      state: state,
-      addTask,
-      updateTask,
-      archiveTask,
-      unarchiveTask,
-      pushTaskToNextDay,
-      startTimer,
-      togglePause,
-      completeTimer,
-      stopTimer,
-      addRoutine,
-      updateRoutine,
-      deleteRoutine,
-      addBadge,
-      updateBadge,
-      deleteBadge,
-      updateProfile,
-    }}>
+    <GlobalStateContext.Provider value={contextValue}>
       {children}
     </GlobalStateContext.Provider>
   );
@@ -807,7 +899,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
 
 export const useGlobalState = () => {
   const context = useContext(GlobalStateContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useGlobalState must be used within a GlobalStateProvider');
   }
   return context;

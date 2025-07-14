@@ -10,7 +10,7 @@ interface TodaysRoutinesWidgetProps {
 export const TodaysRoutinesWidget = ({
   todaysRoutines,
 }: TodaysRoutinesWidgetProps) => {
-  if (todaysRoutines.length === 0) {
+  if (!todaysRoutines || todaysRoutines.length === 0) {
     return null;
   }
 

@@ -4,7 +4,7 @@ import React from 'react';
 import {BadgeCard} from '@/components/badges/badge-card';
 
 export const UnlockedBadgesWidget = ({todaysBadges}: any) => {
-  if (todaysBadges.length === 0) {
+  if (!todaysBadges || todaysBadges.length === 0) {
     return null;
   }
 
