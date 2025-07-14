@@ -91,8 +91,8 @@ export default function DashboardPage() {
     activeItem,
   } = useTasks();
 
-  const {earnedBadges, todaysBadges, isLoaded: badgesLoaded} = useBadges();
-  const {getPreviousDayLogs, todaysCompletedRoutines, isLoaded: loggerLoaded} =
+  const {allBadges, earnedBadges, todaysBadges, isLoaded: badgesLoaded} = useBadges();
+  const {todaysLogs, getPreviousDayLogs, todaysCompletedRoutines, isLoaded: loggerLoaded} =
     useLogger();
   const {profile, isLoaded: profileLoaded} = useProfile();
   const {viewMode, isLoaded: viewModeLoaded} = useViewMode();
@@ -151,8 +151,11 @@ export default function DashboardPage() {
   const widgetProps = {
     // Data
     tasks,
+    logs: todaysLogs,
     todaysCompletedTasks,
     todaysPendingTasks,
+    allBadges,
+    earnedBadges,
     todaysBadges,
     todaysRoutines,
     todaysCompletedRoutines,

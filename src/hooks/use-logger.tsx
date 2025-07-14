@@ -16,6 +16,7 @@ import {subDays, formatISO, format, parseISO} from 'date-fns';
 // --- Context Setup ---
 interface LoggerContextType {
   logs: LogEvent[];
+  todaysLogs: LogEvent[];
   isLoaded: boolean;
   addLog: (type: LogEvent['type'], payload: LogEvent['payload']) => void;
   getPreviousDayLogs: () => LogEvent[];
@@ -155,7 +156,8 @@ export function LoggerProvider({children}: {children: ReactNode}) {
   );
 
   const value = {
-    logs,
+    logs: logs, // all logs for the current session day
+    todaysLogs: logs, // explicitly named for clarity
     isLoaded,
     addLog,
     getPreviousDayLogs,

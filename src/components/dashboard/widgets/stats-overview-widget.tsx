@@ -14,7 +14,9 @@ export const StatsOverviewWidget = ({ tasks, logs, allBadges, earnedBadges }: an
     (t: any) => t.status === 'completed' && t.date === todayStr
   );
   
-  const todaysTimedLogs = logs.filter(
+  // Ensure logs is an array before filtering
+  const safeLogs = Array.isArray(logs) ? logs : [];
+  const todaysTimedLogs = safeLogs.filter(
     (l: any) => (l.type === 'ROUTINE_SESSION_COMPLETE' || l.type === 'TIMER_SESSION_COMPLETE') && l.timestamp.startsWith(todayStr)
   );
 
