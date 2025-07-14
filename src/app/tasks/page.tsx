@@ -1,4 +1,3 @@
-
 'use client';
 import React, {useState, useMemo} from 'react';
 import dynamic from 'next/dynamic';
@@ -10,7 +9,7 @@ import {
   LayoutGrid,
   List,
 } from 'lucide-react';
-import {useTasks} from '@/hooks/use-tasks.tsx';
+import {useGlobalState} from '@/hooks/use-global-state';
 import {TaskList} from '@/components/tasks/task-list';
 import {SimpleTaskList} from '@/components/tasks/simple-task-list';
 import {EmptyState} from '@/components/tasks/empty-state';
@@ -32,15 +31,15 @@ type TaskFilter = 'all' | 'todo' | 'in_progress' | 'completed';
 
 export default function AllTasksPage() {
   const {
-    tasks,
+    state,
     addTask,
     updateTask,
     archiveTask,
     unarchiveTask,
     pushTaskToNextDay,
-    isLoaded: tasksLoaded,
-  } = useTasks();
-  const {viewMode, setViewMode, isLoaded: viewModeLoaded} = useViewMode();
+  } = useGlobalState();
+
+  const {viewMode, setViewMode} = useViewMode();
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
   const [filter, setFilter] = useState<TaskFilter>('all');
@@ -48,7 +47,6 @@ export default function AllTasksPage() {
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
 
   const isTaskFormOpen = isAddDialogOpen || !!editingTask;
-  const isLoaded = tasksLoaded && viewModeLoaded;
 
   const openAddTaskDialog = () => {
     setEditingTask(null);
@@ -66,7 +64,7 @@ export default function AllTasksPage() {
   };
 
   const filteredTasks = useMemo(() => {
-    let activeTasks = tasks.filter(task => task.status !== 'archived');
+    let activeTasks = state.tasks.filter(task => task.status !== 'archived');
 
     let tasksByStatus = activeTasks;
     if (filter !== 'all') {
@@ -79,7 +77,7 @@ export default function AllTasksPage() {
     }
 
     return tasksByStatus;
-  }, [tasks, filter, selectedDate]);
+  }, [state.tasks, filter, selectedDate]);
 
   const hasFilters = filter !== 'all' || !!selectedDate;
 
@@ -114,7 +112,6 @@ export default function AllTasksPage() {
       </header>
 
       <main className="flex-1 p-2 sm:p-4 overflow-y-auto space-y-6">
-        {/* Filter Bar */}
         <div className="flex flex-col sm:flex-row gap-4 items-center">
           <Tabs
             value={filter}
@@ -197,9 +194,8 @@ export default function AllTasksPage() {
           </div>
         </div>
 
-        {/* Task List Section */}
         <div className="flex-1">
-          {!isLoaded ? (
+          {!state.isLoaded ? (
             <div className="space-y-4">
               <Skeleton className="h-28 w-full" />
               <Skeleton className="h-28 w-full" />

@@ -1,3 +1,4 @@
+'use client';
 
 import React, {useState, lazy, Suspense} from 'react';
 import {
@@ -35,7 +36,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {useConfetti} from '@/components/providers/confetti-provider';
-import { useTasks } from '@/hooks/use-tasks.tsx';
+import {useGlobalState} from '@/hooks/use-global-state';
 
 const TimerDialog = lazy(() =>
   import('./timer-dialog').then(module => ({default: module.TimerDialog}))
@@ -48,7 +49,6 @@ interface TaskCardProps {
   onUnarchive: (taskId: string) => void;
   onPushToNextDay: (taskId: string) => void;
   onEdit: (task: StudyTask) => void;
-  activeItem: ReturnType<typeof useTasks>['activeItem'];
 }
 
 const priorityConfig: Record<
@@ -72,7 +72,6 @@ const priorityConfig: Record<
   },
 };
 
-
 export function TaskCard({
   task,
   onUpdate,
@@ -80,12 +79,14 @@ export function TaskCard({
   onUnarchive,
   onPushToNextDay,
   onEdit,
-  activeItem,
 }: TaskCardProps) {
   const [isTimerOpen, setTimerOpen] = useState(false);
   const {toast} = useToast();
   const {fire} = useConfetti();
-  const isTimerActive = activeItem?.type === 'task' && activeItem.item.id === task.id;
+  const {state} = useGlobalState();
+  const {activeItem} = state;
+  const isTimerActive =
+    activeItem?.type === 'task' && activeItem.item.id === task.id;
 
   const handleStatusChange = (newStatus: TaskStatus) => {
     const oldStatus = task.status;
@@ -174,20 +175,22 @@ export function TaskCard({
             : task.status === 'completed'
             ? 'bg-card/60 dark:bg-card/80 border-accent'
             : priorityConfig[task.priority]?.className || 'border-transparent',
-            isTimerActive && 'ring-2 ring-primary'
+          isTimerActive && 'ring-2 ring-primary'
         )}
       >
         <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
             <div className="flex-grow">
-              <CardTitle className="text-lg font-semibold">{task.title}</CardTitle>
+              <CardTitle className="text-lg font-semibold">
+                {task.title}
+              </CardTitle>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
                 <span className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" /> {formattedDate}
                 </span>
                 <span className="flex items-center gap-2">
                   <Clock className="h-4 w-4" /> {formattedTime} ({task.duration}
-                  {' '}min)
+                  {' min)'}
                 </span>
               </div>
             </div>
@@ -209,7 +212,9 @@ export function TaskCard({
               <Award className="h-3.5 w-3.5 text-amber-500" /> {task.points} pts
             </Badge>
             <Badge
-              variant={priorityConfig[task.priority]?.badgeVariant || 'secondary'}
+              variant={
+                priorityConfig[task.priority]?.badgeVariant || 'secondary'
+              }
               className="capitalize flex items-center gap-1.5"
             >
               <Flame className="h-3.5 w-3.5" />

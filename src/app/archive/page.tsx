@@ -1,6 +1,6 @@
 'use client';
 import React, {useMemo} from 'react';
-import {useTasks} from '@/hooks/use-tasks.tsx';
+import {useGlobalState} from '@/hooks/use-global-state';
 import {TaskList} from '@/components/tasks/task-list';
 import {EmptyState} from '@/components/tasks/empty-state';
 import {Skeleton} from '@/components/ui/skeleton';
@@ -8,17 +8,16 @@ import {Archive} from 'lucide-react';
 
 export default function ArchivePage() {
   const {
-    tasks,
+    state,
     updateTask,
     unarchiveTask,
     pushTaskToNextDay,
     archiveTask,
-    isLoaded,
-  } = useTasks();
+  } = useGlobalState();
 
   const archivedTasks = useMemo(
-    () => tasks.filter(task => task.status === 'archived'),
-    [tasks]
+    () => state.tasks.filter(task => task.status === 'archived'),
+    [state.tasks]
   );
 
   return (
@@ -31,7 +30,7 @@ export default function ArchivePage() {
       </header>
 
       <main className="flex-1 p-2 sm:p-4 overflow-y-auto">
-        {!isLoaded ? (
+        {!state.isLoaded ? (
           <div className="space-y-4">
             <Skeleton className="h-28 w-full" />
             <Skeleton className="h-28 w-full" />

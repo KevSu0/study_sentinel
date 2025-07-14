@@ -1,5 +1,5 @@
 'use client';
-import React, {useMemo, lazy, Suspense, useState, useCallback} from 'react';
+import React, {useMemo, lazy, Suspense, useState} from 'react';
 import {
   Card,
   CardContent,
@@ -22,9 +22,7 @@ import {
   Activity,
   Star,
 } from 'lucide-react';
-import {useTasks} from '@/hooks/use-tasks.tsx';
-import {useBadges} from '@/hooks/useBadges';
-import {useLogger} from '@/hooks/use-logger.tsx';
+import {useGlobalState} from '@/hooks/use-global-state';
 import {format, subDays, startOfDay, parseISO} from 'date-fns';
 import {Skeleton} from '@/components/ui/skeleton';
 import {BadgeCard} from '@/components/badges/badge-card';
@@ -45,75 +43,10 @@ const badgeCategories: BadgeCategory[] = [
 ];
 
 export default function StatsPage() {
-  const {tasks, isLoaded: tasksLoaded} = useTasks();
-  const {allBadges, earnedBadges, isLoaded: badgesLoaded} = useBadges();
-  const {getAllLogs, isLoaded: loggerLoaded} = useLogger();
+  const {state} = useGlobalState();
+  const {tasks, allCompletedWork, allBadges, earnedBadges, isLoaded} = state;
   const [timeRange, setTimeRange] = useState('daily');
 
-  const isLoaded = tasksLoaded && badgesLoaded && loggerLoaded;
-
-  // A unified list of all completed work, tasks and routines.
-  const allCompletedWork = useMemo(() => {
-    if (!isLoaded) return [];
-
-    const workItems: {
-      date: string;
-      duration: number; // minutes
-      type: 'task' | 'routine';
-      title: string;
-      points: number;
-      priority?: TaskPriority;
-    }[] = [];
-
-    // Get all completed sessions (tasks and routines) from logs
-    const sessionLogs = getAllLogs().filter(
-      l =>
-        l.type === 'ROUTINE_SESSION_COMPLETE' ||
-        l.type === 'TIMER_SESSION_COMPLETE'
-    );
-
-    const timedTaskIds = new Set(
-      sessionLogs.map(l => l.payload.taskId).filter(Boolean)
-    );
-
-    workItems.push(
-      ...sessionLogs.map(l => {
-        const isRoutine = l.type === 'ROUTINE_SESSION_COMPLETE';
-        const task = isRoutine
-          ? null
-          : tasks.find(t => t.id === l.payload.taskId);
-
-        return {
-          date: format(parseISO(l.timestamp), 'yyyy-MM-dd'),
-          duration: Math.round(l.payload.duration / 60), // convert seconds to minutes
-          type: isRoutine ? 'routine' : 'task',
-          title: l.payload.title,
-          points: l.payload.points || 0,
-          priority: task?.priority,
-        };
-      })
-    );
-
-    // Add completed tasks that were NOT timed sessions
-    const manuallyCompletedTasks = tasks.filter(
-      t => t.status === 'completed' && !timedTaskIds.has(t.id)
-    );
-
-    workItems.push(
-      ...manuallyCompletedTasks.map(t => ({
-        date: t.date,
-        duration: t.duration,
-        type: 'task' as const,
-        title: t.title,
-        points: t.points,
-        priority: t.priority,
-      }))
-    );
-
-    return workItems;
-  }, [isLoaded, tasks, getAllLogs]);
-
-  // Filtered tasks for completion rate calculation (only tasks have this concept)
   const filteredTasks = useMemo(() => {
     const nonArchivedTasks = tasks.filter(t => t.status !== 'archived');
     const now = startOfDay(new Date());
@@ -135,7 +68,6 @@ export default function StatsPage() {
     [filteredTasks]
   );
 
-  // Filtered work items (tasks + routines) for general stats
   const filteredWork = useMemo(() => {
     const now = startOfDay(new Date());
 
@@ -162,7 +94,6 @@ export default function StatsPage() {
       0
     );
 
-    // Completion rate is specific to tasks that can be planned.
     const completionRate =
       filteredTasks.length > 0
         ? (filteredCompletedTasks.length / filteredTasks.length) * 100
@@ -219,7 +150,6 @@ export default function StatsPage() {
       overall: [],
     };
     for (const badge of allBadges) {
-      // Safely default to 'overall' if category is missing
       const category = badge.category || 'overall';
       categories[category].push(badge);
     }

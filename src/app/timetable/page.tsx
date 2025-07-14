@@ -1,25 +1,29 @@
 'use client';
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import dynamic from 'next/dynamic';
-import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
-import { useRoutines } from '@/hooks/use-routines.tsx';
-import { Skeleton } from '@/components/ui/skeleton';
-import { RoutineListItem } from '@/components/timetable/routine-list-item';
-import { Routine } from '@/lib/types';
-import { EmptyState } from '@/components/tasks/empty-state';
-import { useToast } from '@/hooks/use-toast';
+import {Button} from '@/components/ui/button';
+import {PlusCircle} from 'lucide-react';
+import {useGlobalState} from '@/hooks/use-global-state';
+import {Skeleton} from '@/components/ui/skeleton';
+import {RoutineListItem} from '@/components/timetable/routine-list-item';
+import {Routine} from '@/lib/types';
+import {EmptyState} from '@/components/tasks/empty-state';
+import {useToast} from '@/hooks/use-toast';
 
 const AddRoutineDialog = dynamic(
-  () => import('@/components/timetable/add-routine-dialog').then(m => m.AddRoutineDialog),
-  { ssr: false }
+  () =>
+    import('@/components/timetable/add-routine-dialog').then(
+      m => m.AddRoutineDialog
+    ),
+  {ssr: false}
 );
 
 export default function TimetablePage() {
-  const { routines, addRoutine, updateRoutine, deleteRoutine, isLoaded } = useRoutines();
+  const {state, addRoutine, updateRoutine, deleteRoutine} = useGlobalState();
+  const {routines, isLoaded} = state;
   const [isDialogOpen, setDialogOpen] = useState(false);
   const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
-  const { toast } = useToast();
+  const {toast} = useToast();
 
   const openAddDialog = () => {
     setEditingRoutine(null);
@@ -34,17 +38,19 @@ export default function TimetablePage() {
   const handleDeleteRoutine = (routineId: string) => {
     deleteRoutine(routineId);
     toast({
-      title: "Routine Deleted",
-      description: "The routine has been removed from your timetable."
+      title: 'Routine Deleted',
+      description: 'The routine has been removed from your timetable.',
     });
-  }
+  };
 
   return (
     <div className="flex flex-col h-full">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border-b gap-2">
         <div>
           <h1 className="text-3xl font-bold text-primary">Weekly Timetable</h1>
-          <p className="text-muted-foreground">Manage your repeating study routines.</p>
+          <p className="text-muted-foreground">
+            Manage your repeating study routines.
+          </p>
         </div>
         <Button onClick={openAddDialog} className="w-full sm:w-auto">
           <PlusCircle className="mr-2" />
@@ -61,14 +67,14 @@ export default function TimetablePage() {
           </>
         ) : routines.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {routines.map(routine => (
-            <RoutineListItem
-              key={routine.id}
-              routine={routine}
-              onEdit={openEditDialog}
-              onDelete={handleDeleteRoutine}
-            />
-          ))}
+            {routines.map(routine => (
+              <RoutineListItem
+                key={routine.id}
+                routine={routine}
+                onEdit={openEditDialog}
+                onDelete={handleDeleteRoutine}
+              />
+            ))}
           </div>
         ) : (
           <div className="flex items-center justify-center h-full pt-16">

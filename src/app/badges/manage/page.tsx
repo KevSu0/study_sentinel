@@ -1,10 +1,9 @@
-// This is a new file for the badge management page.
 'use client';
 import React, {useState, useMemo} from 'react';
 import dynamic from 'next/dynamic';
 import {Button} from '@/components/ui/button';
 import {PlusCircle, Settings} from 'lucide-react';
-import {useBadges} from '@/hooks/useBadges';
+import {useGlobalState} from '@/hooks/use-global-state';
 import {Skeleton} from '@/components/ui/skeleton';
 import type {Badge} from '@/lib/types';
 import {BadgeListItem} from '@/components/badges/badge-list-item';
@@ -19,14 +18,9 @@ const BadgeDialog = dynamic(
 );
 
 export default function ManageBadgesPage() {
-  const {
-    allBadges,
-    updateBadge,
-    addBadge,
-    deleteBadge,
-    isLoaded,
-    earnedBadges,
-  } = useBadges();
+  const {state, updateBadge, addBadge, deleteBadge} = useGlobalState();
+  const {allBadges, earnedBadges, isLoaded} = state;
+
   const [isDialogOpen, setDialogOpen] = useState(false);
   const [editingBadge, setEditingBadge] = useState<Badge | null>(null);
 
@@ -42,7 +36,6 @@ export default function ManageBadgesPage() {
 
   const sortedBadges = useMemo(() => {
     return [...allBadges].sort((a, b) => {
-      // Show editable custom badges first
       if (a.isCustom && !b.isCustom) return -1;
       if (!a.isCustom && b.isCustom) return 1;
       return a.name.localeCompare(b.name);

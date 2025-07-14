@@ -15,9 +15,10 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-import {useProfile, type UserProfile} from '@/hooks/use-profile.tsx';
+import {useGlobalState} from '@/hooks/use-global-state';
 import {useToast} from '@/hooks/use-toast';
 import {Skeleton} from '@/components/ui/skeleton';
+import {UserProfile} from '@/lib/types';
 
 const profileSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
@@ -30,7 +31,8 @@ const profileSchema = z.object({
 });
 
 export default function ProfilePage() {
-  const {profile, updateProfile, isLoaded} = useProfile();
+  const {state, updateProfile} = useGlobalState();
+  const {profile, isLoaded} = state;
   const {toast} = useToast();
 
   const {
@@ -55,7 +57,7 @@ export default function ProfilePage() {
       title: 'Profile Saved',
       description: 'Your information has been updated successfully.',
     });
-    reset(data); // To reset the dirty state
+    reset(data);
   };
 
   return (

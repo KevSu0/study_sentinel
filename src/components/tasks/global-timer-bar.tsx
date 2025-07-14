@@ -1,7 +1,6 @@
-
 'use client';
 import React, {useState} from 'react';
-import { useTasks } from '@/hooks/use-tasks.tsx';
+import {useGlobalState} from '@/hooks/use-global-state';
 import type {StudyTask, Routine} from '@/lib/types';
 import {Button} from '@/components/ui/button';
 import {Timer, CheckCircle, XCircle, Pause, Play} from 'lucide-react';
@@ -9,14 +8,12 @@ import {StopTimerDialog} from './stop-timer-dialog';
 
 export function GlobalTimerBar() {
   const {
-    activeItem,
-    timeDisplay,
-    isPaused,
-    isOvertime,
+    state,
     togglePause,
     completeTimer,
     stopTimer,
-  } = useTasks();
+  } = useGlobalState();
+  const {activeItem, timeDisplay, isPaused, isOvertime} = state;
 
   const [isStopDialogOpen, setStopDialogOpen] = useState(false);
 
@@ -34,7 +31,6 @@ export function GlobalTimerBar() {
       }
       setStopDialogOpen(true);
     } else {
-      // For routines, stop immediately without a dialog
       stopTimer('Stopped routine timer from global bar');
     }
   };
@@ -44,12 +40,13 @@ export function GlobalTimerBar() {
     setStopDialogOpen(false);
   };
 
-
   return (
     <>
       <div
         className={`sticky top-[65px] md:top-0 z-20 w-full ${
-          isTask ? 'bg-primary/95 text-primary-foreground' : 'bg-accent/95 text-accent-foreground'
+          isTask
+            ? 'bg-primary/95 text-primary-foreground'
+            : 'bg-accent/95 text-accent-foreground'
         } backdrop-blur-sm shadow-lg animate-in fade-in-0 slide-in-from-top-full`}
       >
         <div className="container mx-auto flex items-center justify-between gap-4 p-2">
@@ -78,7 +75,9 @@ export function GlobalTimerBar() {
               className="hover:bg-white/20 px-2 sm:px-3"
             >
               {isPaused ? <Play /> : <Pause />}
-              <span className="hidden sm:inline">{isPaused ? 'Resume' : 'Pause'}</span>
+              <span className="hidden sm:inline">
+                {isPaused ? 'Resume' : 'Pause'}
+              </span>
             </Button>
             <Button
               size="sm"
@@ -89,7 +88,7 @@ export function GlobalTimerBar() {
               <CheckCircle />
               <span className="hidden sm:inline">Complete</span>
             </Button>
-            
+
             <Button
               size="sm"
               variant="destructive"
@@ -99,12 +98,11 @@ export function GlobalTimerBar() {
               <XCircle />
               <span className="hidden sm:inline">Stop</span>
             </Button>
-            
           </div>
         </div>
       </div>
       {isTask && (
-         <StopTimerDialog
+        <StopTimerDialog
           isOpen={isStopDialogOpen}
           onOpenChange={setStopDialogOpen}
           onConfirm={handleConfirmStopTask}
@@ -113,5 +111,3 @@ export function GlobalTimerBar() {
     </>
   );
 }
-
-    

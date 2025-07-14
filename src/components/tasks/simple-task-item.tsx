@@ -1,3 +1,4 @@
+'use client';
 
 import React, {useState, Suspense, lazy, useMemo} from 'react';
 import {
@@ -21,7 +22,7 @@ import type {StudyTask} from '@/lib/types';
 import {useConfetti} from '@/components/providers/confetti-provider';
 import {useToast} from '@/hooks/use-toast';
 import {format} from 'date-fns';
-import { useTasks } from '@/hooks/use-tasks.tsx';
+import {useGlobalState} from '@/hooks/use-global-state';
 
 const TimerDialog = lazy(() =>
   import('./timer-dialog').then(module => ({default: module.TimerDialog}))
@@ -34,7 +35,6 @@ interface SimpleTaskItemProps {
   onUnarchive: (taskId: string) => void;
   onPushToNextDay: (taskId: string) => void;
   onEdit: (task: StudyTask) => void;
-  activeItem: ReturnType<typeof useTasks>['activeItem'];
 }
 
 export function SimpleTaskItem({
@@ -44,9 +44,11 @@ export function SimpleTaskItem({
   onUnarchive,
   onPushToNextDay,
   onEdit,
-  activeItem,
 }: SimpleTaskItemProps) {
-  const isTimerActive = activeItem?.type === 'task' && activeItem.item.id === task.id;
+  const {state} = useGlobalState();
+  const {activeItem} = state;
+  const isTimerActive =
+    activeItem?.type === 'task' && activeItem.item.id === task.id;
   const isCompleted = task.status === 'completed';
   const {fire} = useConfetti();
   const {toast} = useToast();

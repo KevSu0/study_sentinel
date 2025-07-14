@@ -1,4 +1,3 @@
-import type {LucideIcon} from 'lucide-react';
 import {z} from 'zod';
 
 export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'archived';
@@ -35,12 +34,11 @@ export type BadgeCondition = {
     | 'ROUTINES_COMPLETED'
     | 'POINTS_EARNED'
     | 'TIME_ON_SUBJECT'
-    // Special types that don't fit the standard model
-    | 'SINGLE_SESSION_TIME' 
+    | 'SINGLE_SESSION_TIME'
     | 'ALL_TASKS_COMPLETED_ON_DAY';
   target: number;
   timeframe: 'TOTAL' | 'DAY' | 'WEEK' | 'MONTH';
-  subjectId?: string; // For TIME_ON_SUBJECT
+  subjectId?: string;
 };
 
 export type Badge = {
@@ -54,7 +52,6 @@ export type Badge = {
   isCustom: boolean;
   isEnabled: boolean;
   conditions: BadgeCondition[];
-  // The checker function is now derived from conditions, not stored.
 };
 
 export type LogEventType =
@@ -77,6 +74,30 @@ export type LogEvent = {
   timestamp: string; // ISO 8601 format
   type: LogEventType;
   payload: Record<string, any>;
+};
+
+export type UserProfile = {
+  name: string;
+  email: string;
+  phone: string;
+  passion: string;
+  dream: string;
+  education: string;
+  reasonForUsing: string;
+};
+
+export type ActiveTimerItem =
+  | {type: 'task'; item: StudyTask}
+  | {type: 'routine'; item: Routine};
+
+export type CompletedWork = {
+  date: string;
+  duration: number; // minutes
+  type: 'task' | 'routine';
+  title: string;
+  points: number;
+  priority?: TaskPriority;
+  subjectId?: string;
 };
 
 export const PositivePsychologistInputSchema = z.object({

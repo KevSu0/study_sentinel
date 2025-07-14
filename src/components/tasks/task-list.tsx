@@ -1,7 +1,7 @@
+'use client';
 
 import {TaskCard} from './task-card';
 import type {StudyTask} from '@/lib/types';
-import { useTasks } from '@/hooks/use-tasks.tsx';
 
 interface TaskListProps {
   tasks: StudyTask[];
@@ -10,7 +10,6 @@ interface TaskListProps {
   onUnarchive: (taskId: string) => void;
   onPushToNextDay: (taskId: string) => void;
   onEdit: (task: StudyTask) => void;
-  activeItem: ReturnType<typeof useTasks>['activeItem'];
 }
 
 export function TaskList({
@@ -20,7 +19,6 @@ export function TaskList({
   onUnarchive,
   onPushToNextDay,
   onEdit,
-  activeItem,
 }: TaskListProps) {
   return (
     <div className="space-y-4">
@@ -33,7 +31,6 @@ export function TaskList({
           onUnarchive={onUnarchive}
           onPushToNextDay={onPushToNextDay}
           onEdit={onEdit}
-          activeItem={activeItem}
         />
       ))}
     </div>

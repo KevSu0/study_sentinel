@@ -1,9 +1,15 @@
-
 'use client';
 import React from 'react';
 import {RoutineDashboardCard} from '@/components/timetable/routine-dashboard-card';
+import {Routine} from '@/lib/types';
 
-export const TodaysRoutinesWidget = ({todaysRoutines}: any) => {
+interface TodaysRoutinesWidgetProps {
+  todaysRoutines: Routine[];
+}
+
+export const TodaysRoutinesWidget = ({
+  todaysRoutines,
+}: TodaysRoutinesWidgetProps) => {
   if (todaysRoutines.length === 0) {
     return null;
   }

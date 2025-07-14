@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import {useLogger} from '@/hooks/use-logger.tsx';
+import {useGlobalState} from '@/hooks/use-global-state';
 import {format, parseISO} from 'date-fns';
 import {Card, CardContent} from '@/components/ui/card';
 import {Skeleton} from '@/components/ui/skeleton';
@@ -26,7 +26,8 @@ const getIconForLogType = (type: string) => {
 };
 
 export default function LogPage() {
-  const {logs, isLoaded} = useLogger();
+  const {state} = useGlobalState();
+  const {logs, isLoaded} = state;
 
   return (
     <div className="flex flex-col h-full">

@@ -1,10 +1,8 @@
-
 'use client';
 
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {ReactNode} from 'react';
-import dynamic from 'next/dynamic';
 import {
   Sidebar,
   SidebarProvider,
@@ -36,33 +34,15 @@ import {ConfettiProvider} from './providers/confetti-provider';
 import {SplashScreen} from '@/components/splash-screen';
 import {GlobalTimerBar} from './tasks/global-timer-bar';
 import {BottomNav} from './bottom-nav';
-import {cn} from '@/lib/utils';
-import { TasksProvider, useTasks } from '@/hooks/use-tasks.tsx';
-import { LoggerProvider } from '@/hooks/use-logger.tsx';
-import { useBadges } from '@/hooks/useBadges';
-import { ProfileProvider, useProfile } from '@/hooks/use-profile.tsx';
-import { RoutinesProvider, useRoutines } from '@/hooks/use-routines.tsx';
-import { ViewModeProvider, useViewMode } from '@/hooks/use-view-mode.tsx';
-import { DashboardLayoutProvider, useDashboardLayout } from '@/hooks/use-dashboard-layout.tsx';
-
-// The Chat Widget is temporarily disabled.
-// const ChatWidget = dynamic(
-//   () => import('@/components/coach/chat-widget').then(m => m.ChatWidget),
-//   {ssr: false}
-// );
+import {useGlobalState, GlobalStateProvider} from '@/hooks/use-global-state';
+import {ViewModeProvider} from '@/hooks/use-view-mode.tsx';
+import {DashboardLayoutProvider} from '@/hooks/use-dashboard-layout.tsx';
 
 function AppLayout({children}: {children: ReactNode}) {
   const pathname = usePathname();
   const {isMobile, setOpenMobile} = useSidebar();
-  const { isLoaded: tasksLoaded } = useTasks();
-  const { isLoaded: badgesLoaded } = useBadges();
-  const { isLoaded: profileLoaded } = useProfile();
-  const { isLoaded: routinesLoaded } = useRoutines();
-  const { isLoaded: viewModeLoaded } = useViewMode();
-  const { isLoaded: layoutLoaded } = useDashboardLayout();
-
-  const isLoaded = tasksLoaded && badgesLoaded && profileLoaded && routinesLoaded && viewModeLoaded && layoutLoaded;
-
+  const {state} = useGlobalState();
+  const {isLoaded} = state;
 
   const handleMenuClick = () => {
     if (isMobile) {
@@ -116,7 +96,7 @@ function AppLayout({children}: {children: ReactNode}) {
     },
     {href: '/profile', label: 'Profile', icon: User, showInSidebar: true},
   ];
-  
+
   if (!isLoaded) {
     return <SplashScreen />;
   }
@@ -149,9 +129,7 @@ function AppLayout({children}: {children: ReactNode}) {
               ))}
           </SidebarMenu>
         </SidebarContent>
-        <SidebarFooter className="p-2">
-          {/* Footer items can be placed here if needed */}
-        </SidebarFooter>
+        <SidebarFooter className="p-2"></SidebarFooter>
       </Sidebar>
       <SidebarInset>
         <div className="p-4 border-b flex items-center justify-between md:hidden sticky top-0 bg-background z-30">
@@ -163,52 +141,21 @@ function AppLayout({children}: {children: ReactNode}) {
       </SidebarInset>
       <Toaster />
       <BottomNav />
-      {/* <ChatWidget /> */}
     </>
   );
 }
-
-// Wrapper component to provide all contexts from hooks that were converted
-function HooksAsProviders({ children }: { children: ReactNode }) {
-  return (
-    <ProfileProvider>
-      <RoutinesProvider>
-        <ViewModeProvider>
-          <DashboardLayoutProvider>
-            <LoggerProvider>
-              <TasksProvider>
-                <BadgesProvider>
-                  {children}
-                </BadgesProvider>
-              </TasksProvider>
-            </LoggerProvider>
-          </DashboardLayoutProvider>
-        </ViewModeProvider>
-      </RoutinesProvider>
-    </ProfileProvider>
-  )
-}
-
-// Renaming useBadges to BadgesProvider for consistency
-const BadgesProvider = ({ children }: { children: ReactNode }) => {
-    // This component just uses the hook to provide its value, but doesn't render anything itself.
-    // The actual hook logic remains in useBadges.ts
-    // This is a common pattern to turn a hook into a provider if it manages complex state.
-    // For this case, we can just use the hook directly in components that need it,
-    // but we need to ensure they are inside all the other providers.
-    // Let's create a real provider for it.
-    const badgeHook = useBadges();
-    return <>{children}</>
-};
-
 
 export function Providers({children}: {children: ReactNode}) {
   return (
     <ConfettiProvider>
       <SidebarProvider>
-        <HooksAsProviders>
-          <AppLayout>{children}</AppLayout>
-        </HooksAsProviders>
+        <GlobalStateProvider>
+          <ViewModeProvider>
+            <DashboardLayoutProvider>
+              <AppLayout>{children}</AppLayout>
+            </DashboardLayoutProvider>
+          </ViewModeProvider>
+        </GlobalStateProvider>
       </SidebarProvider>
     </ConfettiProvider>
   );

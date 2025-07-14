@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, {useState, useCallback} from 'react';
@@ -6,12 +5,8 @@ import dynamic from 'next/dynamic';
 import {format} from 'date-fns';
 import {Button} from '@/components/ui/button';
 import {PlusCircle, Settings} from 'lucide-react';
-import {useTasks} from '@/hooks/use-tasks.tsx';
-import {useBadges} from '@/hooks/useBadges';
-import {useLogger} from '@/hooks/use-logger.tsx';
-import {useProfile} from '@/hooks/use-profile.tsx';
+import {useGlobalState} from '@/hooks/use-global-state';
 import {useViewMode} from '@/hooks/use-view-mode.tsx';
-import {useRoutines} from '@/hooks/use-routines.tsx';
 import {
   useDashboardLayout,
   type DashboardWidgetType,
@@ -31,8 +26,6 @@ import {CSS} from '@dnd-kit/utilities';
 import {Skeleton} from '@/components/ui/skeleton';
 import {type StudyTask} from '@/lib/types';
 import Link from 'next/link';
-
-// Import dedicated widget components
 import {DailyBriefingWidget} from '@/components/dashboard/widgets/daily-briefing-widget';
 import {StatsOverviewWidget} from '@/components/dashboard/widgets/stats-overview-widget';
 import {UnlockedBadgesWidget} from '@/components/dashboard/widgets/unlocked-badges-widget';
@@ -77,35 +70,22 @@ function SortableWidget({
 }
 
 export default function DashboardPage() {
-  // --- Hooks ---
   const {
-    tasks,
+    state,
     addTask,
     updateTask,
     archiveTask,
     unarchiveTask,
     pushTaskToNextDay,
-    isLoaded: tasksLoaded,
-    todaysCompletedTasks,
-    todaysPendingTasks,
-    activeItem,
-  } = useTasks();
-
-  const {allBadges, earnedBadges, todaysBadges, isLoaded: badgesLoaded} = useBadges();
-  const {todaysLogs, getPreviousDayLogs, todaysCompletedRoutines, isLoaded: loggerLoaded} =
-    useLogger();
-  const {profile, isLoaded: profileLoaded} = useProfile();
-  const {viewMode, isLoaded: viewModeLoaded} = useViewMode();
-  const {todaysRoutines, isLoaded: routinesLoaded} = useRoutines();
+  } = useGlobalState();
+  const {viewMode} = useViewMode();
   const {layout, setLayout, visibleWidgets, isLoaded: layoutLoaded} =
     useDashboardLayout();
 
-  // --- State ---
   const [isCustomizeOpen, setCustomizeOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
   const isTaskFormOpen = !!editingTask;
 
-  // --- Callbacks ---
   const openEditTaskDialog = useCallback((task: StudyTask) => {
     setEditingTask(task);
   }, []);
@@ -128,17 +108,8 @@ export default function DashboardPage() {
     [setLayout]
   );
 
-  // --- Loading State ---
-  const isLoaded =
-    tasksLoaded &&
-    badgesLoaded &&
-    loggerLoaded &&
-    profileLoaded &&
-    viewModeLoaded &&
-    routinesLoaded &&
-    layoutLoaded;
+  const isLoaded = state.isLoaded && layoutLoaded;
 
-  // --- Widget Component Mapping ---
   const widgetMap: Record<DashboardWidgetType, React.FC<any>> = {
     daily_briefing: DailyBriefingWidget,
     stats_overview: StatsOverviewWidget,
@@ -149,26 +120,13 @@ export default function DashboardPage() {
   };
 
   const widgetProps = {
-    // Data
-    tasks,
-    logs: todaysLogs,
-    todaysCompletedTasks,
-    todaysPendingTasks,
-    allBadges,
-    earnedBadges,
-    todaysBadges,
-    todaysRoutines,
-    todaysCompletedRoutines,
-    getPreviousDayLogs,
-    profile,
-    viewMode,
-    activeItem,
-    // Functions
+    ...state,
     onEditTask: openEditTaskDialog,
     onUpdateTask: updateTask,
     onArchiveTask: archiveTask,
     onUnarchiveTask: unarchiveTask,
     onPushTask: pushTaskToNextDay,
+    viewMode,
   };
 
   return (
@@ -228,8 +186,8 @@ export default function DashboardPage() {
                   );
                 })}
 
-                {todaysPendingTasks.length === 0 &&
-                  todaysRoutines.length === 0 && (
+                {state.todaysPendingTasks.length === 0 &&
+                  state.todaysRoutines.length === 0 && (
                     <div className="flex items-center justify-center pt-16">
                       <EmptyState
                         onAddTask={() => {}}

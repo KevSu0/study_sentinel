@@ -1,49 +1,75 @@
-
 'use client';
-import React, { lazy, Suspense } from 'react';
-import { format, parseISO } from 'date-fns';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Award as BadgeIcon, Star } from 'lucide-react';
-const ProductivityChart = lazy(() => import('@/components/dashboard/productivity-chart'));
+import React, {lazy, Suspense} from 'react';
+import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
+import {Skeleton} from '@/components/ui/skeleton';
+import {Award as BadgeIcon, Star} from 'lucide-react';
+const ProductivityChart = lazy(
+  () => import('@/components/dashboard/productivity-chart')
+);
+import type {StudyTask, Badge, LogEvent} from '@/lib/types';
+import {format} from 'date-fns';
 
-export const StatsOverviewWidget = ({ tasks, logs, allBadges, earnedBadges }: any) => {
-  const todayStr = format(new Date(), 'yyyy-MM-dd');
+interface StatsOverviewWidgetProps {
+  todaysCompletedTasks: StudyTask[];
+  todaysBadges: Badge[];
+  todaysLogs: LogEvent[];
+}
 
-  const todaysCompletedTasks = tasks.filter(
-    (t: any) => t.status === 'completed' && t.date === todayStr
-  );
-  
-  // Ensure logs is an array before filtering
-  const safeLogs = Array.isArray(logs) ? logs : [];
+export const StatsOverviewWidget = ({
+  todaysCompletedTasks,
+  todaysBadges,
+  todaysLogs,
+}: StatsOverviewWidgetProps) => {
+  const safeLogs = Array.isArray(todaysLogs) ? todaysLogs : [];
+
   const todaysTimedLogs = safeLogs.filter(
-    (l: any) => (l.type === 'ROUTINE_SESSION_COMPLETE' || l.type === 'TIMER_SESSION_COMPLETE') && l.timestamp.startsWith(todayStr)
+    l =>
+      l.type === 'ROUTINE_SESSION_COMPLETE' ||
+      l.type === 'TIMER_SESSION_COMPLETE'
   );
 
-  const routineLogs = todaysTimedLogs.filter((l: any) => l.type === 'ROUTINE_SESSION_COMPLETE');
-  const routinePoints = routineLogs.reduce((sum: number, log: any) => sum + (log.payload.points || 0), 0);
-  const pointsToday = todaysCompletedTasks.reduce((sum: number, task: any) => sum + task.points, 0) + routinePoints;
-
-  const todaysBadges = allBadges.filter(
-    (badge: any) => earnedBadges.has(badge.id) && earnedBadges.get(badge.id) === todayStr
+  const routineLogs = todaysTimedLogs.filter(
+    l => l.type === 'ROUTINE_SESSION_COMPLETE'
   );
+  const routinePoints = routineLogs.reduce(
+    (sum: number, log: any) => sum + (log.payload.points || 0),
+    0
+  );
+  const pointsToday =
+    todaysCompletedTasks.reduce(
+      (sum: number, task: any) => sum + task.points,
+      0
+    ) + routinePoints;
 
   const taskTime = todaysTimedLogs
-    .filter((l: any) => l.type === 'TIMER_SESSION_COMPLETE')
+    .filter(l => l.type === 'TIMER_SESSION_COMPLETE')
     .reduce((sum: number, log: any) => sum + log.payload.duration, 0);
-  
-  const routineTime = routineLogs.reduce((sum: number, log: any) => sum + log.payload.duration, 0);
+
+  const routineTime = routineLogs.reduce(
+    (sum: number, log: any) => sum + log.payload.duration,
+    0
+  );
 
   const productivityData = [
-    { name: 'Tasks', value: parseFloat((taskTime / 3600).toFixed(2)), fill: 'hsl(var(--chart-1))' },
-    { name: 'Routines', value: parseFloat((routineTime / 3600).toFixed(2)), fill: 'hsl(var(--chart-2))' },
+    {
+      name: 'Tasks',
+      value: parseFloat((taskTime / 3600).toFixed(2)),
+      fill: 'hsl(var(--chart-1))',
+    },
+    {
+      name: 'Routines',
+      value: parseFloat((routineTime / 3600).toFixed(2)),
+      fill: 'hsl(var(--chart-2))',
+    },
   ].filter(d => d.value > 0);
 
   return (
     <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Points Earned Today</CardTitle>
+          <CardTitle className="text-sm font-medium">
+            Points Earned Today
+          </CardTitle>
           <Star className="h-4 w-4 text-yellow-400" />
         </CardHeader>
         <CardContent>
@@ -52,7 +78,9 @@ export const StatsOverviewWidget = ({ tasks, logs, allBadges, earnedBadges }: an
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Badges Unlocked Today</CardTitle>
+          <CardTitle className="text-sm font-medium">
+            Badges Unlocked Today
+          </CardTitle>
           <BadgeIcon className="h-4 w-4 text-accent" />
         </CardHeader>
         <CardContent>

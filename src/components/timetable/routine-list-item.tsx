@@ -1,3 +1,4 @@
+'use client';
 
 import React, {useState} from 'react';
 import {
@@ -26,7 +27,7 @@ import {
 import {Badge} from '@/components/ui/badge';
 import {Routine} from '@/lib/types';
 import {useToast} from '@/hooks/use-toast';
-import {useTasks} from '@/hooks/use-tasks.tsx';
+import {useGlobalState} from '@/hooks/use-global-state';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,7 +54,11 @@ export const RoutineListItem = React.memo(function RoutineListItem({
   onDelete,
 }: RoutineListItemProps) {
   const {toast} = useToast();
-  const {activeItem, startTimer, stopTimer} = useTasks();
+  const {
+    state: {activeItem},
+    startTimer,
+    stopTimer,
+  } = useGlobalState();
   const [isAlertOpen, setAlertOpen] = useState(false);
 
   const isTimerActiveForThis =
@@ -70,10 +75,10 @@ export const RoutineListItem = React.memo(function RoutineListItem({
       });
       return;
     }
-    
+
     if (isTimerActiveForThis) {
-       stopTimer('Stopped routine timer manually');
-       toast({
+      stopTimer('Stopped routine timer manually');
+      toast({
         title: 'Routine Timer Stopped',
       });
     } else {

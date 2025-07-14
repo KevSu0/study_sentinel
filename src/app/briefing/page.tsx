@@ -6,12 +6,11 @@ import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Skeleton} from '@/components/ui/skeleton';
 import {Sparkles, Lightbulb} from 'lucide-react';
 import {getDailySummary} from '@/lib/actions';
-import {useLogger} from '@/hooks/use-logger.tsx';
-import {useProfile} from '@/hooks/use-profile.tsx';
+import {useGlobalState} from '@/hooks/use-global-state';
 
 export default function DailyBriefingPage() {
-  const {getPreviousDayLogs, isLoaded: loggerLoaded} = useLogger();
-  const {profile, isLoaded: profileLoaded} = useProfile();
+  const {state} = useGlobalState();
+  const {isLoaded, previousDayLogs, profile} = state;
   const [dailySummary, setDailySummary] = useState<{
     evaluation: string;
     motivationalParagraph: string;
@@ -20,7 +19,7 @@ export default function DailyBriefingPage() {
 
   useEffect(() => {
     const fetchDailySummary = async () => {
-      if (!loggerLoaded || !profileLoaded) return;
+      if (!isLoaded) return;
 
       const DAILY_SUMMARY_KEY = 'dailySummaryLastShown';
       const lastShownDate = localStorage.getItem(DAILY_SUMMARY_KEY);
@@ -33,7 +32,6 @@ export default function DailyBriefingPage() {
       }
       const sessionDateStr = format(sessionDate, 'yyyy-MM-dd');
 
-      // Check if we already have the summary in state or have shown it today
       const storedSummary = localStorage.getItem('dailySummaryContent');
       if (lastShownDate === sessionDateStr && storedSummary) {
         setDailySummary(JSON.parse(storedSummary));
@@ -41,15 +39,12 @@ export default function DailyBriefingPage() {
         return;
       }
 
-      const yesterdaysLogs = getPreviousDayLogs();
-
-      if (yesterdaysLogs.length > 0) {
-        const summary = await getDailySummary({logs: yesterdaysLogs, profile});
+      if (previousDayLogs.length > 0) {
+        const summary = await getDailySummary({logs: previousDayLogs, profile});
         if (summary && !('error' in summary)) {
           const summaryData = summary as any;
           setDailySummary(summaryData);
           localStorage.setItem(DAILY_SUMMARY_KEY, sessionDateStr);
-          // Store the content as well to avoid re-fetching on the same day
           localStorage.setItem(
             'dailySummaryContent',
             JSON.stringify(summaryData)
@@ -60,7 +55,7 @@ export default function DailyBriefingPage() {
     };
 
     fetchDailySummary();
-  }, [loggerLoaded, profileLoaded, getPreviousDayLogs, profile]);
+  }, [isLoaded, previousDayLogs, profile]);
 
   return (
     <div className="flex flex-col h-full">
@@ -71,7 +66,7 @@ export default function DailyBriefingPage() {
         </p>
       </header>
       <main className="flex-1 p-2 sm:p-4 overflow-y-auto">
-        {isSummaryLoading ? (
+        {isSummaryLoading || !isLoaded ? (
           <div className="space-y-4">
             <Skeleton className="h-48 w-full" />
           </div>

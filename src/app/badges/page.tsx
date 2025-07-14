@@ -4,7 +4,7 @@ import Link from 'next/link';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
 import {Button} from '@/components/ui/button';
 import {BadgeCard} from '@/components/badges/badge-card';
-import {useBadges} from '@/hooks/useBadges';
+import {useGlobalState} from '@/hooks/use-global-state';
 import {Skeleton} from '@/components/ui/skeleton';
 import type {Badge, BadgeCategory} from '@/lib/types';
 import {Settings} from 'lucide-react';
@@ -17,9 +17,13 @@ const badgeCategories: BadgeCategory[] = [
 ];
 
 export default function BadgesPage() {
-  const {allBadges, earnedBadges, isLoaded} = useBadges();
-  
-  const enabledBadges = useMemo(() => allBadges.filter(b => b.isEnabled), [allBadges]);
+  const {state} = useGlobalState();
+  const {allBadges, earnedBadges, isLoaded} = state;
+
+  const enabledBadges = useMemo(
+    () => allBadges.filter(b => b.isEnabled),
+    [allBadges]
+  );
 
   const categorizedBadges = useMemo(() => {
     const categories: Record<BadgeCategory, Badge[]> = {
@@ -29,7 +33,6 @@ export default function BadgesPage() {
       overall: [],
     };
     for (const badge of enabledBadges) {
-      // Add custom badges to the 'overall' category for display purposes
       const category = badge.isCustom ? 'overall' : badge.category;
       categories[category].push(badge);
     }
@@ -46,10 +49,10 @@ export default function BadgesPage() {
           </p>
         </div>
         <Button asChild>
-            <Link href="/badges/manage">
-                <Settings className="mr-2 h-4 w-4" />
-                Manage Badges
-            </Link>
+          <Link href="/badges/manage">
+            <Settings className="mr-2 h-4 w-4" />
+            Manage Badges
+          </Link>
         </Button>
       </header>
       <main className="flex-1 p-2 sm:p-4 overflow-y-auto">
