@@ -1,14 +1,11 @@
 
 'use client';
 
-import React, {useState, useMemo, useEffect, lazy, Suspense, useCallback} from 'react';
+import React, {useState, useCallback} from 'react';
 import dynamic from 'next/dynamic';
 import {format} from 'date-fns';
 import {Button} from '@/components/ui/button';
-import {
-  PlusCircle,
-  Settings,
-} from 'lucide-react';
+import {PlusCircle, Settings} from 'lucide-react';
 import {useTasks} from '@/hooks/use-tasks.tsx';
 import {useBadges} from '@/hooks/useBadges';
 import {useLogger} from '@/hooks/use-logger.tsx';
@@ -35,15 +32,14 @@ import {Skeleton} from '@/components/ui/skeleton';
 import {type StudyTask} from '@/lib/types';
 import Link from 'next/link';
 
-// Import newly created dedicated widget components
-import { DailyBriefingWidget } from '@/components/dashboard/widgets/daily-briefing-widget';
-import { StatsOverviewWidget } from '@/components/dashboard/widgets/stats-overview-widget';
-import { UnlockedBadgesWidget } from '@/components/dashboard/widgets/unlocked-badges-widget';
-import { TodaysRoutinesWidget } from '@/components/dashboard/widgets/todays-routines-widget';
-import { TodaysPlanWidget } from '@/components/dashboard/widgets/todays-plan-widget';
-import { CompletedTodayWidget } from '@/components/dashboard/widgets/completed-today-widget';
-import { EmptyState } from '@/components/tasks/empty-state';
-
+// Import dedicated widget components
+import {DailyBriefingWidget} from '@/components/dashboard/widgets/daily-briefing-widget';
+import {StatsOverviewWidget} from '@/components/dashboard/widgets/stats-overview-widget';
+import {UnlockedBadgesWidget} from '@/components/dashboard/widgets/unlocked-badges-widget';
+import {TodaysRoutinesWidget} from '@/components/dashboard/widgets/todays-routines-widget';
+import {TodaysPlanWidget} from '@/components/dashboard/widgets/todays-plan-widget';
+import {CompletedTodayWidget} from '@/components/dashboard/widgets/completed-today-widget';
+import {EmptyState} from '@/components/tasks/empty-state';
 
 const TaskDialog = dynamic(
   () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),
@@ -58,7 +54,13 @@ const CustomizeDialog = dynamic(
   {ssr: false}
 );
 
-function SortableWidget({id, children}: {id: string; children: React.ReactNode}) {
+function SortableWidget({
+  id,
+  children,
+}: {
+  id: string;
+  children: React.ReactNode;
+}) {
   const {attributes, listeners, setNodeRef, transform, transition} =
     useSortable({id});
 
@@ -75,6 +77,7 @@ function SortableWidget({id, children}: {id: string; children: React.ReactNode})
 }
 
 export default function DashboardPage() {
+  // --- Hooks ---
   const {
     tasks,
     addTask,
@@ -83,21 +86,26 @@ export default function DashboardPage() {
     unarchiveTask,
     pushTaskToNextDay,
     isLoaded: tasksLoaded,
+    todaysCompletedTasks,
+    todaysPendingTasks,
     activeItem,
   } = useTasks();
 
-  const {allBadges, earnedBadges, isLoaded: badgesLoaded} = useBadges();
-  const {logs, getPreviousDayLogs, isLoaded: loggerLoaded} = useLogger();
+  const {earnedBadges, todaysBadges, isLoaded: badgesLoaded} = useBadges();
+  const {getPreviousDayLogs, todaysCompletedRoutines, isLoaded: loggerLoaded} =
+    useLogger();
   const {profile, isLoaded: profileLoaded} = useProfile();
   const {viewMode, isLoaded: viewModeLoaded} = useViewMode();
-  const {routines, isLoaded: routinesLoaded} = useRoutines();
-  const {layout, setLayout, isLoaded: layoutLoaded} = useDashboardLayout();
+  const {todaysRoutines, isLoaded: routinesLoaded} = useRoutines();
+  const {layout, setLayout, visibleWidgets, isLoaded: layoutLoaded} =
+    useDashboardLayout();
+
+  // --- State ---
   const [isCustomizeOpen, setCustomizeOpen] = useState(false);
-
   const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
-
   const isTaskFormOpen = !!editingTask;
 
+  // --- Callbacks ---
   const openEditTaskDialog = useCallback((task: StudyTask) => {
     setEditingTask(task);
   }, []);
@@ -106,6 +114,21 @@ export default function DashboardPage() {
     setEditingTask(null);
   }, []);
 
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const {active, over} = event;
+      if (over && active.id !== over.id) {
+        setLayout(prevLayout => {
+          const oldIndex = prevLayout.findIndex(w => w.id === active.id);
+          const newIndex = prevLayout.findIndex(w => w.id === over.id);
+          return arrayMove(prevLayout, oldIndex, newIndex);
+        });
+      }
+    },
+    [setLayout]
+  );
+
+  // --- Loading State ---
   const isLoaded =
     tasksLoaded &&
     badgesLoaded &&
@@ -114,18 +137,8 @@ export default function DashboardPage() {
     viewModeLoaded &&
     routinesLoaded &&
     layoutLoaded;
-    
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const {active, over} = event;
-    if (over && active.id !== over.id) {
-      setLayout(prevLayout => {
-        const oldIndex = prevLayout.findIndex(w => w.id === active.id);
-        const newIndex = prevLayout.findIndex(w => w.id === over.id);
-        return arrayMove(prevLayout, oldIndex, newIndex);
-      });
-    }
-  }, [setLayout]);
 
+  // --- Widget Component Mapping ---
   const widgetMap: Record<DashboardWidgetType, React.FC<any>> = {
     daily_briefing: DailyBriefingWidget,
     stats_overview: StatsOverviewWidget,
@@ -136,25 +149,24 @@ export default function DashboardPage() {
   };
 
   const widgetProps = {
-      tasks,
-      allBadges,
-      earnedBadges,
-      logs,
-      profile,
-      getPreviousDayLogs,
-      routines,
-      viewMode,
-      activeItem,
-      onEditTask: openEditTaskDialog,
-      onUpdateTask: updateTask,
-      onArchiveTask: archiveTask,
-      onUnarchiveTask: unarchiveTask,
-      onPushTask: pushTaskToNextDay,
+    // Data
+    tasks,
+    todaysCompletedTasks,
+    todaysPendingTasks,
+    todaysBadges,
+    todaysRoutines,
+    todaysCompletedRoutines,
+    getPreviousDayLogs,
+    profile,
+    viewMode,
+    activeItem,
+    // Functions
+    onEditTask: openEditTaskDialog,
+    onUpdateTask: updateTask,
+    onArchiveTask: archiveTask,
+    onUnarchiveTask: unarchiveTask,
+    onPushTask: pushTaskToNextDay,
   };
-
-  const visibleWidgets = useMemo(() => {
-    return layout.filter(w => w.isVisible);
-  }, [layout]);
 
   return (
     <div className="flex flex-col h-full">
@@ -205,37 +217,37 @@ export default function DashboardPage() {
             >
               <div className="space-y-6">
                 {visibleWidgets.map(widget => {
-                    const WidgetComponent = widgetMap[widget.id];
-                    return (
-                        <SortableWidget key={widget.id} id={widget.id}>
-                            <WidgetComponent {...widgetProps} />
-                        </SortableWidget>
-                    );
+                  const WidgetComponent = widgetMap[widget.id];
+                  return (
+                    <SortableWidget key={widget.id} id={widget.id}>
+                      <WidgetComponent {...widgetProps} />
+                    </SortableWidget>
+                  );
                 })}
 
-                {tasks.filter(t => t.status !== 'archived').length === 0 &&
-                 routines.length === 0 && (
-                   <div className="flex items-center justify-center pt-16">
-                     <EmptyState
-                       onAddTask={() => {}}
-                       title="A Fresh Start!"
-                       message="No tasks or routines scheduled for today. Let's plan your day!"
-                     >
-                       <div className="flex flex-col sm:flex-row gap-4 mt-6">
-                         <Button asChild>
-                           <Link href="/tasks">
-                             <PlusCircle /> Plan Tasks
-                           </Link>
-                         </Button>
+                {todaysPendingTasks.length === 0 &&
+                  todaysRoutines.length === 0 && (
+                    <div className="flex items-center justify-center pt-16">
+                      <EmptyState
+                        onAddTask={() => {}}
+                        title="A Fresh Start!"
+                        message="No tasks or routines scheduled for today. Let's plan your day!"
+                      >
+                        <div className="flex flex-col sm:flex-row gap-4 mt-6">
+                          <Button asChild>
+                            <Link href="/tasks">
+                              <PlusCircle /> Plan Tasks
+                            </Link>
+                          </Button>
                           <Button asChild variant="outline">
-                           <Link href="/timetable">
-                             <PlusCircle /> Set up Routines
-                           </Link>
-                         </Button>
-                       </div>
-                     </EmptyState>
-                   </div>
-                 )}
+                            <Link href="/timetable">
+                              <PlusCircle /> Set up Routines
+                            </Link>
+                          </Button>
+                        </div>
+                      </EmptyState>
+                    </div>
+                  )}
               </div>
             </SortableContext>
           </DndContext>

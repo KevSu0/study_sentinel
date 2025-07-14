@@ -1,15 +1,17 @@
+
 'use client';
 
 import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   createContext,
   useContext,
   type ReactNode,
 } from 'react';
 import {type LogEvent} from '@/lib/types';
-import {subDays, formatISO} from 'date-fns';
+import {subDays, formatISO, format, parseISO} from 'date-fns';
 
 // --- Context Setup ---
 interface LoggerContextType {
@@ -18,6 +20,7 @@ interface LoggerContextType {
   addLog: (type: LogEvent['type'], payload: LogEvent['payload']) => void;
   getPreviousDayLogs: () => LogEvent[];
   getAllLogs: () => LogEvent[];
+  todaysCompletedRoutines: LogEvent[];
 }
 
 const LoggerContext = createContext<LoggerContextType | null>(null);
@@ -134,12 +137,30 @@ export function LoggerProvider({children}: {children: ReactNode}) {
     return allLogs;
   }, []);
 
+  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+
+  const todaysCompletedRoutines = useMemo(
+    () =>
+      logs
+        .filter(
+          l =>
+            l.type === 'ROUTINE_SESSION_COMPLETE' &&
+            l.timestamp.startsWith(todayStr)
+        )
+        .sort(
+          (a, b) =>
+            parseISO(b.timestamp).getTime() - parseISO(a.timestamp).getTime()
+        ),
+    [logs, todayStr]
+  );
+
   const value = {
     logs,
     isLoaded,
     addLog,
     getPreviousDayLogs,
     getAllLogs,
+    todaysCompletedRoutines,
   };
 
   return (

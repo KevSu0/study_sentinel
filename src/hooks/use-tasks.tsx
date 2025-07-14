@@ -8,6 +8,7 @@ import React, {
   useRef,
   createContext,
   useContext,
+  useMemo,
   type ReactNode,
 } from 'react';
 import {type StudyTask, type Routine} from '@/lib/types';
@@ -75,6 +76,9 @@ interface TasksContextType {
   togglePause: () => void;
   completeTimer: () => void;
   stopTimer: (reason: string) => void;
+  // Derived state for dashboard
+  todaysCompletedTasks: StudyTask[];
+  todaysPendingTasks: StudyTask[];
 }
 
 const TasksContext = createContext<TasksContextType | null>(null);
@@ -116,10 +120,14 @@ export function TasksProvider({children}: {children: ReactNode}) {
     setIsLoaded(false);
     try {
       const savedTasks = localStorage.getItem(TASKS_KEY);
-      if (savedTasks) setTasks(JSON.parse(savedTasks));
+      if (savedTasks) {
+        setTasks(JSON.parse(savedTasks));
+      }
 
       const savedTimer = localStorage.getItem(TIMER_KEY);
-      if (savedTimer) setActiveTimer(JSON.parse(savedTimer));
+      if (savedTimer) {
+        setActiveTimer(JSON.parse(savedTimer));
+      }
     } catch (error) {
       console.error('Failed to load data from localStorage', error);
       localStorage.removeItem(TASKS_KEY);
@@ -134,24 +142,28 @@ export function TasksProvider({children}: {children: ReactNode}) {
       (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
     );
     localStorage.setItem(TASKS_KEY, JSON.stringify(sortedTasks));
+    setTasks(sortedTasks);
   }, []);
 
   const addTask = useCallback(
     (task: Omit<StudyTask, 'id' | 'status'>) => {
-      const newTask: StudyTask = {
-        ...task,
-        id: crypto.randomUUID(),
-        status: 'todo',
-        description: task.description || '',
-      };
-      setTasks(prevTasks => {
-        const updatedTasks = [...prevTasks, newTask];
-        saveTasks(updatedTasks);
-        return updatedTasks;
+      setTasks(currentTasks => {
+        const newTask: StudyTask = {
+          ...task,
+          id: crypto.randomUUID(),
+          status: 'todo',
+          description: task.description || '',
+        };
+        const updatedTasks = [...currentTasks, newTask];
+        const sortedTasks = [...updatedTasks].sort(
+          (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
+        );
+        localStorage.setItem(TASKS_KEY, JSON.stringify(sortedTasks));
+        addLog('TASK_ADD', {taskId: newTask.id, title: newTask.title});
+        return sortedTasks;
       });
-      addLog('TASK_ADD', {taskId: newTask.id, title: newTask.title});
     },
-    [addLog, saveTasks]
+    [addLog]
   );
 
   const updateTask = useCallback(
@@ -160,16 +172,17 @@ export function TasksProvider({children}: {children: ReactNode}) {
       setTasks(currentTasks => {
         const taskExists = currentTasks.find(t => t.id === updatedTask.id);
         if (taskExists) {
-            oldStatus = taskExists.status;
+          oldStatus = taskExists.status;
         }
         const newTasks = currentTasks.map(task =>
           task.id === updatedTask.id ? updatedTask : task
         );
-        saveTasks(newTasks);
-        return newTasks;
-      });
+        const sortedTasks = [...newTasks].sort(
+          (a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
+        );
+        localStorage.setItem(TASKS_KEY, JSON.stringify(sortedTasks));
 
-      if (oldStatus && oldStatus !== updatedTask.status) {
+        if (oldStatus && oldStatus !== updatedTask.status) {
           switch (updatedTask.status) {
             case 'completed':
               addLog('TASK_COMPLETE', {
@@ -179,18 +192,18 @@ export function TasksProvider({children}: {children: ReactNode}) {
               });
               break;
             case 'in_progress':
-               addLog('TASK_IN_PROGRESS', {
-                 taskId: updatedTask.id,
-                 title: updatedTask.title,
-               });
-               break;
+              addLog('TASK_IN_PROGRESS', {
+                taskId: updatedTask.id,
+                title: updatedTask.title,
+              });
+              break;
             case 'todo':
-               addLog('TASK_UPDATE', {
-                 taskId: updatedTask.id,
-                 title: updatedTask.title,
-                 newStatus: 'todo'
-               });
-               break;
+              addLog('TASK_UPDATE', {
+                taskId: updatedTask.id,
+                title: updatedTask.title,
+                newStatus: 'todo',
+              });
+              break;
           }
         } else {
           addLog('TASK_UPDATE', {
@@ -198,8 +211,10 @@ export function TasksProvider({children}: {children: ReactNode}) {
             title: updatedTask.title,
           });
         }
+        return sortedTasks;
+      });
     },
-    [addLog, saveTasks]
+    [addLog]
   );
 
   const archiveTask = useCallback(
@@ -216,12 +231,12 @@ export function TasksProvider({children}: {children: ReactNode}) {
 
         if (taskToArchive) {
           addLog('TASK_ARCHIVE', {taskId, title: taskToArchive.title});
-          saveTasks(newTasks);
+          localStorage.setItem(TASKS_KEY, JSON.stringify(newTasks));
         }
         return newTasks;
       });
     },
-    [addLog, saveTasks]
+    [addLog]
   );
 
   const unarchiveTask = useCallback(
@@ -238,12 +253,12 @@ export function TasksProvider({children}: {children: ReactNode}) {
 
         if (taskToUnarchive) {
           addLog('TASK_UNARCHIVE', {taskId, title: taskToUnarchive.title});
-          saveTasks(newTasks);
+          localStorage.setItem(TASKS_KEY, JSON.stringify(newTasks));
         }
         return newTasks;
       });
     },
-    [addLog, saveTasks]
+    [addLog]
   );
 
   const pushTaskToNextDay = useCallback(
@@ -262,12 +277,12 @@ export function TasksProvider({children}: {children: ReactNode}) {
 
         if (pushedTask) {
           addLog('TASK_PUSH_NEXT_DAY', {taskId, title: pushedTask.title});
-          saveTasks(newTasks);
+          localStorage.setItem(TASKS_KEY, JSON.stringify(newTasks));
         }
         return newTasks;
       });
     },
-    [addLog, saveTasks]
+    [addLog]
   );
 
   const startTimer = useCallback(
@@ -500,6 +515,23 @@ export function TasksProvider({children}: {children: ReactNode}) {
     }
   }, [isOvertime, activeTimer, addLog, saveTimer]);
 
+  // Derived state for the dashboard
+  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+  const todaysCompletedTasks = useMemo(
+    () =>
+      tasks.filter(t => t.status === 'completed' && t.date === todayStr),
+    [tasks, todayStr]
+  );
+  const todaysPendingTasks = useMemo(
+    () =>
+      tasks.filter(
+        t =>
+          t.date === todayStr &&
+          (t.status === 'todo' || t.status === 'in_progress')
+      ),
+    [tasks, todayStr]
+  );
+
   const value: TasksContextType = {
     tasks,
     isLoaded,
@@ -516,6 +548,8 @@ export function TasksProvider({children}: {children: ReactNode}) {
     togglePause,
     completeTimer,
     stopTimer,
+    todaysCompletedTasks,
+    todaysPendingTasks,
   };
 
   return (
