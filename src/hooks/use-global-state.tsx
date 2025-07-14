@@ -275,82 +275,114 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
 
   // --- Initial Load Effect (CLIENT-SIDE ONLY) ---
   useEffect(() => {
-    // This effect runs only once on mount to load from localStorage.
-    if (typeof window !== 'undefined') {
-      const savedTasks = localStorage.getItem(TASKS_KEY);
-      const savedProfile = localStorage.getItem(PROFILE_KEY);
-      const savedRoutines = localStorage.getItem(ROUTINES_KEY);
-      const savedEarnedBadges = localStorage.getItem(EARNED_BADGES_KEY);
-      const savedCustomBadges = localStorage.getItem(CUSTOM_BADGES_KEY);
-      const systemBadgeConfigs = localStorage.getItem(SYSTEM_BADGES_CONFIG_KEY);
-      const savedTimer = localStorage.getItem(TIMER_KEY);
-      const sessionDate = getSessionDate();
-      const logKey = getLogKeyForDate(sessionDate);
-      const savedLogs = localStorage.getItem(logKey);
+    // This effect runs only once on mount to load and derive all state.
+    const savedTasksJSON = localStorage.getItem(TASKS_KEY);
+    const savedProfileJSON = localStorage.getItem(PROFILE_KEY);
+    const savedRoutinesJSON = localStorage.getItem(ROUTINES_KEY);
+    const savedEarnedBadgesJSON = localStorage.getItem(EARNED_BADGES_KEY);
+    const savedCustomBadgesJSON = localStorage.getItem(CUSTOM_BADGES_KEY);
+    const systemBadgeConfigsJSON = localStorage.getItem(SYSTEM_BADGES_CONFIG_KEY);
+    const savedTimerJSON = localStorage.getItem(TIMER_KEY);
+    const sessionDate = getSessionDate();
+    const logKey = getLogKeyForDate(sessionDate);
+    const savedLogsJSON = localStorage.getItem(logKey);
 
-      const tasks = savedTasks ? JSON.parse(savedTasks) : [];
-      const profile = savedProfile ? JSON.parse(savedProfile) : defaultProfile;
-      const routines = savedRoutines ? JSON.parse(savedRoutines) : [];
-      const earnedBadges = savedEarnedBadges
-        ? new Map(JSON.parse(savedEarnedBadges))
-        : new Map();
-      const customBadges = savedCustomBadges
-        ? JSON.parse(savedCustomBadges)
-        : [];
-      let systemBadges;
-      if (systemBadgeConfigs) {
-        systemBadges = JSON.parse(systemBadgeConfigs);
-      } else {
-        systemBadges = SYSTEM_BADGES.map((b, i) => ({
-          ...b,
-          id: `system_${i + 1}`,
-          isCustom: false,
-          isEnabled: true,
-        }));
-        saveToStorage(SYSTEM_BADGES_CONFIG_KEY, systemBadges);
-      }
-      const activeTimer: StoredTimer | null = savedTimer
-        ? JSON.parse(savedTimer)
-        : null;
-      const logs = savedLogs ? JSON.parse(savedLogs) : [];
+    const tasks = savedTasksJSON ? JSON.parse(savedTasksJSON) : [];
+    const profile = savedProfileJSON ? JSON.parse(savedProfileJSON) : defaultProfile;
+    const routines = savedRoutinesJSON ? JSON.parse(savedRoutinesJSON) : [];
+    const earnedBadges = savedEarnedBadgesJSON
+      ? new Map(JSON.parse(savedEarnedBadgesJSON))
+      : new Map();
+    const customBadges = savedCustomBadgesJSON ? JSON.parse(savedCustomBadgesJSON) : [];
+    let systemBadges;
+    if (systemBadgeConfigsJSON) {
+      systemBadges = JSON.parse(systemBadgeConfigsJSON);
+    } else {
+      systemBadges = SYSTEM_BADGES.map((b, i) => ({
+        ...b,
+        id: `system_${i + 1}`,
+        isCustom: false,
+        isEnabled: true,
+      }));
+      saveToStorage(SYSTEM_BADGES_CONFIG_KEY, systemBadges);
+    }
+    const activeTimer: StoredTimer | null = savedTimerJSON ? JSON.parse(savedTimerJSON) : null;
+    const logs = savedLogsJSON ? JSON.parse(savedLogsJSON) : [];
 
-       // Previous day's logs
-      const previousDay = subDays(sessionDate, 1);
-      const prevLogKey = getLogKeyForDate(previousDay);
-      const prevLogsJSON = localStorage.getItem(prevLogKey);
-      const previousDayLogs = prevLogsJSON ? JSON.parse(prevLogsJSON) : [];
+    // --- Start Deriving State (client-only) ---
+    const todayStr = format(sessionDate, 'yyyy-MM-dd');
+    const todaysLogs = logs.filter((l: LogEvent) => l.timestamp.startsWith(todayStr));
 
-      // All logs for badge checking
-      const allTimeLogs: LogEvent[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
+    const previousDay = subDays(sessionDate, 1);
+    const prevLogKey = getLogKeyForDate(previousDay);
+    const prevLogsJSON = localStorage.getItem(prevLogKey);
+    const previousDayLogs = prevLogsJSON ? JSON.parse(prevLogsJSON) : [];
+    
+    // Calculate all completed work
+    const allTimeLogs: LogEvent[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith(LOG_PREFIX)) {
             const lsLogs = localStorage.getItem(key);
             if (lsLogs) allTimeLogs.push(...JSON.parse(lsLogs));
         }
-      }
-      allTimeLogs.sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-
-      setState(prev => ({
-        ...prev,
-        isLoaded: true,
-        tasks,
-        profile,
-        routines,
-        earnedBadges,
-        allBadges: [...systemBadges, ...customBadges],
-        logs,
-        previousDayLogs,
-        activeItem: activeTimer?.item ?? null,
-        isPaused: activeTimer?.isPaused ?? true,
-      }));
-
-      audioRef.current = new Audio(
-        'https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg'
-      );
-      audioRef.current.volume = 0.5;
     }
+    allTimeLogs.sort((a,b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    const sessionLogs = allTimeLogs.filter(l => l.type === 'ROUTINE_SESSION_COMPLETE' || l.type === 'TIMER_SESSION_COMPLETE');
+    const timedTaskIds = new Set(sessionLogs.map(l => l.payload.taskId).filter(Boolean));
+    const workItems: CompletedWork[] = sessionLogs.map(l => ({
+        date: l.timestamp.split('T')[0],
+        duration: Math.round(l.payload.duration / 60),
+        type: l.type === 'ROUTINE_SESSION_COMPLETE' ? 'routine' : 'task',
+        title: l.payload.title,
+        points: l.payload.points || 0,
+        priority: l.payload.priority,
+    }));
+    const manuallyCompletedTasks = tasks.filter((t: StudyTask) => t.status === 'completed' && !timedTaskIds.has(t.id));
+    workItems.push(...manuallyCompletedTasks.map((t: StudyTask) => ({
+        date: t.date,
+        duration: t.duration,
+        type: 'task',
+        title: t.title,
+        points: t.points,
+        priority: t.priority,
+    })));
+
+    const allBadges = [...systemBadges, ...customBadges];
+    const todaysBadges = allBadges.filter((b: Badge) => earnedBadges.get(b.id) === todayStr);
+    const todaysRoutines = routines.filter((r: Routine) => r.days.includes(sessionDate.getDay()));
+    const todaysCompletedRoutines = todaysLogs.filter((l: LogEvent) => l.type === 'ROUTINE_SESSION_COMPLETE');
+    const todaysCompletedTasks = tasks.filter((t: StudyTask) => t.status === 'completed' && t.date === todayStr);
+    const todaysPendingTasks = tasks.filter((t: StudyTask) => t.date === todayStr && (t.status === 'todo' || t.status === 'in_progress'));
+
+    setState({
+      isLoaded: true,
+      tasks,
+      profile,
+      routines,
+      earnedBadges,
+      allBadges,
+      logs,
+      previousDayLogs,
+      activeItem: activeTimer?.item ?? null,
+      isPaused: activeTimer?.isPaused ?? true,
+      timeDisplay: '00:00',
+      isOvertime: false,
+      // Derived state
+      todaysLogs,
+      allCompletedWork: workItems,
+      todaysBadges,
+      todaysRoutines,
+      todaysCompletedRoutines,
+      todaysCompletedTasks,
+      todaysPendingTasks,
+    });
+
+    audioRef.current = new Audio(
+      'https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg'
+    );
+    audioRef.current.volume = 0.5;
   }, [saveToStorage]);
 
   // --- Timer Logic Effect ---
@@ -454,47 +486,6 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
 
   }, [state.isLoaded, state.tasks, state.logs, state.allBadges, fire, toast, saveMapToStorage]);
 
-
-  // --- Memoized Derived State (Server-Safe) ---
-  const derivedState = useMemo(() => {
-    if (!state.isLoaded) return initialAppState; // Return initial state if not loaded
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-    const todaysLogs = state.logs.filter(l => l.timestamp.startsWith(todayStr));
-    
-    // Calculate all completed work
-    const sessionLogs = state.logs.filter(l => l.type === 'ROUTINE_SESSION_COMPLETE' || l.type === 'TIMER_SESSION_COMPLETE');
-    const timedTaskIds = new Set(sessionLogs.map(l => l.payload.taskId).filter(Boolean));
-    const workItems: CompletedWork[] = sessionLogs.map(l => ({
-        date: l.timestamp.split('T')[0],
-        duration: Math.round(l.payload.duration / 60),
-        type: l.type === 'ROUTINE_SESSION_COMPLETE' ? 'routine' : 'task',
-        title: l.payload.title,
-        points: l.payload.points || 0,
-        priority: l.payload.priority,
-    }));
-    const manuallyCompletedTasks = state.tasks.filter(t => t.status === 'completed' && !timedTaskIds.has(t.id));
-    workItems.push(...manuallyCompletedTasks.map(t => ({
-        date: t.date,
-        duration: t.duration,
-        type: 'task',
-        title: t.title,
-        points: t.points,
-        priority: t.priority,
-    })));
-
-    return {
-      todaysLogs,
-      allCompletedWork: workItems,
-      todaysBadges: state.allBadges.filter(b => state.earnedBadges.get(b.id) === todayStr),
-      todaysRoutines: state.routines.filter(r => r.days.includes(new Date().getDay())),
-      todaysCompletedRoutines: todaysLogs.filter(l => l.type === 'ROUTINE_SESSION_COMPLETE'),
-      todaysCompletedTasks: state.tasks.filter(t => t.status === 'completed' && t.date === todayStr),
-      todaysPendingTasks: state.tasks.filter(t => t.date === todayStr && (t.status === 'todo' || t.status === 'in_progress')),
-    };
-  }, [state.isLoaded, state.logs, state.tasks, state.routines, state.allBadges, state.earnedBadges]);
-
-  const fullState = useMemo(() => ({...state, ...derivedState}), [state, derivedState]);
-
   // --- Public API ---
   const contextValue = useMemo(() => {
     const addTask = (task: Omit<StudyTask, 'id' | 'status'>) => {
@@ -507,28 +498,45 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
             return {...prevState, tasks: sortedTasks};
         });
     };
-    const archiveTask = (taskId: string) => updateTaskStatus(taskId, 'archived', 'TASK_ARCHIVE');
-    const unarchiveTask = (taskId: string) => updateTaskStatus(taskId, 'todo', 'TASK_UNARCHIVE');
     
-    const updateTaskStatus = (taskId: string, status: StudyTask['status'], logType: LogEvent['type']) => {
+    const archiveTask = (taskId: string) => {
         setState(prevState => {
             let changedTask: StudyTask | undefined;
             const newTasks = prevState.tasks.map(t => {
                 if (t.id === taskId) {
                     changedTask = t;
-                    return {...t, status};
+                    return {...t, status: 'archived'};
                 }
                 return t;
             });
             if (changedTask) {
-                addLog(logType, {taskId, title: changedTask.title});
+                addLog('TASK_ARCHIVE', {taskId, title: changedTask.title});
                 saveToStorage(TASKS_KEY, newTasks);
                 return {...prevState, tasks: newTasks};
             }
             return prevState;
         });
     };
-
+    
+    const unarchiveTask = (taskId: string) => {
+        setState(prevState => {
+            let changedTask: StudyTask | undefined;
+            const newTasks = prevState.tasks.map(t => {
+                if (t.id === taskId) {
+                    changedTask = t;
+                    return {...t, status: 'todo'};
+                }
+                return t;
+            });
+            if (changedTask) {
+                addLog('TASK_UNARCHIVE', {taskId, title: changedTask.title});
+                saveToStorage(TASKS_KEY, newTasks);
+                return {...prevState, tasks: newTasks};
+            }
+            return prevState;
+        });
+    };
+    
     const pushTaskToNextDay = (taskId: string) => {
         setState(prevState => {
             let pushedTask: StudyTask | undefined;
@@ -683,7 +691,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     };
 
     return {
-      state: fullState,
+      state: state,
       setState,
       addTask,
       updateTask,
@@ -703,7 +711,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
       deleteBadge,
       updateProfile,
     };
-  }, [fullState, setState, addLog, updateTask, toast, fire, saveToStorage, saveMapToStorage, updateProfile]);
+  }, [state, addLog, updateTask, fire, toast, saveMapToStorage, saveToStorage, updateProfile]);
 
   return (
     <GlobalStateContext.Provider value={contextValue}>
@@ -719,5 +727,3 @@ export const useGlobalState = () => {
   }
   return context;
 };
-
-    
