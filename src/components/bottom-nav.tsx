@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 const menuItems = [
-  {href: '/', label: 'Dashboard', icon: LayoutDashboard},
+  {href: '/lets-start', label: 'Dashboard', icon: LayoutDashboard},
   {href: '/tasks', label: 'Tasks', icon: ListChecks},
   {href: '/timetable', label: 'Timetable', icon: CalendarDays},
   {href: '/stats', label: 'Stats', icon: TrendingUp},
@@ -26,7 +26,7 @@ export function BottomNav() {
     <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-background border-t z-40">
       <div className="flex justify-around items-center h-full">
         {menuItems.map(item => {
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || (pathname === '/' && item.href === '/lets-start');
           return (
             <Link
               key={item.href}

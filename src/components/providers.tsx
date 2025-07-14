@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -52,7 +53,7 @@ function AppLayout({children}: {children: ReactNode}) {
 
   const menuItems = [
     {
-      href: '/',
+      href: '/lets-start',
       label: 'Dashboard',
       icon: LayoutDashboard,
       showInSidebar: true,
@@ -116,7 +117,7 @@ function AppLayout({children}: {children: ReactNode}) {
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === item.href}
+                    isActive={pathname === item.href || (pathname === '/' && item.href === '/lets-start')}
                     tooltip={item.label}
                     onClick={handleMenuClick}
                   >
