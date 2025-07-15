@@ -153,7 +153,8 @@ export default function StatsPage() {
       overall: [],
     };
     for (const badge of allBadges) {
-      const category = badge.category || 'overall';
+      if (!badge.isEnabled) continue;
+      const category = badge.isCustom ? 'overall' : badge.category;
       categories[category].push(badge);
     }
     return categories;

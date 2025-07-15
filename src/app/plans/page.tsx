@@ -9,7 +9,7 @@ import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
 import {Button} from '@/components/ui/button';
 import {TaskList} from '@/components/tasks/task-list';
 import {SimpleTaskList} from '@/components/tasks/simple-task-list';
-import {RoutineCard} from '@/components/routines/routine-card';
+import {RoutineListItem} from '@/components/timetable/routine-list-item';
 import {SimpleRoutineItem} from '@/components/routines/simple-routine-item';
 import {EmptyState} from '@/components/tasks/empty-state';
 import {Skeleton} from '@/components/ui/skeleton';
@@ -93,14 +93,7 @@ export default function PlansPage() {
     setRoutineDialogOpen(true);
   }, []);
 
-  const {
-    isLoaded,
-    tasks,
-    logs,
-    routines,
-    activeItem,
-    allCompletedWork,
-  } = state;
+  const {isLoaded, tasks, logs, routines, activeItem, allCompletedWork} = state;
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -177,7 +170,6 @@ export default function PlansPage() {
       onUnarchive: unarchiveTask,
       onPushToNextDay: pushTaskToNextDay,
       onEdit: handleEditTask,
-      activeItem: activeItem,
     };
     return viewMode === 'card' ? (
       <TaskList {...props} />

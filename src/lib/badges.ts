@@ -9,6 +9,7 @@ import {
   endOfMonth,
   eachDayOfInterval,
   subDays,
+  format,
 } from 'date-fns';
 
 // --- Default System Badges ---
@@ -337,12 +338,12 @@ export function checkBadge(
 
         let streak = 0;
         let checkDate = new Date();
-        // Start check from yesterday if no activity today
-        if (!studyDays.has(checkDate.toISOString().split('T')[0])) {
+        
+        if (!studyDays.has(format(checkDate, 'yyyy-MM-dd'))) {
           checkDate = subDays(checkDate, 1);
         }
 
-        while (studyDays.has(checkDate.toISOString().split('T')[0])) {
+        while (studyDays.has(format(checkDate, 'yyyy-MM-dd'))) {
           streak++;
           checkDate = subDays(checkDate, 1);
         }

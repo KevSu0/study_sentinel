@@ -655,13 +655,13 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
       if (type === 'task') {
         const task = item as StudyTask;
         timerData.endTime = Date.now() + task.duration * 60 * 1000;
-        addLog('TIMER_START', {taskId: task.id, taskTitle: task.title});
+        addLog('TIMER_START', {taskId: task.id, title: task.title});
         updateTask({...task, status: 'in_progress'});
       } else {
         timerData.startTime = Date.now();
         addLog('TIMER_START', {
           routineId: item.id,
-          routineTitle: item.title,
+          title: item.title,
         });
       }
       localStorage.setItem(TIMER_KEY, JSON.stringify(timerData));
@@ -726,6 +726,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
         );
         updateTask({...item.item, status: 'todo'});
         addLog('TIMER_STOP', {
+          taskId: item.item.id,
           title: item.item.title,
           reason,
           timeSpentSeconds: Math.max(0, durationInSeconds),
