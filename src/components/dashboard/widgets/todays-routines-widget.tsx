@@ -1,6 +1,7 @@
+
 'use client';
 import React from 'react';
-import {RoutineDashboardCard} from '@/components/timetable/routine-dashboard-card';
+import {RoutineCard} from '@/components/routines/routine-card';
 import {Routine} from '@/lib/types';
 
 interface TodaysRoutinesWidgetProps {
@@ -21,7 +22,7 @@ export const TodaysRoutinesWidget = ({
       </h2>
       <div className="grid gap-4 md:grid-cols-2">
         {todaysRoutines.map((routine: any) => (
-          <RoutineDashboardCard key={routine.id} routine={routine} />
+          <RoutineCard key={routine.id} routine={routine} />
         ))}
       </div>
     </section>

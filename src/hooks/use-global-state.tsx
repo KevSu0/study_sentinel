@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, {
@@ -72,6 +73,7 @@ interface AppState {
 interface GlobalStateContextType {
   state: AppState;
   addTask: (task: Omit<StudyTask, 'id' | 'status'>) => void;
+  onEditTask: (task: StudyTask) => void;
   updateTask: (updatedTask: StudyTask) => void;
   archiveTask: (taskId: string) => void;
   unarchiveTask: (taskId: string) => void;
@@ -510,6 +512,12 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     },
     [addLog]
   );
+  
+  const onEditTask = useCallback((task: StudyTask) => {
+    // This is a placeholder. The actual dialog opening logic will be in the component.
+    // This function is here to be passed in context if needed.
+    // For now, the dialog is managed by the page component's local state.
+  }, []);
 
   const updateTask = useCallback(
     (updatedTask: StudyTask) => {
@@ -873,6 +881,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
   const contextValue = useMemo(() => ({
     state,
     addTask,
+    onEditTask,
     updateTask,
     archiveTask,
     unarchiveTask,
@@ -888,7 +897,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     updateBadge,
     deleteBadge,
     updateProfile,
-  }), [state, addTask, updateTask, archiveTask, unarchiveTask, pushTaskToNextDay, startTimer, togglePause, completeTimer, stopTimer, addRoutine, updateRoutine, deleteRoutine, addBadge, updateBadge, deleteBadge, updateProfile]);
+  }), [state, addTask, onEditTask, updateTask, archiveTask, unarchiveTask, pushTaskToNextDay, startTimer, togglePause, completeTimer, stopTimer, addRoutine, updateRoutine, deleteRoutine, addBadge, updateBadge, deleteBadge, updateProfile]);
 
   return (
     <GlobalStateContext.Provider value={contextValue}>

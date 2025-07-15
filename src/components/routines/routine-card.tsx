@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -15,11 +16,11 @@ import {Routine} from '@/lib/types';
 import {useToast} from '@/hooks/use-toast';
 import {useGlobalState} from '@/hooks/use-global-state';
 
-interface RoutineDashboardCardProps {
+interface RoutineCardProps {
   routine: Routine;
 }
 
-export function RoutineDashboardCard({routine}: RoutineDashboardCardProps) {
+export function RoutineCard({routine}: RoutineCardProps) {
   const {toast} = useToast();
   const {
     state: {activeItem},
