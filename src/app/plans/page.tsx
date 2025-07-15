@@ -1,7 +1,8 @@
 
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useGlobalState } from '@/hooks/use-global-state';
 import { useViewMode } from '@/hooks/use-view-mode.tsx';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,9 +15,23 @@ import { EmptyState } from '@/components/tasks/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { CardCompletedRoutineItem, SimpleCompletedRoutineItem } from '@/components/dashboard/completed-routine-card';
-import { LayoutGrid, List, Clock } from 'lucide-react';
+import { LayoutGrid, List, Clock, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StudyTask, Routine } from '@/lib/types';
+
+const TaskDialog = dynamic(
+  () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),
+  {ssr: false}
+);
+
+const AddRoutineDialog = dynamic(
+  () =>
+    import('@/components/timetable/add-routine-dialog').then(
+      m => m.AddRoutineDialog
+    ),
+  {ssr: false}
+);
+
 
 export default function PlansPage() {
   const {
@@ -25,10 +40,34 @@ export default function PlansPage() {
     archiveTask,
     unarchiveTask,
     pushTaskToNextDay,
-    startTimer,
-    onEditTask, // Assuming this function exists to open an edit dialog
+    addTask,
+    updateRoutine,
+    addRoutine,
+    deleteRoutine,
+    onEditTask, 
   } = useGlobalState();
   const { viewMode, setViewMode } = useViewMode();
+
+  const [isTaskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
+
+  const [isRoutineDialogOpen, setRoutineDialogOpen] = useState(false);
+  const [editingRoutine, setEditingRoutine] = useState<Routine | null>(null);
+
+  const openAddTaskDialog = useCallback(() => {
+    setEditingTask(null);
+    setTaskDialogOpen(true);
+  }, []);
+
+  const handleEditTask = useCallback((task: StudyTask) => {
+    setEditingTask(task);
+    setTaskDialogOpen(true);
+  }, []);
+
+  const openAddRoutineDialog = useCallback(() => {
+    setEditingRoutine(null);
+    setRoutineDialogOpen(true);
+  }, []);
 
   const {
     isLoaded,
@@ -60,17 +99,18 @@ export default function PlansPage() {
       .reduce((sum, work) => sum + work.duration, 0);
   }, [allCompletedWork, isLoaded]);
 
-  const formatProductiveTime = (totalMinutes: number) => {
-    if (totalMinutes === 0) return '0m';
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    if (hours > 0 && minutes > 0) {
-      return `${hours}h ${minutes}m`;
-    }
-    if (hours > 0) {
-      return `${hours}h`;
-    }
-    return `${minutes}m`;
+  const formatProductiveTime = (totalSeconds: number) => {
+    if (totalSeconds === 0) return '0s';
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+
+    const parts = [];
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
+
+    return parts.join(' ');
   };
 
 
@@ -81,7 +121,7 @@ export default function PlansPage() {
       onArchive: archiveTask,
       onUnarchive: unarchiveTask,
       onPushToNextDay: pushTaskToNextDay,
-      onEdit: onEditTask,
+      onEdit: handleEditTask,
       activeItem: activeItem,
     };
     return viewMode === 'card' ? (
@@ -139,31 +179,39 @@ export default function PlansPage() {
                   <div className="flex items-center gap-2 mt-2 text-sm font-medium text-accent">
                     <Clock className="h-4 w-4" />
                     <span>
-                      Productive Time Today: {formatProductiveTime(todaysProductiveTime)}
+                      Productive Time Today: {formatProductiveTime(todaysProductiveTime * 60)}
                     </span>
                   </div>
                 )}
             </div>
-            <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
-            <Button
-              variant={viewMode === 'card' ? 'secondary' : 'ghost'}
-              size="sm"
-              className="h-8 px-2.5"
-              onClick={() => setViewMode('card')}
-            >
-              <LayoutGrid className="h-4 w-4" />
-              <span className="sr-only">Card View</span>
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-              size="sm"
-              className="h-8 px-2.5"
-              onClick={() => setViewMode('list')}
-            >
-              <List className="h-4 w-4" />
-              <span className="sr-only">List View</span>
-            </Button>
-          </div>
+            <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={openAddRoutineDialog}>
+                    <PlusCircle /> Add Routine
+                </Button>
+                <Button onClick={openAddTaskDialog}>
+                    <PlusCircle /> Add Task
+                </Button>
+                <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
+                    <Button
+                    variant={viewMode === 'card' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="h-8 px-2.5"
+                    onClick={() => setViewMode('card')}
+                    >
+                    <LayoutGrid className="h-4 w-4" />
+                    <span className="sr-only">Card View</span>
+                    </Button>
+                    <Button
+                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="h-8 px-2.5"
+                    onClick={() => setViewMode('list')}
+                    >
+                    <List className="h-4 w-4" />
+                    <span className="sr-only">List View</span>
+                    </Button>
+                </div>
+            </div>
         </div>
       </header>
       <main className="flex-1 p-2 sm:p-4 overflow-y-auto">
@@ -200,7 +248,7 @@ export default function PlansPage() {
             ) : (
               <div className="pt-16">
                 <EmptyState
-                  onAddTask={() => {}}
+                  onAddTask={openAddTaskDialog}
                   title="All Clear for Today!"
                   message="No upcoming tasks or routines. Enjoy the peace or plan a new task."
                   buttonText="Plan New Task"
@@ -236,7 +284,7 @@ export default function PlansPage() {
             ) : (
               <div className="pt-16">
                 <EmptyState
-                  onAddTask={() => {}}
+                  onAddTask={openAddTaskDialog}
                   title="Nothing Completed Yet"
                   message="Get started on your tasks to see your achievements here."
                   buttonText="View Upcoming Tasks"
@@ -259,7 +307,7 @@ export default function PlansPage() {
             ) : (
               <div className="pt-16">
                 <EmptyState
-                  onAddTask={() => {}}
+                  onAddTask={openAddTaskDialog}
                   title="No Overdue Tasks"
                   message="Great job staying on top of your work!"
                   buttonText="View All Tasks"
@@ -269,6 +317,26 @@ export default function PlansPage() {
           </TabsContent>
         </Tabs>
       </main>
+
+       {isTaskDialogOpen && (
+          <TaskDialog
+            isOpen={isTaskDialogOpen}
+            onOpenChange={setTaskDialogOpen}
+            onAddTask={addTask}
+            onUpdateTask={updateTask}
+            taskToEdit={editingTask}
+          />
+        )}
+
+       {isRoutineDialogOpen && (
+        <AddRoutineDialog
+            isOpen={isRoutineDialogOpen}
+            onOpenChange={setRoutineDialogOpen}
+            onAddRoutine={addRoutine}
+            onUpdateRoutine={updateRoutine}
+            routineToEdit={editingRoutine}
+        />
+       )}
     </div>
   );
 }

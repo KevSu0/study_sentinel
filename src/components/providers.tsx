@@ -72,18 +72,6 @@ function AppLayout({children}: {children: ReactNode}) {
       showInSidebar: true,
     },
     {
-      href: '/tasks',
-      label: 'All Tasks',
-      icon: ListChecks,
-      showInSidebar: true,
-    },
-    {
-      href: '/timetable',
-      label: 'Timetable',
-      icon: CalendarDays,
-      showInSidebar: true,
-    },
-    {
       href: '/stats',
       label: 'Stats',
       icon: TrendingUp,

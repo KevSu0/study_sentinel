@@ -5,8 +5,6 @@ import {usePathname} from 'next/navigation';
 import {cn} from '@/lib/utils';
 import {
   LayoutDashboard,
-  ListChecks,
-  CalendarDays,
   TrendingUp,
   User,
   ClipboardList
@@ -15,7 +13,6 @@ import {
 const menuItems = [
   {href: '/lets-start', label: 'Dashboard', icon: LayoutDashboard},
   {href: '/plans', label: 'Plans', icon: ClipboardList},
-  {href: '/tasks', label: 'Tasks', icon: ListChecks},
   {href: '/stats', label: 'Stats', icon: TrendingUp},
   {href: '/profile', label: 'Profile', icon: User},
 ];
