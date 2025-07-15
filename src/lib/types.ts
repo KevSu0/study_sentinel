@@ -92,12 +92,13 @@ export type ActiveTimerItem =
 
 export type CompletedWork = {
   date: string;
-  duration: number; // minutes
+  duration: number; // seconds
   type: 'task' | 'routine';
   title: string;
   points: number;
   priority?: TaskPriority;
   subjectId?: string;
+  timestamp: string;
 };
 
 export const PositivePsychologistInputSchema = z.object({

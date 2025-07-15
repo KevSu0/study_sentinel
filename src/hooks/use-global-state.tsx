@@ -281,12 +281,13 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     const sessionLogs = allTimeLogs.filter(l => l.type === 'ROUTINE_SESSION_COMPLETE' || l.type === 'TIMER_SESSION_COMPLETE');
     const workItems: CompletedWork[] = sessionLogs.map(l => ({
       date: l.timestamp.split('T')[0],
-      duration: l.payload.duration / 60, // Convert seconds to minutes for consistency
+      duration: l.payload.duration, // duration is in seconds
       type: l.type === 'ROUTINE_SESSION_COMPLETE' ? 'routine' : 'task',
       title: l.payload.title,
       points: l.payload.points || 0,
       priority: l.payload.priority,
       subjectId: l.payload.routineId || l.payload.taskId,
+      timestamp: l.timestamp,
     }));
     
     const allCompletedWork = workItems;
@@ -533,6 +534,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
             taskId: updatedTask.id,
             title: updatedTask.title,
             points: updatedTask.points,
+            timestamp: formatISO(new Date()),
           });
         }
 

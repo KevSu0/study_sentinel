@@ -23,7 +23,7 @@ export const StatsOverviewWidget = ({
   const chartData = useMemo(() => {
     return todaysCompletedWork.map((work, index) => ({
       name: `${work.type === 'task' ? 'Task' : 'Routine'}: ${work.title}`,
-      value: work.duration, // duration is in minutes
+      value: work.duration, // duration is in seconds
     }));
   }, [todaysCompletedWork]);
 
