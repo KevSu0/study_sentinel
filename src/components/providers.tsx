@@ -23,14 +23,12 @@ import {Toaster} from '@/components/ui/toaster';
 import {Logo} from '@/components/logo';
 import {
   LayoutDashboard,
-  ListChecks,
   TrendingUp,
   Award,
   Archive,
   Sparkles,
   ScrollText,
   User,
-  CalendarDays,
   ClipboardList,
 } from 'lucide-react';
 import {ConfettiProvider} from './providers/confetti-provider';
@@ -42,11 +40,24 @@ import {ViewModeProvider} from '@/hooks/use-view-mode.tsx';
 import {DashboardLayoutProvider} from '@/hooks/use-dashboard-layout.tsx';
 import {UserMenu} from './user-menu';
 
+function AppContent({children}: {children: ReactNode}) {
+  const {state} = useGlobalState();
+  const {isLoaded} = state;
+
+  if (!isLoaded) {
+    return <SplashScreen />;
+  }
+
+  return (
+    <SidebarProvider>
+      <AppLayout>{children}</AppLayout>
+    </SidebarProvider>
+  );
+}
+
 function AppLayout({children}: {children: ReactNode}) {
   const pathname = usePathname();
   const {isMobile, setOpenMobile} = useSidebar();
-  const {state} = useGlobalState();
-  const {isLoaded} = state;
 
   const handleMenuClick = () => {
     if (isMobile) {
@@ -94,10 +105,6 @@ function AppLayout({children}: {children: ReactNode}) {
     },
     {href: '/profile', label: 'Profile', icon: User, showInSidebar: true},
   ];
-
-  if (!isLoaded) {
-    return <SplashScreen />;
-  }
 
   return (
     <>
@@ -158,13 +165,11 @@ export function Providers({children}: {children: ReactNode}) {
     >
       <ConfettiProvider>
         <GlobalStateProvider>
-          <SidebarProvider>
-            <ViewModeProvider>
-              <DashboardLayoutProvider>
-                <AppLayout>{children}</AppLayout>
-              </DashboardLayoutProvider>
-            </ViewModeProvider>
-          </SidebarProvider>
+          <ViewModeProvider>
+            <DashboardLayoutProvider>
+              <AppContent>{children}</AppContent>
+            </DashboardLayoutProvider>
+          </ViewModeProvider>
         </GlobalStateProvider>
       </ConfettiProvider>
     </ThemeProvider>
