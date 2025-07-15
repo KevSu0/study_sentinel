@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "ionic:build": "next build",
     "cap:sync": "npx cap sync",
-    "cap:open": "npx cap open android"
+    "cap:open": "npx cap open android",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",

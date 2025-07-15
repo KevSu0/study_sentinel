@@ -23,18 +23,7 @@ const nextConfig: NextConfig = {
     ],
   },
   // Ignore the .genkit directory to prevent dev server restarts
-  webpack(config, {isServer, dev}) {
-    if (dev) {
-      // Ensure watchOptions is an object before modifying it.
-      config.watchOptions = config.watchOptions || {};
-      const ignored = config.watchOptions.ignored || [];
-      config.watchOptions.ignored = [
-          ...(Array.isArray(ignored) ? ignored : [ignored]),
-          '**/.genkit/**',
-      ];
-    }
-    return config;
-  },
+  // This is handled by a patch-package patch now.
   serverExternalPackages: ['handlebars', 'dotprompt', '@genkit-ai/core'],
 };
 

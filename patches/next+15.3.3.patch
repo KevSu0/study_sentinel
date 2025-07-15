@@ -1,0 +1,48 @@
+diff --git a/node_modules/next/dist/server/lib/find-page-file.js b/node_modules/next/dist/server/lib/find-page-file.js
+index 72c77d4..3a75850 100644
+--- a/node_modules/next/dist/server/lib/find-page-file.js
++++ b/node_modules/next/dist/server/lib/find-page-file.js
+@@ -102,6 +102,7 @@
+         "**/_app.[jt]s?(x)",
+         "**/_error.[jt]s?(x)",
+         "**/_document.[jt]s?(x)",
++        "**/.genkit/**",
+     ];
+     if (options.appDir) {
+         // TODO: find a better way to do this, this is very brittle and is inside of a hot-path.
+diff --git a/node_modules/next/dist/server/next-server.js b/node_modules/next/dist/server/next-server.js
+index 35a4233..7d58954 100644
+--- a/node_modules/next/dist/server/next-server.js
++++ b/node_modules/next/dist/server/next-server.js
+@@ -239,6 +239,7 @@
+                     "**/.next/trace",
+                     "**/.next/cache/**", 
+                 ];
++                watchOptions.ignored.push("**/.genkit/**");
+                 let watcher = new (_chokidar()).default.watch(pathsToWatch, {
+                     ignored: watchOptions.ignored,
+                     ignoreInitial: true,
+diff --git a/node_modules/next/dist/server/web/sandbox/context.js b/node_modules/next/dist/server/web/sandbox/context.js
+index 9e5576a..71c2656 100644
+--- a/node_modules/next/dist/server/web/sandbox/context.js
++++ b/node_modules/next/dist/server/web/sandbox/context.js
+@@ -127,6 +127,7 @@
+         "**/_app.server.[jt]s?(x)",
+         "**/_error.server.[jt]s?(x)",
+         "**/_document.server.[jt]s?(x)",
++        "**/.genkit/**",
+     ];
+     const { 0: appPaths, 1: pagesPaths } = await Promise.all([
+         findPageFile(options.appDir, "/_app", pageExtensions),
+diff --git a/node_modules/next/dist/server/web/sandbox/sandbox.js b/node_modules/next/dist/server/web/sandbox/sandbox.js
+index 10246a4..ed95d73 100644
+--- a/node_modules/next/dist/server/web/sandbox/sandbox.js
++++ b/node_modules/next/dist/server/web/sandbox/sandbox.js
+@@ -75,6 +75,7 @@
+         "**/_app.[jt]s?(x)",
+         "**/_error.[jt]s?(x)",
+         "**/_document.[jt]s?(x)",
++        "**/.genkit/**",
+     ];
+     // Turbopack handles watching server components, so we don't need to here.
+     if (!options.isTurbopack) {
