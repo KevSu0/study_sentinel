@@ -227,5 +227,3 @@ export default function LetsStartPage() {
     </div>
   );
 }
-
-    

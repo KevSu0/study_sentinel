@@ -77,6 +77,8 @@ interface AppState {
   todaysLogs: LogEvent[];
   previousDayLogs: LogEvent[];
   allCompletedWork: CompletedWork[];
+  todaysCompletedWork: CompletedWork[];
+  todaysPoints: number;
   todaysBadges: Badge[];
   todaysRoutines: Routine[];
   todaysCompletedRoutines: LogEvent[];
@@ -135,6 +137,8 @@ const initialAppState: AppState = {
   todaysLogs: [],
   previousDayLogs: [],
   allCompletedWork: [],
+  todaysCompletedWork: [],
+  todaysPoints: 0,
   todaysBadges: [],
   todaysRoutines: [],
   todaysCompletedRoutines: [],
@@ -272,32 +276,23 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
       }
     }
     allTimeLogs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
+    
+    // --- Completed Work Calculation ---
     const sessionLogs = allTimeLogs.filter(l => l.type === 'ROUTINE_SESSION_COMPLETE' || l.type === 'TIMER_SESSION_COMPLETE');
-    const timedTaskIds = new Set(sessionLogs.map(l => l.payload.taskId).filter(Boolean));
-
     const workItems: CompletedWork[] = sessionLogs.map(l => ({
       date: l.timestamp.split('T')[0],
-      duration: Math.round(l.payload.duration / 60),
+      duration: l.payload.duration / 60, // Convert seconds to minutes for consistency
       type: l.type === 'ROUTINE_SESSION_COMPLETE' ? 'routine' : 'task',
       title: l.payload.title,
       points: l.payload.points || 0,
       priority: l.payload.priority,
       subjectId: l.payload.routineId || l.payload.taskId,
     }));
-
-    const manuallyCompletedTasks = tasks.filter(t => t.status === 'completed' && !timedTaskIds.has(t.id));
-    workItems.push(...manuallyCompletedTasks.map(t => ({
-      date: t.date,
-      duration: t.duration,
-      type: 'task',
-      title: t.title,
-      points: t.points,
-      priority: t.priority,
-      subjectId: t.id,
-    })));
-
+    
     const allCompletedWork = workItems;
+    const todaysCompletedWork = allCompletedWork.filter(w => w.date === todayStr);
+    const todaysPoints = todaysCompletedWork.reduce((sum, work) => sum + work.points, 0);
+
     const todaysBadges = allBadges.filter(b => earnedBadges.get(b.id) === todayStr);
     const todaysRoutines = routines.filter(r => r.days.includes(sessionDate.getDay()));
     const todaysCompletedRoutines = todaysLogs.filter(l => l.type === 'ROUTINE_SESSION_COMPLETE');
@@ -306,30 +301,35 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     
     const activity: ActivityFeedItem[] = [];
     
-    // 1. Add completed tasks
-    const completedSessionLogs = todaysLogs.filter(log => log.type === 'TIMER_SESSION_COMPLETE');
-    for (const log of completedSessionLogs) {
-        const task = tasks.find(t => t.id === log.payload.taskId);
-        if (task) {
-            activity.push({ type: 'TASK_COMPLETE', data: { task, log }, timestamp: log.timestamp });
-        }
-    }
-    const manuallyCompleted = todaysLogs.filter(log => log.type === 'TASK_COMPLETE');
-     for (const log of manuallyCompleted) {
-        const task = tasks.find(t => t.id === log.payload.taskId);
-        if (task) {
-            activity.push({ type: 'TASK_COMPLETE', data: { task, log: null }, timestamp: log.timestamp });
+    // Get all completed/stopped logs for today
+    const activityLogs = todaysLogs.filter(
+        log => log.type === 'TIMER_SESSION_COMPLETE' || log.type === 'ROUTINE_SESSION_COMPLETE' || (log.type === 'TIMER_STOP' && log.payload.reason)
+    );
+
+    for (const log of activityLogs) {
+        if (log.type === 'TIMER_SESSION_COMPLETE') {
+            const task = tasks.find(t => t.id === log.payload.taskId);
+            if (task) {
+                activity.push({ type: 'TASK_COMPLETE', data: { task, log }, timestamp: log.timestamp });
+            }
+        } else if (log.type === 'ROUTINE_SESSION_COMPLETE') {
+             activity.push({ type: 'ROUTINE_COMPLETE', data: log, timestamp: log.timestamp });
+        } else if (log.type === 'TIMER_STOP') {
+            activity.push({ type: 'TASK_STOPPED', data: log, timestamp: log.timestamp });
         }
     }
 
-    // 2. Add completed routines
-    for (const log of todaysCompletedRoutines) {
-        activity.push({ type: 'ROUTINE_COMPLETE', data: log, timestamp: log.timestamp });
-    }
-    // 3. Add stopped tasks
-    const stoppedTaskLogs = todaysLogs.filter(l => l.type === 'TIMER_STOP' && l.payload.reason);
-    for (const log of stoppedTaskLogs) {
-        activity.push({ type: 'TASK_STOPPED', data: log, timestamp: log.timestamp });
+    // Add manually completed tasks (not from timer)
+     const timedTaskIds = new Set(activityLogs.map(l => l.payload.taskId).filter(Boolean));
+     const manuallyCompletedLogs = todaysLogs.filter(log => log.type === 'TASK_COMPLETE' && !timedTaskIds.has(log.payload.taskId));
+
+     for (const log of manuallyCompletedLogs) {
+        const task = tasks.find(t => t.id === log.payload.taskId);
+        if (task) {
+            // Fake a log object for consistency
+            const fakeSessionLog = { payload: { duration: task.duration * 60, points: task.points } };
+            activity.push({ type: 'TASK_COMPLETE', data: { task, log: fakeSessionLog }, timestamp: log.timestamp });
+        }
     }
 
     activity.sort((a, b) => {
@@ -341,6 +341,8 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     return {
       todaysLogs,
       allCompletedWork,
+      todaysCompletedWork,
+      todaysPoints,
       todaysBadges,
       todaysRoutines,
       todaysCompletedRoutines,
