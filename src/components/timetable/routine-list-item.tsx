@@ -87,6 +87,8 @@ export const RoutineListItem = React.memo(function RoutineListItem({
     }
   };
 
+  const sortedDays = dayOrder.filter(day => routine.days.includes(day));
+
   return (
     <>
       <Card className="flex flex-col">
