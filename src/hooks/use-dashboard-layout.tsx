@@ -29,8 +29,8 @@ export const WIDGET_NAMES: Record<DashboardWidgetType, string> = {
   daily_briefing: 'Daily Briefing / Quote',
   stats_overview: 'Statistics Overview',
   unlocked_badges: 'Badges Unlocked Today',
-  todays_routines: "Today's Routines",
-  todays_plan: "Today's Plan",
+  todays_routines: "Today Routines",
+  todays_plan: "Today Plan",
   completed_today: 'Completed Today',
 };
 
