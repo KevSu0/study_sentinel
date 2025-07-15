@@ -1,7 +1,13 @@
 
 'use client';
-import React, {useMemo} from 'react';
-import {PieChart, Pie, Cell, ResponsiveContainer, Tooltip} from 'recharts';
+import React, {useMemo, useState, useCallback} from 'react';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Sector,
+} from 'recharts';
 import {
   Card,
   CardContent,
@@ -30,37 +36,63 @@ const formatTime = (totalSeconds: number) => {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = Math.floor(totalSeconds % 60);
-  
+
   const parts = [];
   if (hours > 0) parts.push(`${hours}h`);
   if (minutes > 0) parts.push(`${minutes}m`);
   if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
-  
+
   return parts.join(' ');
 };
 
-const CustomTooltip = ({active, payload}: any) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload;
-    const [type, ...nameParts] = data.name.split(': ');
-    const name = nameParts.join(': ');
-    const timeInSeconds = data.value;
+const renderActiveShape = (props: any) => {
+  const {cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload} =
+    props;
+  const [type, ...nameParts] = payload.name.split(': ');
+  const name = nameParts.join(': ');
 
-    return (
-      <div className="rounded-lg border bg-background p-2.5 shadow-sm">
-        <div className="grid grid-cols-[auto,1fr] items-center gap-x-2 gap-y-1">
-          <p className="text-xs font-semibold uppercase text-muted-foreground">
-            {type}
-          </p>
-          <p className="text-xs text-right font-semibold text-foreground">
-            {formatTime(timeInSeconds)}
-          </p>
-          <p className="col-span-2 text-sm text-foreground">{name}</p>
-        </div>
-      </div>
-    );
-  }
-  return null;
+  return (
+    <g>
+      <text
+        x={cx}
+        y={cy - 10}
+        dy={8}
+        textAnchor="middle"
+        fill="hsl(var(--foreground))"
+        className="text-sm font-bold"
+      >
+        {name}
+      </text>
+      <text
+        x={cx}
+        y={cy + 10}
+        dy={8}
+        textAnchor="middle"
+        fill="hsl(var(--muted-foreground))"
+        className="text-xs"
+      >
+        {formatTime(payload.value)} ({type})
+      </text>
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+      />
+      <Sector
+        cx={cx}
+        cy={cy}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        innerRadius={outerRadius + 6}
+        outerRadius={outerRadius + 10}
+        fill={fill}
+      />
+    </g>
+  );
 };
 
 export default function ProductivityPieChart({
@@ -70,6 +102,18 @@ export default function ProductivityPieChart({
     () => data.reduce((sum, item) => sum + item.value, 0),
     [data]
   );
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
+  const onPieEnter = useCallback(
+    (_: any, index: number) => {
+      setActiveIndex(index);
+    },
+    [setActiveIndex]
+  );
+
+  const onPieLeave = useCallback(() => {
+    setActiveIndex(null);
+  }, [setActiveIndex]);
 
   if (totalSeconds === 0) {
     return (
@@ -96,16 +140,19 @@ export default function ProductivityPieChart({
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow flex items-center justify-center p-0 pb-2 relative">
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <p className="text-2xl font-bold tracking-tight">
-            {formatTime(totalSeconds)}
-          </p>
-          <p className="text-xs text-muted-foreground">Total Time</p>
-        </div>
+        {activeIndex === null && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <p className="text-2xl font-bold tracking-tight">
+              {formatTime(totalSeconds)}
+            </p>
+            <p className="text-xs text-muted-foreground">Total Time</p>
+          </div>
+        )}
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Tooltip content={<CustomTooltip />} />
             <Pie
+              activeIndex={activeIndex as number}
+              activeShape={renderActiveShape}
               data={data}
               cx="50%"
               cy="50%"
@@ -116,6 +163,8 @@ export default function ProductivityPieChart({
               paddingAngle={2}
               stroke="hsl(var(--background))"
               strokeWidth={2}
+              onMouseEnter={onPieEnter}
+              onMouseLeave={onPieLeave}
             >
               {data.map((entry, index) => (
                 <Cell
