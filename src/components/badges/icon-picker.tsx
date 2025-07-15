@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/popover';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
-import {ScrollArea} from '@/components/ui/scroll-area';
 import {cn} from '@/lib/utils';
 import * as Icons from 'lucide-react';
 import {FixedSizeGrid as Grid} from 'react-window';

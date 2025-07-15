@@ -11,6 +11,8 @@ import {Button} from '@/components/ui/button';
 import {Textarea} from '@/components/ui/textarea';
 import {Label} from '@/components/ui/label';
 import {RadioGroup, RadioGroupItem} from '@/components/ui/radio-group';
+import { useGlobalState } from '@/hooks/use-global-state';
+
 
 interface StopTimerDialogProps {
   isOpen: boolean;
@@ -33,12 +35,16 @@ export function StopTimerDialog({
 }: StopTimerDialogProps) {
   const [selectedValue, setSelectedValue] = useState('');
   const [customReason, setCustomReason] = useState('');
+  const { stopTimer } = useGlobalState();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const finalReason =
       selectedValue === 'Other' ? customReason : selectedValue;
-    onConfirm(finalReason || 'No reason provided.');
+    
+    stopTimer(finalReason || 'No reason provided.');
+    onConfirm(finalReason);
+
     onOpenChange(false);
     setSelectedValue('');
     setCustomReason('');

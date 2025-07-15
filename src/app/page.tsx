@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, {useState, useCallback} from 'react';
@@ -31,14 +32,6 @@ import {StatsOverviewWidget} from '@/components/dashboard/widgets/stats-overview
 import {UnlockedBadgesWidget} from '@/components/dashboard/widgets/unlocked-badges-widget';
 import {CompletedTodayWidget} from '@/components/dashboard/widgets/completed-today-widget';
 import {EmptyState} from '@/components/tasks/empty-state';
-
-const TaskDialog = dynamic(
-  () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),
-  {
-    ssr: false,
-    loading: () => <Skeleton className="h-[500px] w-[600px]" />,
-  }
-);
 
 const CustomizeDialog = dynamic(
   () =>
@@ -76,27 +69,12 @@ function SortableWidget({
 export default function DashboardPage() {
   const {
     state,
-    addTask,
-    updateTask,
-    archiveTask,
-    unarchiveTask,
-    pushTaskToNextDay,
   } = useGlobalState();
   const {viewMode} = useViewMode();
   const {layout, setLayout, visibleWidgets, isLoaded: layoutLoaded} =
     useDashboardLayout();
 
   const [isCustomizeOpen, setCustomizeOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
-  const isTaskFormOpen = !!editingTask;
-
-  const openEditTaskDialog = useCallback((task: StudyTask) => {
-    setEditingTask(task);
-  }, []);
-
-  const closeTaskFormDialog = useCallback(() => {
-    setEditingTask(null);
-  }, []);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -123,19 +101,15 @@ export default function DashboardPage() {
 
   const widgetProps = {
     ...state,
-    onEditTask: openEditTaskDialog,
-    onUpdateTask: updateTask,
-    onArchiveTask: archiveTask,
-    onUnarchiveTask: unarchiveTask,
-    onPushTask: pushTaskToNextDay,
     viewMode,
   };
 
   const hasContent =
-    visibleWidgets.length > 0 ||
-    state.todaysPendingTasks.length > 0 ||
-    state.todaysRoutines.length > 0 ||
-    state.todaysActivity.length > 0;
+    visibleWidgets.length > 0 &&
+    (state.todaysCompletedWork.length > 0 ||
+      state.todaysBadges.length > 0 ||
+      state.previousDayLogs.length > 0);
+
 
   return (
     <div className="flex flex-col h-full">
@@ -213,13 +187,6 @@ export default function DashboardPage() {
           </div>
         )}
       </main>
-      <TaskDialog
-        isOpen={isTaskFormOpen}
-        onOpenChange={open => !open && closeTaskFormDialog()}
-        onAddTask={addTask}
-        onUpdateTask={updateTask}
-        taskToEdit={editingTask}
-      />
       <CustomizeDialog
         isOpen={isCustomizeOpen}
         onOpenChange={setCustomizeOpen}

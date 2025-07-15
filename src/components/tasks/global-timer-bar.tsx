@@ -12,7 +12,6 @@ export function GlobalTimerBar() {
     state,
     togglePause,
     completeTimer,
-    stopTimer,
     openRoutineLogDialog
   } = useGlobalState();
   const {activeItem, timeDisplay, isPaused, isOvertime} = state;
@@ -46,7 +45,8 @@ export function GlobalTimerBar() {
   }
 
   const handleConfirmStopTask = (reason: string) => {
-    stopTimer(reason);
+    // The stopTimer logic is now inside the dialog confirmation
+    // So we just close the dialog. The global state will handle the rest.
     setStopTaskDialogOpen(false);
   };
 

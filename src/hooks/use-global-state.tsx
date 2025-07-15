@@ -88,7 +88,6 @@ interface AppState {
 interface GlobalStateContextType {
   state: AppState;
   addTask: (task: Omit<StudyTask, 'id' | 'status'>) => void;
-  onEditTask: (task: StudyTask) => void;
   updateTask: (updatedTask: StudyTask) => void;
   archiveTask: (taskId: string) => void;
   unarchiveTask: (taskId: string) => void;
@@ -571,12 +570,6 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     [addLog]
   );
 
-  const onEditTask = useCallback((task: StudyTask) => {
-    // This is a placeholder. The actual dialog opening logic will be in the component.
-    // This function is here to be passed in context if needed.
-    // For now, the dialog is managed by the page component's local state.
-  }, []);
-
   const updateTask = useCallback(
     (updatedTask: StudyTask) => {
       setStateAndDerive(prev => {
@@ -974,7 +967,6 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     () => ({
       state,
       addTask,
-      onEditTask,
       updateTask,
       archiveTask,
       unarchiveTask,
@@ -996,7 +988,6 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     [
       state,
       addTask,
-      onEditTask,
       updateTask,
       archiveTask,
       unarchiveTask,

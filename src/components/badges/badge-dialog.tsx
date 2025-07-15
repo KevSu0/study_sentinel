@@ -22,10 +22,9 @@ import {
 import {useForm, Controller, useFieldArray} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
 import {z} from 'zod';
-import {useEffect, useMemo} from 'react';
+import {useEffect} from 'react';
 import type {Badge} from '@/lib/types';
 import {useToast} from '@/hooks/use-toast';
-import * as Icons from 'lucide-react';
 import {X} from 'lucide-react';
 import {useGlobalState} from '@/hooks/use-global-state';
 import {DurationInput} from './duration-input';
@@ -127,7 +126,6 @@ export function BadgeDialog({
   });
 
   const watchedConditions = watch('conditions');
-  const selectedIconName = watch('icon');
   const watchedColor = watch('color');
 
   useEffect(() => {

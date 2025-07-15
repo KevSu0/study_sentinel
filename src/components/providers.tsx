@@ -67,7 +67,7 @@ function AppLayout({children}: {children: ReactNode}) {
 
   const menuItems = [
     {
-      href: '/lets-start',
+      href: '/',
       label: 'Dashboard',
       icon: LayoutDashboard,
       showInSidebar: true,
@@ -123,7 +123,7 @@ function AppLayout({children}: {children: ReactNode}) {
                     asChild
                     isActive={
                       pathname === item.href ||
-                      (pathname === '/' && item.href === '/lets-start')
+                      (pathname === '/lets-start' && item.href === '/')
                     }
                     tooltip={item.label}
                     onClick={handleMenuClick}
