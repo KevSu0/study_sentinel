@@ -15,9 +15,10 @@ import { EmptyState } from '@/components/tasks/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { CardCompletedRoutineItem, SimpleCompletedRoutineItem } from '@/components/dashboard/completed-routine-card';
-import { LayoutGrid, List, Clock, PlusCircle } from 'lucide-react';
+import { LayoutGrid, List, Clock, PlusCircle, CalendarPlus, Repeat } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StudyTask, Routine } from '@/lib/types';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const TaskDialog = dynamic(
   () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),
@@ -179,18 +180,30 @@ export default function PlansPage() {
                   <div className="flex items-center gap-2 mt-2 text-sm font-medium text-accent">
                     <Clock className="h-4 w-4" />
                     <span>
-                      Productive Time Today: {formatProductiveTime(todaysProductiveTime * 60)}
+                      Productive Time Today: {formatProductiveTime(todaysProductiveTime)}
                     </span>
                   </div>
                 )}
             </div>
             <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={openAddRoutineDialog}>
-                    <PlusCircle /> Add Routine
-                </Button>
-                <Button onClick={openAddTaskDialog}>
-                    <PlusCircle /> Add Task
-                </Button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button>
+                            <PlusCircle /> Add New
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={openAddTaskDialog}>
+                            <CalendarPlus />
+                            New Task
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={openAddRoutineDialog}>
+                            <Repeat />
+                            New Routine
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+                
                 <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
                     <Button
                     variant={viewMode === 'card' ? 'secondary' : 'ghost'}
