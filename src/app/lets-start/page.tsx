@@ -185,7 +185,8 @@ export default function LetsStartPage() {
                 })}
 
                 {state.todaysPendingTasks.length === 0 &&
-                  state.todaysRoutines.length === 0 && (
+                  state.todaysRoutines.length === 0 &&
+                  state.todaysActivity.length === 0 && (
                     <div className="flex items-center justify-center pt-16">
                       <EmptyState
                         onAddTask={() => {}}
@@ -226,3 +227,5 @@ export default function LetsStartPage() {
     </div>
   );
 }
+
+    

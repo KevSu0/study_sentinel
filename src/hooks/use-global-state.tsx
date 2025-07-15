@@ -47,6 +47,13 @@ type StoredTimer = {
   overtimeNotified?: boolean;
 };
 
+// Represents any item that can appear in the "Today's Activity" feed
+export type ActivityFeedItem =
+    | { type: 'TASK_COMPLETE'; data: StudyTask }
+    | { type: 'ROUTINE_COMPLETE'; data: LogEvent }
+    | { type: 'TASK_STOPPED'; data: LogEvent };
+
+
 interface AppState {
   isLoaded: boolean;
   tasks: StudyTask[];
@@ -68,6 +75,7 @@ interface AppState {
   todaysCompletedRoutines: LogEvent[];
   todaysCompletedTasks: StudyTask[];
   todaysPendingTasks: StudyTask[];
+  todaysActivity: ActivityFeedItem[];
 }
 
 interface GlobalStateContextType {
@@ -122,6 +130,7 @@ const initialAppState: AppState = {
   todaysCompletedRoutines: [],
   todaysCompletedTasks: [],
   todaysPendingTasks: [],
+  todaysActivity: [],
 };
 
 const GlobalStateContext = createContext<GlobalStateContextType | undefined>(
@@ -210,71 +219,12 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
       localStorage.getItem(prevLogKey) || '[]'
     );
 
-    const allTimeLogs: LogEvent[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(LOG_PREFIX)) {
-        allTimeLogs.push(...JSON.parse(localStorage.getItem(key) || '[]'));
-      }
-    }
-    allTimeLogs.sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
-
-    // --- DERIVED STATE CALCULATION ---
-    const sessionLogs = allTimeLogs.filter(
-      l =>
-        l.type === 'ROUTINE_SESSION_COMPLETE' ||
-        l.type === 'TIMER_SESSION_COMPLETE'
-    );
-    const timedTaskIds = new Set(
-      sessionLogs.map(l => l.payload.taskId).filter(Boolean)
-    );
-
-    const workItems: CompletedWork[] = sessionLogs.map(l => ({
-      date: l.timestamp.split('T')[0],
-      duration: Math.round(l.payload.duration / 60),
-      type: l.type === 'ROUTINE_SESSION_COMPLETE' ? 'routine' : 'task',
-      title: l.payload.title,
-      points: l.payload.points || 0,
-      priority: l.payload.priority,
-      subjectId: l.payload.routineId || l.payload.taskId,
-    }));
-
-    const manuallyCompletedTasks = savedTasks.filter(
-      (t: StudyTask) => t.status === 'completed' && !timedTaskIds.has(t.id)
-    );
-    workItems.push(
-      ...manuallyCompletedTasks.map((t: StudyTask) => ({
-        date: t.date,
-        duration: t.duration,
-        type: 'task',
-        title: t.title,
-        points: t.points,
-        priority: t.priority,
-        subjectId: t.id,
-      }))
-    );
-    const allCompletedWork = workItems;
-    const todaysBadges = allBadges.filter(
-      (b: Badge) => savedEarnedBadges.get(b.id) === todayStr
-    );
-    const todaysRoutines = savedRoutines.filter((r: Routine) =>
-      r.days.includes(sessionDate.getDay())
-    );
-    const todaysCompletedRoutines = todaysLogs.filter(
-      (l: LogEvent) => l.type === 'ROUTINE_SESSION_COMPLETE'
-    );
-    const todaysCompletedTasks = savedTasks.filter(
-      (t: StudyTask) => t.status === 'completed' && t.date === todayStr
-    );
-    const todaysPendingTasks = savedTasks.filter(
-      (t: StudyTask) =>
-        t.date === todayStr && (t.status === 'todo' || t.status === 'in_progress')
-    );
+    const derivedState = updateDerivedState({ tasks: savedTasks, routines: savedRoutines, logs: todaysLogs, allBadges, earnedBadges: savedEarnedBadges });
 
     // --- Set final hydrated state ---
     setState({
+      ...initialAppState,
+      ...derivedState,
       isLoaded: true,
       tasks: savedTasks,
       profile: savedProfile,
@@ -282,18 +232,9 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
       earnedBadges: savedEarnedBadges,
       allBadges,
       logs: todaysLogs,
+      previousDayLogs,
       activeItem: savedTimer?.item || null,
       isPaused: savedTimer?.isPaused ?? true,
-      timeDisplay: '00:00',
-      isOvertime: false,
-      todaysLogs,
-      previousDayLogs,
-      allCompletedWork,
-      todaysBadges,
-      todaysRoutines,
-      todaysCompletedRoutines,
-      todaysCompletedTasks,
-      todaysPendingTasks,
     });
 
     // Initialize audio element
@@ -353,9 +294,32 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     const todaysCompletedTasks = tasks.filter(t => t.status === 'completed' && t.date === todayStr);
     const todaysPendingTasks = tasks.filter(t => t.date === todayStr && (t.status === 'todo' || t.status === 'in_progress'));
     
-    // Previous day logs need to be read separately for briefing, can't be derived from current state easily
-    // Let's keep the initial load logic for previousDayLogs for now.
-    
+    // --- New: Build Today's Activity Feed ---
+    const activity: ActivityFeedItem[] = [];
+
+    // 1. Add completed tasks
+    for (const task of todaysCompletedTasks) {
+        activity.push({ type: 'TASK_COMPLETE', data: task });
+    }
+    // 2. Add completed routines
+    for (const log of todaysCompletedRoutines) {
+        activity.push({ type: 'ROUTINE_COMPLETE', data: log });
+    }
+    // 3. Add stopped tasks
+    const stoppedTaskLogs = todaysLogs.filter(l => l.type === 'TIMER_STOP' && l.payload.reason);
+    for (const log of stoppedTaskLogs) {
+        activity.push({ type: 'TASK_STOPPED', data: log });
+    }
+
+    // Sort the combined feed by timestamp DESC
+    activity.sort((a, b) => {
+        const dateA = a.type === 'TASK_COMPLETE' ? parseISO(`${a.data.date}T${a.data.time}`) : parseISO(a.data.timestamp);
+        const dateB = b.type === 'TASK_COMPLETE' ? parseISO(`${b.data.date}T${b.data.time}`) : parseISO(b.data.timestamp);
+        return dateB.getTime() - dateA.getTime();
+    });
+
+    const todaysActivity = activity;
+
     return {
       todaysLogs,
       allCompletedWork,
@@ -364,12 +328,14 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
       todaysCompletedRoutines,
       todaysCompletedTasks,
       todaysPendingTasks,
+      todaysActivity,
     };
   };
 
-  const setStateAndDerive = (updater: (prevState: AppState) => AppState) => {
+  const setStateAndDerive = (updater: (prevState: AppState) => Partial<AppState>) => {
     setState(prevState => {
-      const newState = updater(prevState);
+      const changes = updater(prevState);
+      const newState = { ...prevState, ...changes };
       const derived = updateDerivedState(newState);
       return { ...newState, ...derived };
     });
@@ -388,7 +354,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
         const updatedLogs = [...prevState.logs, newLog];
         const logKey = `${LOG_PREFIX}${format(getSessionDate(), 'yyyy-MM-dd')}`;
         localStorage.setItem(logKey, JSON.stringify(updatedLogs));
-        return {...prevState, logs: updatedLogs};
+        return {logs: updatedLogs};
       });
     },
     []
@@ -486,7 +452,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
           }, 500);
         });
         localStorage.setItem(EARNED_BADGES_KEY, JSON.stringify(Array.from(newEarnedMap.entries())));
-        return {...prev, earnedBadges: newEarnedMap};
+        return {earnedBadges: newEarnedMap};
       });
     }
   }, [state.isLoaded, state.allCompletedWork, state.tasks, fire, toast]);
@@ -507,7 +473,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
         );
         localStorage.setItem(TASKS_KEY, JSON.stringify(updatedTasks));
         addLog('TASK_ADD', {taskId: newTask.id, title: newTask.title});
-        return {...prev, tasks: updatedTasks};
+        return {tasks: updatedTasks};
       });
     },
     [addLog]
@@ -555,7 +521,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
             a.date.localeCompare(b.date) || a.time.localeCompare(b.time)
         );
         localStorage.setItem(TASKS_KEY, JSON.stringify(sortedTasks));
-        return {...prev, tasks: sortedTasks};
+        return {tasks: sortedTasks};
       });
     },
     [addLog]
@@ -565,13 +531,13 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     (taskId: string) => {
       setStateAndDerive(prev => {
         const taskToArchive = prev.tasks.find(t => t.id === taskId);
-        if (!taskToArchive) return prev;
+        if (!taskToArchive) return {};
         const newTasks = prev.tasks.map(t =>
           t.id === taskId ? {...t, status: 'archived' as const} : t
         );
         addLog('TASK_ARCHIVE', {taskId, title: taskToArchive.title});
         localStorage.setItem(TASKS_KEY, JSON.stringify(newTasks));
-        return {...prev, tasks: newTasks};
+        return {tasks: newTasks};
       });
     },
     [addLog]
@@ -581,13 +547,13 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     (taskId: string) => {
       setStateAndDerive(prev => {
         const taskToUnarchive = prev.tasks.find(t => t.id === taskId);
-        if (!taskToUnarchive) return prev;
+        if (!taskToUnarchive) return {};
         const newTasks = prev.tasks.map(t =>
           t.id === taskId ? {...t, status: 'todo' as const} : t
         );
         addLog('TASK_UNARCHIVE', {taskId, title: taskToUnarchive.title});
         localStorage.setItem(TASKS_KEY, JSON.stringify(newTasks));
-        return {...prev, tasks: newTasks};
+        return {tasks: newTasks};
       });
     },
     [addLog]
@@ -597,7 +563,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     (taskId: string) => {
       setStateAndDerive(prev => {
         const taskToPush = prev.tasks.find(t => t.id === taskId);
-        if (!taskToPush) return prev;
+        if (!taskToPush) return {};
         const newTasks = prev.tasks.map(t => {
           if (t.id === taskId) {
             const taskDate = parseISO(t.date);
@@ -607,7 +573,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
         });
         addLog('TASK_PUSH_NEXT_DAY', {taskId, title: taskToPush.title});
         localStorage.setItem(TASKS_KEY, JSON.stringify(newTasks));
-        return {...prev, tasks: newTasks};
+        return {tasks: newTasks};
       });
     },
     [addLog]
@@ -716,7 +682,6 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
       });
       localStorage.removeItem(TIMER_KEY);
       setStateAndDerive(prev => ({
-        ...prev,
         activeItem: null,
         isPaused: true,
         isOvertime: false,
@@ -777,7 +742,6 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     }
     localStorage.removeItem(TIMER_KEY);
     setStateAndDerive(prev => ({
-      ...prev,
       activeItem: null,
       isPaused: true,
       isOvertime: false,
@@ -797,7 +761,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
           a.startTime.localeCompare(b.startTime)
         );
         localStorage.setItem(ROUTINES_KEY, JSON.stringify(updated));
-        return {...prev, routines: updated};
+        return {routines: updated};
       });
     },
     []
@@ -809,7 +773,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
         .map(r => (r.id === routine.id ? routine : r))
         .sort((a, b) => a.startTime.localeCompare(b.startTime));
       localStorage.setItem(ROUTINES_KEY, JSON.stringify(updated));
-      return {...prev, routines: updated};
+      return {routines: updated};
     });
   }, []);
 
@@ -819,7 +783,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
         .filter(r => r.id !== routineId)
         .sort((a, b) => a.startTime.localeCompare(b.startTime));
       localStorage.setItem(ROUTINES_KEY, JSON.stringify(updated));
-      return {...prev, routines: updated};
+      return {routines: updated};
     });
   }, []);
 
@@ -832,7 +796,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
         const newAllBadges = [...prev.allBadges, newBadge];
         const customBadges = newAllBadges.filter(b => b.isCustom);
         localStorage.setItem(CUSTOM_BADGES_KEY, JSON.stringify(customBadges));
-        return {...prev, allBadges: newAllBadges};
+        return {allBadges: newAllBadges};
     });
   }, []);
 
@@ -848,7 +812,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
         const systemBadges = newAllBadges.filter(b => !b.isCustom);
         localStorage.setItem(SYSTEM_BADGES_CONFIG_KEY, JSON.stringify(systemBadges));
       }
-      return {...prev, allBadges: newAllBadges};
+      return {allBadges: newAllBadges};
     });
   }, []);
 
@@ -863,7 +827,6 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
       localStorage.setItem(CUSTOM_BADGES_KEY, JSON.stringify(customBadges));
       localStorage.setItem(EARNED_BADGES_KEY, JSON.stringify(Array.from(updatedEarned.entries())));
       return {
-        ...prev,
         allBadges: updatedAllBadges,
         earnedBadges: updatedEarned,
       };
@@ -874,7 +837,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     setStateAndDerive(prev => {
       const newProfile = {...prev.profile, ...newProfileData};
       localStorage.setItem(PROFILE_KEY, JSON.stringify(newProfile));
-      return {...prev, profile: newProfile};
+      return {profile: newProfile};
     });
   }, []);
 
@@ -913,3 +876,5 @@ export const useGlobalState = () => {
   }
   return context;
 };
+
+    
