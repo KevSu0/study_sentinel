@@ -48,10 +48,12 @@ type StoredTimer = {
 };
 
 // Represents any item that can appear in the "Today's Activity" feed
-export type ActivityFeedItem =
-    | { type: 'TASK_COMPLETE'; data: StudyTask }
-    | { type: 'ROUTINE_COMPLETE'; data: LogEvent }
-    | { type: 'TASK_STOPPED'; data: LogEvent };
+export type ActivityFeedItem = {
+  type: 'TASK_COMPLETE' | 'ROUTINE_COMPLETE' | 'TASK_STOPPED';
+  data: any; // StudyTask for TASK_COMPLETE, LogEvent for others
+  timestamp: string; // ISO string for consistent sorting
+};
+
 
 type RoutineLogDialogState = {
     isOpen: boolean;
@@ -307,23 +309,21 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
 
     // 1. Add completed tasks
     for (const task of todaysCompletedTasks) {
-        activity.push({ type: 'TASK_COMPLETE', data: task });
+        activity.push({ type: 'TASK_COMPLETE', data: task, timestamp: formatISO(new Date(`${task.date}T${task.time}`)) });
     }
     // 2. Add completed routines
     for (const log of todaysCompletedRoutines) {
-        activity.push({ type: 'ROUTINE_COMPLETE', data: log });
+        activity.push({ type: 'ROUTINE_COMPLETE', data: log, timestamp: log.timestamp });
     }
     // 3. Add stopped tasks
     const stoppedTaskLogs = todaysLogs.filter(l => l.type === 'TIMER_STOP' && l.payload.reason);
     for (const log of stoppedTaskLogs) {
-        activity.push({ type: 'TASK_STOPPED', data: log });
+        activity.push({ type: 'TASK_STOPPED', data: log, timestamp: log.timestamp });
     }
 
     // Sort the combined feed by timestamp DESC
     activity.sort((a, b) => {
-        const dateA = a.type === 'TASK_COMPLETE' ? parseISO(`${a.data.date}T${a.data.time}`) : parseISO(a.data.timestamp);
-        const dateB = b.type === 'TASK_COMPLETE' ? parseISO(`${b.data.date}T${b.data.time}`) : parseISO(b.data.timestamp);
-        return dateB.getTime() - dateA.getTime();
+        return parseISO(b.timestamp).getTime() - parseISO(a.timestamp).getTime();
     });
 
     const todaysActivity = activity;
@@ -908,5 +908,3 @@ export const useGlobalState = () => {
   }
   return context;
 };
-
-    

@@ -1,3 +1,4 @@
+
 'use client';
 import React, {useState, useMemo} from 'react';
 import type {ActivityFeedItem} from '@/hooks/use-global-state';
@@ -13,6 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {parseISO} from 'date-fns';
 
 type ActivityFilter = 'all' | 'task' | 'routine';
 type ActivitySort = 'newest' | 'time_asc' | 'time_desc';
@@ -26,7 +28,7 @@ export const CompletedTodayWidget = ({
   const [sort, setSort] = useState<ActivitySort>('newest');
 
   const filteredAndSortedActivity = useMemo(() => {
-    let result = todaysActivity;
+    let result = [...todaysActivity];
 
     // Filtering
     if (filter !== 'all') {
@@ -53,9 +55,8 @@ export const CompletedTodayWidget = ({
                 return getTime(b) - getTime(a);
             case 'newest':
             default:
-                const dateA = a.type === 'TASK_COMPLETE' ? new Date(`${a.data.date}T${a.data.time}`) : new Date(a.data.timestamp);
-                const dateB = b.type === 'TASK_COMPLETE' ? new Date(`${b.data.date}T${b.data.time}`) : new Date(b.data.timestamp);
-                return dateB.getTime() - dateA.getTime();
+                // Timestamps are now guaranteed to be ISO strings
+                return parseISO(b.timestamp).getTime() - parseISO(a.timestamp).getTime();
         }
     });
 
