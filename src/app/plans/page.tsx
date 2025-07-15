@@ -14,7 +14,7 @@ import { EmptyState } from '@/components/tasks/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { CardCompletedRoutineItem, SimpleCompletedRoutineItem } from '@/components/dashboard/completed-routine-card';
-import { LayoutGrid, List } from 'lucide-react';
+import { LayoutGrid, List, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StudyTask, Routine } from '@/lib/types';
 
@@ -38,6 +38,7 @@ export default function PlansPage() {
     todaysCompletedTasks,
     todaysCompletedRoutines,
     activeItem,
+    allCompletedWork,
   } = state;
 
   const overdueTasks = useMemo(() => {
@@ -50,6 +51,28 @@ export default function PlansPage() {
         task.status !== 'archived'
     );
   }, [tasks, isLoaded]);
+  
+  const todaysProductiveTime = useMemo(() => {
+    if (!isLoaded) return 0;
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    return allCompletedWork
+      .filter(work => work.date === todayStr)
+      .reduce((sum, work) => sum + work.duration, 0);
+  }, [allCompletedWork, isLoaded]);
+
+  const formatProductiveTime = (totalMinutes: number) => {
+    if (totalMinutes === 0) return '0m';
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours > 0 && minutes > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    if (hours > 0) {
+      return `${hours}h`;
+    }
+    return `${minutes}m`;
+  };
+
 
   const renderTaskList = (tasksToRender: StudyTask[]) => {
     const props = {
@@ -109,9 +132,17 @@ export default function PlansPage() {
                  <h1 className="text-3xl font-bold text-primary">
                   Today's Plans & Routines
                 </h1>
-                <p className="text-muted-foreground">
+                <p className="text-muted-foreground mt-1">
                   Your agenda for {format(new Date(), 'MMMM d, yyyy')}.
                 </p>
+                 {isLoaded && (
+                  <div className="flex items-center gap-2 mt-2 text-sm font-medium text-accent">
+                    <Clock className="h-4 w-4" />
+                    <span>
+                      Productive Time Today: {formatProductiveTime(todaysProductiveTime)}
+                    </span>
+                  </div>
+                )}
             </div>
             <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
             <Button
