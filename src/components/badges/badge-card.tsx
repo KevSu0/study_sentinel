@@ -23,7 +23,8 @@ export const BadgeCard = memo(function BadgeCard({
         'transition-all duration-300 flex flex-col items-center text-center p-4',
         isEarned
           ? 'bg-opacity-10 border-solid'
-          : 'border-dashed bg-card/50'
+          : 'border-dashed bg-card/50',
+        !isEarned && 'grayscale'
       )}
       style={{
         borderColor: isEarned ? badge.color : undefined,

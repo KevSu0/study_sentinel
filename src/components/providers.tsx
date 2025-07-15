@@ -25,9 +25,7 @@ import {
   LayoutDashboard,
   TrendingUp,
   Award,
-  Archive,
   Sparkles,
-  ScrollText,
   User,
   ClipboardList,
 } from 'lucide-react';
@@ -70,40 +68,24 @@ function AppLayout({children}: {children: ReactNode}) {
       href: '/',
       label: 'Dashboard',
       icon: LayoutDashboard,
-      showInSidebar: true,
     },
     {
       href: '/plans',
       label: 'Plans & Routines',
       icon: ClipboardList,
-      showInSidebar: true,
     },
     {
       href: '/briefing',
       label: 'Daily Briefing',
       icon: Sparkles,
-      showInSidebar: true,
     },
     {
       href: '/stats',
       label: 'Stats',
       icon: TrendingUp,
-      showInSidebar: true,
     },
-    {href: '/badges', label: 'Badges', icon: Award, showInSidebar: true},
-    {
-      href: '/archive',
-      label: 'Archived Tasks',
-      icon: Archive,
-      showInSidebar: true,
-    },
-    {
-      href: '/logs',
-      label: 'Activity Log',
-      icon: ScrollText,
-      showInSidebar: true,
-    },
-    {href: '/profile', label: 'Profile', icon: User, showInSidebar: true},
+    {href: '/badges', label: 'Badges', icon: Award},
+    {href: '/profile', label: 'Profile', icon: User},
   ];
 
   return (
@@ -115,25 +97,21 @@ function AppLayout({children}: {children: ReactNode}) {
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            {menuItems
-              .filter(item => item.showInSidebar)
-              .map(item => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={
-                      pathname === item.href
-                    }
-                    tooltip={item.label}
-                    onClick={handleMenuClick}
-                  >
-                    <Link href={item.href} className="flex items-center gap-2">
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+            {menuItems.map(item => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === item.href}
+                  tooltip={item.label}
+                  onClick={handleMenuClick}
+                >
+                  <Link href={item.href} className="flex items-center gap-2">
+                    <item.icon />
+                    <span>{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-2">

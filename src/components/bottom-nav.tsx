@@ -24,7 +24,7 @@ export function BottomNav() {
     <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-background border-t z-40">
       <div className="flex justify-around items-center h-full">
         {menuItems.map(item => {
-          const isActive = pathname === item.href || (pathname === '/lets-start' && item.href === '/');
+          const isActive = pathname === item.href;
           return (
             <Link
               key={item.href}

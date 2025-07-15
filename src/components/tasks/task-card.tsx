@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, {useState, lazy, Suspense} from 'react';
+import React, {useState, lazy, Suspense, useMemo} from 'react';
 import {
   Card,
   CardContent,
@@ -86,6 +87,10 @@ export function TaskCard({
   const {activeItem} = state;
   const isTimerActive =
     activeItem?.type === 'task' && activeItem.item.id === task.id;
+  
+  const isCompleted = task.status === 'completed';
+  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+  const isOverdue = !isCompleted && task.date < todayStr;
 
   const handleStatusChange = (newStatus: TaskStatus) => {
     const oldStatus = task.status;
@@ -165,9 +170,8 @@ export function TaskCard({
       <Card
         className={cn(
           'transition-all duration-300 flex flex-col border-l-4',
-          task.status !== 'completed' &&
-            task.date < format(new Date(), 'yyyy-MM-dd')
-            ? 'border-destructive/70'
+          isOverdue
+            ? 'border-destructive/70 bg-destructive/5'
             : task.status === 'completed'
             ? 'bg-card/60 dark:bg-card/80 border-accent'
             : priorityConfig[task.priority]?.className || 'border-transparent',
@@ -177,11 +181,11 @@ export function TaskCard({
         <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
             <div className="flex-grow">
-              <CardTitle className="text-lg font-semibold">
+              <CardTitle className={cn("text-lg font-semibold", isCompleted && "line-through text-muted-foreground")}>
                 {task.title}
               </CardTitle>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
-                <span className="flex items-center gap-2">
+                <span className={cn("flex items-center gap-2", isOverdue && "text-destructive font-semibold")}>
                   <Calendar className="h-4 w-4" /> {formattedDate}
                 </span>
                 <span className="flex items-center gap-2">
@@ -198,7 +202,7 @@ export function TaskCard({
 
         <CardContent className="flex-grow pb-4 space-y-4">
           {task.description && (
-            <p className="text-sm text-foreground/80">{task.description}</p>
+            <p className={cn("text-sm text-foreground/80", isCompleted && "text-muted-foreground")}>{task.description}</p>
           )}
         </CardContent>
 

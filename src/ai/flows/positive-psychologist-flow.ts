@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A positive psychology chatbot flow.
@@ -84,10 +85,9 @@ You MUST follow these rules:
     }
 
     if (contextParts.length > 0) {
-      systemPrompt += `
-
-Here is some context about the user:
-- ${contextParts.join('\n- ')}`;
+      systemPrompt += `\nHere is some context about the user:\n- ${contextParts.join(
+        '\n- '
+      )}`;
     }
 
     // 5. Call the AI with the correctly structured request.

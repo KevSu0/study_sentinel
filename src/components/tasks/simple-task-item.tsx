@@ -22,7 +22,7 @@ import {cn} from '@/lib/utils';
 import type {StudyTask} from '@/lib/types';
 import {useConfetti} from '@/components/providers/confetti-provider';
 import toast from 'react-hot-toast';
-import {format} from 'date-fns';
+import {format, parseISO} from 'date-fns';
 import {useGlobalState} from '@/hooks/use-global-state';
 
 const TimerDialog = lazy(() =>
@@ -106,12 +106,11 @@ export function SimpleTaskItem({
             className={cn(
               'font-medium cursor-pointer',
               isCompleted && 'line-through text-muted-foreground',
-              isOverdue && 'text-destructive'
             )}
           >
             {task.title}
           </label>
-          <p className="text-sm text-muted-foreground">
+          <p className={cn("text-sm text-muted-foreground", isOverdue && 'text-destructive')}>
             {task.duration} min &bull; {task.points} pts &bull; {task.priority}{' '}
             priority
           </p>
