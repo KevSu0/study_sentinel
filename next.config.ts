@@ -20,23 +20,21 @@ const nextConfig: NextConfig = {
     ],
   },
   // Ignore the .genkit directory to prevent dev server restarts
-  webpack(config, { isServer, dev }) {
+  webpack(config, {isServer, dev}) {
     if (dev) {
-        config.watchOptions = {
-            ...config.watchOptions,
-            ignored: [
-                ...config.watchOptions.ignored as string[],
-                '**/.genkit/**',
-            ]
-        }
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: [
+          ...(Array.isArray(config.watchOptions.ignored)
+            ? config.watchOptions.ignored
+            : []),
+          '**/.genkit/**',
+        ],
+      };
     }
     return config;
   },
-  serverExternalPackages: [
-    'handlebars',
-    'dotprompt',
-    '@genkit-ai/core',
-  ],
+  serverExternalPackages: ['handlebars', 'dotprompt', '@genkit-ai/core'],
 };
 
 export default nextConfig;
