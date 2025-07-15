@@ -8,12 +8,15 @@ import {
   Star,
   XCircle,
   AlertTriangle,
-  BookText
+  BookText,
+  Clock,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { ActivityFeedItem } from '@/hooks/use-global-state';
 import { cn } from '@/lib/utils';
 import type { StudyTask } from '@/lib/types';
+import { parseISO, format } from 'date-fns';
+
 
 const formatDuration = (seconds: number) => {
     if (seconds < 60) return `${seconds}s`;
@@ -32,6 +35,7 @@ const formatDuration = (seconds: number) => {
 
 export function ActivityItem({ item }: { item: ActivityFeedItem }) {
   const baseClasses = "flex items-start gap-4 p-3 border rounded-lg transition-colors bg-card/70";
+  const formattedTime = format(parseISO(item.timestamp), 'p');
 
   switch (item.type) {
     case 'TASK_COMPLETE': {
@@ -54,6 +58,10 @@ export function ActivityItem({ item }: { item: ActivityFeedItem }) {
               <span className="flex items-center gap-1.5">
                 <Star className="h-4 w-4 text-yellow-400" />
                 {points} pts
+              </span>
+               <span className="flex items-center gap-1.5">
+                <Clock className="h-4 w-4" />
+                {formattedTime}
               </span>
               <Badge variant="secondary" className="capitalize">{task.priority} Priority</Badge>
             </div>
@@ -80,6 +88,10 @@ export function ActivityItem({ item }: { item: ActivityFeedItem }) {
                   <Star className="h-4 w-4 text-yellow-400" />
                   {points || 0} pts earned
                 </span>
+                 <span className="flex items-center gap-1.5">
+                  <Clock className="h-4 w-4" />
+                  {formattedTime}
+                </span>
              </div>
              {studyLog && (
                 <div className="flex items-start gap-2 mt-2 p-2 rounded-md bg-muted/50 text-sm">
@@ -103,6 +115,10 @@ export function ActivityItem({ item }: { item: ActivityFeedItem }) {
                <span className="flex items-center gap-1.5">
                   <Timer className="h-4 w-4" />
                   Time spent: {formatDuration(timeSpentSeconds || 0)}
+                </span>
+                 <span className="flex items-center gap-1.5">
+                  <Clock className="h-4 w-4" />
+                  {formattedTime}
                 </span>
             </div>
              {reason && (
