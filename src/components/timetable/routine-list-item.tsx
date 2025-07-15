@@ -143,12 +143,12 @@ export const RoutineListItem = memo(function RoutineListItem({
           >
             {isTimerActiveForThis ? (
               <>
-                <Timer className="mr-2 animate-pulse" />
+                <Timer className="mr-2 h-4 w-4 animate-pulse" />
                 Stop Timer
               </>
             ) : (
               <>
-                <PlayCircle className="mr-2" />
+                <PlayCircle className="mr-2 h-4 w-4" />
                 Start Infinity Timer
               </>
             )}

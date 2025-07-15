@@ -104,12 +104,17 @@ export const SimpleTaskItem = React.memo(function SimpleTaskItem({
             htmlFor={`task-${task.id}`}
             className={cn(
               'font-medium cursor-pointer',
-              isCompleted && 'line-through text-muted-foreground',
+              isCompleted && 'line-through text-muted-foreground'
             )}
           >
             {task.title}
           </label>
-          <p className={cn("text-sm text-muted-foreground", isOverdue && 'text-destructive')}>
+          <p
+            className={cn(
+              'text-sm text-muted-foreground',
+              isOverdue && 'text-destructive'
+            )}
+          >
             {task.duration} min &bull; {task.points} pts &bull; {task.priority}{' '}
             priority
           </p>
@@ -124,8 +129,8 @@ export const SimpleTaskItem = React.memo(function SimpleTaskItem({
           >
             {isTimerActive && (
               <span className="relative flex h-3 w-3 mr-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-accent"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
               </span>
             )}
             <Timer className="mr-2 h-4 w-4" />

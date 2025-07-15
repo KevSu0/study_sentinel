@@ -15,9 +15,6 @@ import {
   Calendar,
   Flame,
   Pencil,
-  PlayCircle,
-  CheckCircle2,
-  RotateCcw,
   MoreHorizontal,
   SendToBack,
   Archive as ArchiveIcon,
@@ -37,7 +34,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {useConfetti} from '@/components/providers/confetti-provider';
 import {useGlobalState} from '@/hooks/use-global-state';
-import { Checkbox } from '../ui/checkbox';
+import {Checkbox} from '../ui/checkbox';
 
 const TimerDialog = lazy(() =>
   import('./timer-dialog').then(module => ({default: module.TimerDialog}))
@@ -54,7 +51,11 @@ interface TaskCardProps {
 
 const priorityConfig: Record<
   TaskPriority,
-  {label: string; className: string; badgeVariant: 'destructive' | 'secondary' | 'outline'}
+  {
+    label: string;
+    className: string;
+    badgeVariant: 'destructive' | 'secondary' | 'outline';
+  }
 > = {
   low: {
     label: 'Low',
@@ -87,7 +88,7 @@ export const TaskCard = React.memo(function TaskCard({
   const {activeItem} = state;
   const isTimerActive =
     activeItem?.type === 'task' && activeItem.item.id === task.id;
-  
+
   const isCompleted = task.status === 'completed';
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   const isOverdue = !isCompleted && task.date < todayStr;
@@ -145,52 +146,78 @@ export const TaskCard = React.memo(function TaskCard({
         )}
       >
         <CardHeader className="flex flex-row items-start gap-4 p-4 pb-2">
-            <Checkbox
-                id={`card-task-${task.id}`}
-                checked={isCompleted}
-                onCheckedChange={handleToggleComplete}
-                aria-label={`Mark task ${task.title} as ${isCompleted ? 'incomplete' : 'complete'}`}
+          <Checkbox
+            id={`card-task-${task.id}`}
+            checked={isCompleted}
+            onCheckedChange={handleToggleComplete}
+            aria-label={`Mark task ${task.title} as ${
+              isCompleted ? 'incomplete' : 'complete'
+            }`}
+            className={cn(
+              'mt-1 h-5 w-5',
+              isCompleted &&
+                'data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600'
+            )}
+          />
+          <div className="flex-1 grid gap-1">
+            <label
+              htmlFor={`card-task-${task.id}`}
+              className={cn(
+                'text-lg font-semibold leading-none cursor-pointer',
+                isCompleted && 'line-through text-muted-foreground'
+              )}
+            >
+              {task.title}
+            </label>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
+              <span
                 className={cn(
-                    "mt-1 h-5 w-5",
-                    isCompleted && 'data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600'
+                  'flex items-center gap-2',
+                  isOverdue && 'text-destructive font-semibold'
                 )}
-            />
-            <div className="flex-1 grid gap-1">
-                <label htmlFor={`card-task-${task.id}`} className={cn("text-lg font-semibold leading-none", isCompleted && "line-through text-muted-foreground")}>
-                    {task.title}
-                </label>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
-                    <span className={cn("flex items-center gap-2", isOverdue && "text-destructive font-semibold")}>
-                    <Calendar className="h-4 w-4" /> {formattedDate}
-                    </span>
-                    <span className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" /> {formattedTime} ({task.duration}{' min)'}
-                    </span>
-                </div>
+              >
+                <Calendar className="h-4 w-4" /> {formattedDate}
+              </span>
+              <span className="flex items-center gap-2">
+                <Clock className="h-4 w-4" /> {formattedTime} ({task.duration}
+                {' min)'}
+              </span>
             </div>
+          </div>
         </CardHeader>
 
-
-        <CardContent className="flex-grow py-2 px-4 pl-14">
+        <CardContent className="flex-grow py-2 px-4 flex">
+          <div className="w-5 mr-4" />
           {task.description && (
-            <p className={cn("text-sm text-foreground/80", isCompleted && "text-muted-foreground")}>{task.description}</p>
+            <p
+              className={cn(
+                'text-sm text-foreground/80 flex-1',
+                isCompleted && 'text-muted-foreground'
+              )}
+            >
+              {task.description}
+            </p>
           )}
         </CardContent>
 
-        <CardFooter className="flex flex-col sm:flex-row gap-2 justify-between items-start sm:items-center p-4 pt-2 pl-14">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="secondary" className="flex items-center gap-1.5">
-              <Award className="h-3.5 w-3.5 text-amber-500" /> {task.points} pts
-            </Badge>
-            <Badge
-              variant={
-                priorityConfig[task.priority]?.badgeVariant || 'secondary'
-              }
-              className="capitalize flex items-center gap-1.5"
-            >
-              <Flame className="h-3.5 w-3.5" />
-              {task.priority}
-            </Badge>
+        <CardFooter className="flex flex-col sm:flex-row gap-2 justify-between items-start sm:items-center p-4 pt-2">
+          <div className="flex-1 flex items-center justify-start">
+            <div className="w-5 mr-4" />
+            <div className="flex items-center gap-2 flex-wrap flex-1">
+              <Badge variant="secondary" className="flex items-center gap-1.5">
+                <Award className="h-3.5 w-3.5 text-amber-500" />{' '}
+                {task.points} pts
+              </Badge>
+              <Badge
+                variant={
+                  priorityConfig[task.priority]?.badgeVariant || 'secondary'
+                }
+                className="capitalize flex items-center gap-1.5"
+              >
+                <Flame className="h-3.5 w-3.5" />
+                {task.priority}
+              </Badge>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -201,27 +228,32 @@ export const TaskCard = React.memo(function TaskCard({
             >
               {isTimerActive && (
                 <span className="relative flex h-3 w-3 mr-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-accent"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
                 </span>
               )}
               <TimerIcon className="mr-2 h-4 w-4" />
               {isTimerActive ? 'View Timer' : 'Start Timer'}
             </Button>
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="More actions" className="h-9 w-9">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="More actions"
+                  className="h-9 w-9"
+                >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem
-                    onSelect={() => onEdit(task)}
-                    disabled={task.status === 'completed'}
+                  onSelect={() => onEdit(task)}
+                  disabled={task.status === 'completed'}
                 >
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit Task
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit Task
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => onPushToNextDay(task.id)}>
                   <SendToBack className="mr-2 h-4 w-4" />
