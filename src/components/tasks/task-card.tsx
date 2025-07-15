@@ -159,7 +159,7 @@ export const TaskCard = React.memo(function TaskCard({
                 'data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600'
             )}
           />
-          <div className="flex-1 grid gap-1">
+          <div className="flex-1 grid gap-1.5">
             <label
               htmlFor={`card-task-${task.id}`}
               className={cn(
@@ -169,7 +169,7 @@ export const TaskCard = React.memo(function TaskCard({
             >
               {task.title}
             </label>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <span
                 className={cn(
                   'flex items-center gap-2',

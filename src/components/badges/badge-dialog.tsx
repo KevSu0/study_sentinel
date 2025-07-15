@@ -135,7 +135,10 @@ export function BadgeDialog({
           description: badgeToEdit.description,
           icon: badgeToEdit.icon,
           color: badgeToEdit.color,
-          conditions: badgeToEdit.conditions.map(c => ({...c, subjectId: c.subjectId || undefined}))
+          conditions: badgeToEdit.conditions.map(c => ({
+            ...c,
+            subjectId: c.subjectId || undefined,
+          })),
         });
       } else {
         reset({
@@ -180,7 +183,7 @@ export function BadgeDialog({
       case 'TOTAL_STUDY_TIME':
       case 'TIME_ON_SUBJECT':
       case 'SINGLE_SESSION_TIME':
-        return 'Duration';
+        return 'Duration (Minutes)';
       case 'DAY_STREAK':
         return 'Target (Days)';
       case 'POINTS_EARNED':
