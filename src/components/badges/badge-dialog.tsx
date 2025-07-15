@@ -259,7 +259,7 @@ export function BadgeDialog({
                   id="color"
                   type="color"
                   {...register('color')}
-                  className="p-1 h-10"
+                  className="p-1 h-10 w-full"
                 />
                 {errors.color && (
                   <p className="text-sm text-destructive mt-1">

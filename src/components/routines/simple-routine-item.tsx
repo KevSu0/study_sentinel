@@ -10,9 +10,11 @@ import { cn } from '@/lib/utils';
 
 interface SimpleRoutineItemProps {
   routine: Routine;
+  onEdit: (routine: Routine) => void;
+  onDelete: (routineId: string) => void;
 }
 
-export const SimpleRoutineItem = React.memo(function SimpleRoutineItem({ routine }: SimpleRoutineItemProps) {
+export const SimpleRoutineItem = React.memo(function SimpleRoutineItem({ routine, onEdit, onDelete }: SimpleRoutineItemProps) {
   const {
     state: { activeItem },
     startTimer,
