@@ -21,20 +21,20 @@ export interface DashboardWidget {
   isVisible: boolean;
 }
 
-const LAYOUT_KEY = 'studySentinelDashboardLayout_v2';
+const LAYOUT_KEY = 'studySentinelDashboardLayout_v3';
 
 export const WIDGET_NAMES: Record<DashboardWidgetType, string> = {
   daily_briefing: 'Daily Briefing / Quote',
   stats_overview: 'Statistics Overview',
   unlocked_badges: 'Badges Unlocked Today',
-  completed_today: 'Completed Today',
+  completed_today: "Today's Activity",
 };
 
 const DEFAULT_LAYOUT: DashboardWidget[] = [
   {id: 'daily_briefing', isVisible: true},
   {id: 'stats_overview', isVisible: true},
-  {id: 'unlocked_badges', isVisible: true},
   {id: 'completed_today', isVisible: true},
+  {id: 'unlocked_badges', isVisible: true},
 ];
 
 interface DashboardLayoutContextType {

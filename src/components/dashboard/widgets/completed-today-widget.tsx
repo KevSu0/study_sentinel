@@ -1,7 +1,7 @@
 
 'use client';
 import React from 'react';
-import type {ActivityFeedItem} from '@/hooks/use-global-state';
+import type {ActivityFeedItem} from '@/hooks/use-global-state.tsx';
 import {CheckCircle2} from 'lucide-react';
 import {ActivityItem} from '@/components/dashboard/activity/activity-item';
 

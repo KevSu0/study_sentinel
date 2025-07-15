@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, {useState, Suspense, lazy, useMemo} from 'react';
@@ -62,7 +63,7 @@ export function SimpleTaskItem({
       fire();
       toast({
         title: 'Task Completed!',
-        description: `You'veearned ${task.points} points!`,
+        description: `You've earned ${task.points} points!`,
       });
     }
     onUpdate({...task, status: newStatus});

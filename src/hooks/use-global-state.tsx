@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, {
@@ -78,10 +79,6 @@ interface AppState {
   todaysCompletedWork: CompletedWork[];
   todaysPoints: number;
   todaysBadges: Badge[];
-  todaysRoutines: Routine[];
-  todaysCompletedRoutines: LogEvent[];
-  todaysCompletedTasks: StudyTask[];
-  todaysPendingTasks: StudyTask[];
   todaysActivity: ActivityFeedItem[];
 }
 
@@ -137,10 +134,6 @@ const initialAppState: AppState = {
   todaysCompletedWork: [],
   todaysPoints: 0,
   todaysBadges: [],
-  todaysRoutines: [],
-  todaysCompletedRoutines: [],
-  todaysCompletedTasks: [],
-  todaysPendingTasks: [],
   todaysActivity: [],
 };
 
@@ -331,19 +324,6 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     const todaysBadges = allBadges.filter(
       b => earnedBadges.get(b.id) === todayStr
     );
-    const todaysRoutines = routines.filter(r =>
-      r.days.includes(sessionDate.getDay())
-    );
-    const todaysCompletedRoutines = todaysLogs.filter(
-      l => l.type === 'ROUTINE_SESSION_COMPLETE'
-    );
-    const todaysCompletedTasks = tasks.filter(
-      t => t.status === 'completed' && t.date === todayStr
-    );
-    const todaysPendingTasks = tasks.filter(
-      t =>
-        t.date === todayStr && (t.status === 'todo' || t.status === 'in_progress')
-    );
 
     const activity: ActivityFeedItem[] = [];
 
@@ -411,10 +391,6 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
       todaysCompletedWork,
       todaysPoints,
       todaysBadges,
-      todaysRoutines,
-      todaysCompletedRoutines,
-      todaysCompletedTasks,
-      todaysPendingTasks,
       todaysActivity,
     };
   };

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, {useState, useCallback} from 'react';
+import React, {useState} from 'react';
 import dynamic from 'next/dynamic';
 import {format} from 'date-fns';
 import {Button} from '@/components/ui/button';
@@ -25,7 +25,6 @@ import {
 } from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
 import {Skeleton} from '@/components/ui/skeleton';
-import {type StudyTask} from '@/lib/types';
 import Link from 'next/link';
 import {DailyBriefingWidget} from '@/components/dashboard/widgets/daily-briefing-widget';
 import {StatsOverviewWidget} from '@/components/dashboard/widgets/stats-overview-widget';
@@ -67,16 +66,14 @@ function SortableWidget({
 }
 
 export default function DashboardPage() {
-  const {
-    state,
-  } = useGlobalState();
+  const {state} = useGlobalState();
   const {viewMode} = useViewMode();
   const {layout, setLayout, visibleWidgets, isLoaded: layoutLoaded} =
     useDashboardLayout();
 
-  const [isCustomizeOpen, setCustomizeOpen] = useState(false);
+  const [isCustomizeOpen, setCustomizeOpen] = React.useState(false);
 
-  const handleDragEnd = useCallback(
+  const handleDragEnd = React.useCallback(
     (event: DragEndEvent) => {
       const {active, over} = event;
       if (over && active.id !== over.id) {
@@ -106,7 +103,7 @@ export default function DashboardPage() {
 
   const hasContent =
     visibleWidgets.length > 0 &&
-    (state.todaysCompletedWork.length > 0 ||
+    (state.todaysActivity.length > 0 ||
       state.todaysBadges.length > 0 ||
       state.previousDayLogs.length > 0);
 

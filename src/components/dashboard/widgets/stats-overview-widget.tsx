@@ -35,7 +35,7 @@ export const StatsOverviewWidget = ({
 
   return (
     <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div className="lg:col-span-1 h-[260px]">
+      <div className="lg:col-span-1 min-h-[260px]">
         <Suspense fallback={<Skeleton className="h-full w-full" />}>
           <ProductivityPieChart data={chartData} />
         </Suspense>

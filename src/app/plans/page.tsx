@@ -28,7 +28,7 @@ import {
   Calendar as CalendarIcon,
 } from 'lucide-react';
 import {cn} from '@/lib/utils';
-import type {StudyTask, Routine} from '@/lib/types';
+import type {StudyTask, Routine, LogEvent} from '@/lib/types';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,7 +62,6 @@ export default function PlansPage() {
     updateRoutine,
     addRoutine,
     deleteRoutine,
-    onEditTask,
   } = useGlobalState();
   const {viewMode, setViewMode} = useViewMode();
 
@@ -89,6 +88,11 @@ export default function PlansPage() {
     setRoutineDialogOpen(true);
   }, []);
 
+  const openEditRoutineDialog = useCallback((routine: Routine) => {
+    setEditingRoutine(routine);
+    setRoutineDialogOpen(true);
+  }, []);
+
   const {
     isLoaded,
     tasks,
@@ -98,6 +102,7 @@ export default function PlansPage() {
     allCompletedWork,
   } = state;
 
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
 
   const selectedDayRoutines = useMemo(() => {
@@ -126,7 +131,7 @@ export default function PlansPage() {
   const completedRoutines = useMemo(() => {
     if (!isLoaded) return [];
     return logs.filter(
-      l =>
+      (l): l is LogEvent & {payload: {routineId: string}} =>
         l.type === 'ROUTINE_SESSION_COMPLETE' &&
         l.timestamp.startsWith(selectedDateStr)
     );
@@ -134,13 +139,14 @@ export default function PlansPage() {
 
   const overdueTasks = useMemo(() => {
     if (!isLoaded) return [];
+    // Only show tasks from before *today* that are not completed/archived.
     return tasks.filter(
       task =>
-        task.date < selectedDateStr &&
+        task.date < todayStr &&
         task.status !== 'completed' &&
         task.status !== 'archived'
     );
-  }, [tasks, selectedDateStr, isLoaded]);
+  }, [tasks, todayStr, isLoaded]);
 
   const productiveTimeForDay = useMemo(() => {
     if (!isLoaded) return 0;
@@ -182,15 +188,25 @@ export default function PlansPage() {
 
   const renderRoutines = (routinesToRender: Routine[]) => {
     return viewMode === 'card' ? (
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {routinesToRender.map(routine => (
-          <RoutineCard key={routine.id} routine={routine} />
+          <RoutineListItem
+            key={routine.id}
+            routine={routine}
+            onEdit={openEditRoutineDialog}
+            onDelete={deleteRoutine}
+          />
         ))}
       </div>
     ) : (
       <div className="space-y-2">
         {routinesToRender.map(routine => (
-          <SimpleRoutineItem key={routine.id} routine={routine} />
+          <SimpleRoutineItem
+            key={routine.id}
+            routine={routine}
+            onEdit={openEditRoutineDialog}
+            onDelete={deleteRoutine}
+          />
         ))}
       </div>
     );
@@ -254,16 +270,16 @@ export default function PlansPage() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button>
-                  <PlusCircle /> Add New
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add New
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onSelect={openAddTaskDialog}>
-                  <CalendarPlus />
+                  <CalendarPlus className="mr-2 h-4 w-4" />
                   New Task
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={openAddRoutineDialog}>
-                  <Repeat />
+                  <Repeat className="mr-2 h-4 w-4" />
                   New Routine
                 </DropdownMenuItem>
               </DropdownMenuContent>
