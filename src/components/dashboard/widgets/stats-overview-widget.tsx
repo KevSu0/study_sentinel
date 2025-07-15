@@ -1,13 +1,19 @@
 
 'use client';
 import React, {lazy, Suspense, useMemo} from 'react';
+import dynamic from 'next/dynamic';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Skeleton} from '@/components/ui/skeleton';
 import {Award as BadgeIcon, Star} from 'lucide-react';
-const ProductivityPieChart = lazy(
-  () => import('@/components/dashboard/productivity-pie-chart')
-);
 import type {Badge, CompletedWork} from '@/lib/types';
+
+const ProductivityPieChart = dynamic(
+  () => import('@/components/dashboard/productivity-pie-chart'),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-[260px] w-full" />,
+  }
+);
 
 interface StatsOverviewWidgetProps {
   todaysPoints: number;
