@@ -19,6 +19,19 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Ignore the .genkit directory to prevent dev server restarts
+  webpack(config, { isServer, dev }) {
+    if (dev) {
+        config.watchOptions = {
+            ...config.watchOptions,
+            ignored: [
+                ...config.watchOptions.ignored as string[],
+                '**/.genkit/**',
+            ]
+        }
+    }
+    return config;
+  },
   serverExternalPackages: [
     'handlebars',
     'dotprompt',
