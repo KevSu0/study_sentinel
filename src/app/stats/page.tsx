@@ -1,3 +1,4 @@
+
 'use client';
 import React, {useMemo, lazy, Suspense, useState} from 'react';
 import {
@@ -29,10 +30,12 @@ import {BadgeCard} from '@/components/badges/badge-card';
 import type {Badge, BadgeCategory, TaskPriority} from '@/lib/types';
 
 const StudyActivityChart = lazy(
-  () => import('@/components/stats/weekly-chart')
+  () => import('@/components/stats/weekly-chart'),
+  {loading: () => <Skeleton className="w-full h-[380px] rounded-lg" />}
 );
 const PriorityChart = lazy(
-  () => import('@/components/stats/priority-chart')
+  () => import('@/components/stats/priority-chart'),
+  {loading: () => <Skeleton className="w-full h-[380px] rounded-lg" />}
 );
 
 const badgeCategories: BadgeCategory[] = [
@@ -88,7 +91,7 @@ export default function StatsPage() {
       (sum, work) => sum + work.duration,
       0
     );
-    const totalHours = (totalMinutes / 60).toFixed(1);
+    const totalHours = (totalMinutes / 3600).toFixed(1); // duration is in seconds
     const totalPoints = filteredWork.reduce(
       (sum, work) => sum + work.points,
       0
@@ -101,7 +104,7 @@ export default function StatsPage() {
 
     const avgSessionDuration =
       filteredWork.length > 0
-        ? (totalMinutes / filteredWork.length).toFixed(0)
+        ? (totalMinutes / 60 / filteredWork.length).toFixed(0)
         : '0';
 
     return {
@@ -165,7 +168,7 @@ export default function StatsPage() {
           work.title.length > 20
             ? `${work.title.substring(0, 18)}...`
             : work.title,
-        hours: parseFloat((work.duration / 60).toFixed(2)),
+        hours: parseFloat((work.duration / 3600).toFixed(2)),
       }));
     }
 
@@ -183,7 +186,7 @@ export default function StatsPage() {
         .sort()
         .map(monthKey => ({
           name: format(parseISO(`${monthKey}-01`), 'MMM yy'),
-          hours: parseFloat((monthlyData[monthKey] / 60).toFixed(2)),
+          hours: parseFloat((monthlyData[monthKey] / 3600).toFixed(2)),
         }));
     }
 
@@ -201,7 +204,7 @@ export default function StatsPage() {
 
       data.push({
         name: dayName,
-        hours: parseFloat((durationOnDay / 60).toFixed(2)),
+        hours: parseFloat((durationOnDay / 3600).toFixed(2)),
       });
     }
     return data;
@@ -339,35 +342,19 @@ export default function StatsPage() {
 
             <section className="grid gap-6 lg:grid-cols-5">
               <div className="lg:col-span-3">
-                {isLoaded ? (
-                  <Suspense
-                    fallback={
-                      <Skeleton className="w-full h-[380px] rounded-lg" />
-                    }
-                  >
-                    <StudyActivityChart
-                      data={barChartData}
-                      title={chartDetails.title}
-                      description={chartDetails.description}
-                      timeRange={timeRange}
-                    />
-                  </Suspense>
-                ) : (
-                  <Skeleton className="w-full h-[380px] rounded-lg" />
-                )}
+                <Suspense>
+                  <StudyActivityChart
+                    data={barChartData}
+                    title={chartDetails.title}
+                    description={chartDetails.description}
+                    timeRange={timeRange}
+                  />
+                </Suspense>
               </div>
               <div className="lg:col-span-2">
-                {isLoaded ? (
-                  <Suspense
-                    fallback={
-                      <Skeleton className="w-full h-[380px] rounded-lg" />
-                    }
-                  >
-                    <PriorityChart data={priorityData} />
-                  </Suspense>
-                ) : (
-                  <Skeleton className="w-full h-[380px] rounded-lg" />
-                )}
+                <Suspense>
+                  <PriorityChart data={priorityData} />
+                </Suspense>
               </div>
             </section>
 

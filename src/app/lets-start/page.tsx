@@ -11,7 +11,7 @@ import {useViewMode} from '@/hooks/use-view-mode.tsx';
 import {
   useDashboardLayout,
   type DashboardWidgetType,
-} from '@/hooks/use-dashboard-layout';
+} from '@/hooks/use-dashboard-layout.tsx';
 import {
   DndContext,
   closestCenter,
@@ -35,7 +35,10 @@ import {EmptyState} from '@/components/tasks/empty-state';
 
 const TaskDialog = dynamic(
   () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),
-  {ssr: false}
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-[500px] w-[600px]" />,
+  }
 );
 
 const CustomizeDialog = dynamic(
@@ -43,7 +46,10 @@ const CustomizeDialog = dynamic(
     import('@/components/dashboard/customize-dialog').then(
       m => m.CustomizeDialog
     ),
-  {ssr: false}
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-[400px] w-[400px]" />,
+  }
 );
 
 function SortableWidget({
@@ -131,9 +137,7 @@ export default function LetsStartPage() {
       <header className="p-4 border-b">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <h1 className="text-3xl font-bold text-primary">
-              Let's Start
-            </h1>
+            <h1 className="text-3xl font-bold text-primary">Let's Start</h1>
             <p className="text-muted-foreground">
               Your achievements for {format(new Date(), 'MMMM d, yyyy')}.
             </p>
@@ -148,7 +152,7 @@ export default function LetsStartPage() {
               <span className="hidden sm:inline ml-2">Customize</span>
             </Button>
             <Button asChild className="w-full sm:w-auto">
-              <Link href="/tasks">
+              <Link href="/plans">
                 <PlusCircle />
                 Manage Tasks
               </Link>

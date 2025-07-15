@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, {useState} from 'react';
+import React, {useState, memo} from 'react';
 import {
   Card,
   CardHeader,
@@ -48,7 +49,7 @@ interface RoutineListItemProps {
 const daysMap = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const dayOrder = [1, 2, 3, 4, 5, 6, 0];
 
-export const RoutineListItem = React.memo(function RoutineListItem({
+export const RoutineListItem = memo(function RoutineListItem({
   routine,
   onEdit,
   onDelete,

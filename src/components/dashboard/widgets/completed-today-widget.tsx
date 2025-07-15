@@ -17,7 +17,8 @@ export const CompletedTodayWidget = ({
           <CheckCircle2 className="h-16 w-16 text-primary/80 mb-4" />
           <h2 className="text-xl font-bold">No Activity Yet Today</h2>
           <p className="text-muted-foreground mt-2 max-w-md">
-            Complete or work on tasks and routines to see your activity here.
+            Your completed tasks and routines will appear here. Let's get to
+            work!
           </p>
         </div>
       </section>

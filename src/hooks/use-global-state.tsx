@@ -205,6 +205,14 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
       savedTimer = JSON.parse(localStorage.getItem(TIMER_KEY) || 'null');
     } catch (error) {
       console.error('Failed to load state from localStorage', error);
+      // Clean up potentially corrupted keys
+      localStorage.removeItem(TASKS_KEY);
+      localStorage.removeItem(PROFILE_KEY);
+      localStorage.removeItem(ROUTINES_KEY);
+      localStorage.removeItem(EARNED_BADGES_KEY);
+      localStorage.removeItem(CUSTOM_BADGES_KEY);
+      localStorage.removeItem(SYSTEM_BADGES_CONFIG_KEY);
+      localStorage.removeItem(TIMER_KEY);
     }
 
     const systemBadges =
@@ -242,6 +250,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     const baseState = {
       tasks: savedTasks,
       routines: savedRoutines,
+      profile: savedProfile,
       logs: todaysLogs,
       allBadges,
       earnedBadges: savedEarnedBadges,
@@ -272,6 +281,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
   const updateDerivedState = (baseState: {
     tasks: StudyTask[];
     routines: Routine[];
+    profile: UserProfile;
     logs: LogEvent[];
     allBadges: Badge[];
     earnedBadges: Map<string, string>;

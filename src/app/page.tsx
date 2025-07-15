@@ -11,7 +11,7 @@ import {useViewMode} from '@/hooks/use-view-mode.tsx';
 import {
   useDashboardLayout,
   type DashboardWidgetType,
-} from '@/hooks/use-dashboard-layout';
+} from '@/hooks/use-dashboard-layout.tsx';
 import {
   DndContext,
   closestCenter,
@@ -35,7 +35,10 @@ import {EmptyState} from '@/components/tasks/empty-state';
 
 const TaskDialog = dynamic(
   () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),
-  {ssr: false}
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-[500px] w-[600px]" />,
+  }
 );
 
 const CustomizeDialog = dynamic(
@@ -43,7 +46,10 @@ const CustomizeDialog = dynamic(
     import('@/components/dashboard/customize-dialog').then(
       m => m.CustomizeDialog
     ),
-  {ssr: false}
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-[400px] w-[400px]" />,
+  }
 );
 
 function SortableWidget({
@@ -186,7 +192,7 @@ export default function LetsStartPage() {
 
                 {state.todaysPendingTasks.length === 0 &&
                   state.todaysRoutines.length === 0 &&
-                  state.todaysActivity.length === 0 &&(
+                  state.todaysActivity.length === 0 && (
                     <div className="flex items-center justify-center pt-16">
                       <EmptyState
                         onAddTask={() => {}}
