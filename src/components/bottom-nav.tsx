@@ -9,12 +9,13 @@ import {
   CalendarDays,
   TrendingUp,
   User,
+  ClipboardList
 } from 'lucide-react';
 
 const menuItems = [
   {href: '/lets-start', label: 'Dashboard', icon: LayoutDashboard},
+  {href: '/plans', label: 'Plans', icon: ClipboardList},
   {href: '/tasks', label: 'Tasks', icon: ListChecks},
-  {href: '/timetable', label: 'Timetable', icon: CalendarDays},
   {href: '/stats', label: 'Stats', icon: TrendingUp},
   {href: '/profile', label: 'Profile', icon: User},
 ];

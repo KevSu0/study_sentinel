@@ -30,6 +30,7 @@ import {
   ScrollText,
   User,
   CalendarDays,
+  ClipboardList,
 } from 'lucide-react';
 import {ConfettiProvider} from './providers/confetti-provider';
 import {SplashScreen} from '@/components/splash-screen';
@@ -56,6 +57,12 @@ function AppLayout({children}: {children: ReactNode}) {
       href: '/lets-start',
       label: 'Dashboard',
       icon: LayoutDashboard,
+      showInSidebar: true,
+    },
+    {
+      href: '/plans',
+      label: 'Plans & Routines',
+      icon: ClipboardList,
       showInSidebar: true,
     },
     {
