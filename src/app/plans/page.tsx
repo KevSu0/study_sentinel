@@ -1,24 +1,42 @@
 
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, {useState, useMemo, useCallback} from 'react';
 import dynamic from 'next/dynamic';
-import { useGlobalState } from '@/hooks/use-global-state';
-import { useViewMode } from '@/hooks/use-view-mode.tsx';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { TaskList } from '@/components/tasks/task-list';
-import { SimpleTaskList } from '@/components/tasks/simple-task-list';
-import { RoutineCard } from '@/components/routines/routine-card';
-import { SimpleRoutineItem } from '@/components/routines/simple-routine-item';
-import { EmptyState } from '@/components/tasks/empty-state';
-import { Skeleton } from '@/components/ui/skeleton';
-import { format } from 'date-fns';
-import { CardCompletedRoutineItem, SimpleCompletedRoutineItem } from '@/components/dashboard/completed-routine-card';
-import { LayoutGrid, List, Clock, PlusCircle, CalendarPlus, Repeat } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { StudyTask, Routine } from '@/lib/types';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {useGlobalState} from '@/hooks/use-global-state';
+import {useViewMode} from '@/hooks/use-view-mode.tsx';
+import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
+import {Button} from '@/components/ui/button';
+import {TaskList} from '@/components/tasks/task-list';
+import {SimpleTaskList} from '@/components/tasks/simple-task-list';
+import {RoutineCard} from '@/components/routines/routine-card';
+import {SimpleRoutineItem} from '@/components/routines/simple-routine-item';
+import {EmptyState} from '@/components/tasks/empty-state';
+import {Skeleton} from '@/components/ui/skeleton';
+import {format} from 'date-fns';
+import {
+  CardCompletedRoutineItem,
+  SimpleCompletedRoutineItem,
+} from '@/components/dashboard/completed-routine-card';
+import {
+  LayoutGrid,
+  List,
+  Clock,
+  PlusCircle,
+  CalendarPlus,
+  Repeat,
+  Calendar as CalendarIcon,
+} from 'lucide-react';
+import {cn} from '@/lib/utils';
+import type {StudyTask, Routine} from '@/lib/types';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
+import {Calendar} from '@/components/ui/calendar';
 
 const TaskDialog = dynamic(
   () => import('@/components/tasks/add-task-dialog').then(m => m.TaskDialog),
@@ -33,7 +51,6 @@ const AddRoutineDialog = dynamic(
   {ssr: false}
 );
 
-
 export default function PlansPage() {
   const {
     state,
@@ -45,9 +62,11 @@ export default function PlansPage() {
     updateRoutine,
     addRoutine,
     deleteRoutine,
-    onEditTask, 
+    onEditTask,
   } = useGlobalState();
-  const { viewMode, setViewMode } = useViewMode();
+  const {viewMode, setViewMode} = useViewMode();
+
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   const [isTaskDialogOpen, setTaskDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<StudyTask | null>(null);
@@ -73,32 +92,62 @@ export default function PlansPage() {
   const {
     isLoaded,
     tasks,
-    todaysRoutines,
-    todaysPendingTasks,
-    todaysCompletedTasks,
-    todaysCompletedRoutines,
+    logs,
+    routines,
     activeItem,
     allCompletedWork,
   } = state;
 
+  const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+
+  const selectedDayRoutines = useMemo(() => {
+    if (!isLoaded) return [];
+    return routines.filter(r => r.days.includes(selectedDate.getDay()));
+  }, [routines, selectedDate, isLoaded]);
+
+  const selectedDayTasks = useMemo(() => {
+    if (!isLoaded) return [];
+    return tasks.filter(task => task.date === selectedDateStr);
+  }, [tasks, selectedDateStr, isLoaded]);
+
+  const pendingTasks = useMemo(
+    () =>
+      selectedDayTasks.filter(
+        t => t.status === 'todo' || t.status === 'in_progress'
+      ),
+    [selectedDayTasks]
+  );
+
+  const completedTasks = useMemo(
+    () => selectedDayTasks.filter(t => t.status === 'completed'),
+    [selectedDayTasks]
+  );
+
+  const completedRoutines = useMemo(() => {
+    if (!isLoaded) return [];
+    return logs.filter(
+      l =>
+        l.type === 'ROUTINE_SESSION_COMPLETE' &&
+        l.timestamp.startsWith(selectedDateStr)
+    );
+  }, [logs, selectedDateStr, isLoaded]);
+
   const overdueTasks = useMemo(() => {
     if (!isLoaded) return [];
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
     return tasks.filter(
       task =>
-        task.date < todayStr &&
+        task.date < selectedDateStr &&
         task.status !== 'completed' &&
         task.status !== 'archived'
     );
-  }, [tasks, isLoaded]);
-  
-  const todaysProductiveTime = useMemo(() => {
+  }, [tasks, selectedDateStr, isLoaded]);
+
+  const productiveTimeForDay = useMemo(() => {
     if (!isLoaded) return 0;
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
     return allCompletedWork
-      .filter(work => work.date === todayStr)
+      .filter(work => work.date === selectedDateStr)
       .reduce((sum, work) => sum + work.duration, 0);
-  }, [allCompletedWork, isLoaded]);
+  }, [allCompletedWork, selectedDateStr, isLoaded]);
 
   const formatProductiveTime = (totalSeconds: number) => {
     if (totalSeconds === 0) return '0s';
@@ -113,7 +162,6 @@ export default function PlansPage() {
 
     return parts.join(' ');
   };
-
 
   const renderTaskList = (tasksToRender: StudyTask[]) => {
     const props = {
@@ -131,100 +179,117 @@ export default function PlansPage() {
       <SimpleTaskList {...props} />
     );
   };
-  
+
   const renderRoutines = (routinesToRender: Routine[]) => {
-      return viewMode === 'card' ? (
-        <div className="grid gap-4 md:grid-cols-2">
-            {routinesToRender.map(routine => (
-                <RoutineCard key={routine.id} routine={routine} />
-            ))}
-        </div>
-      ) : (
-        <div className="space-y-2">
-            {routinesToRender.map(routine => (
-                <SimpleRoutineItem key={routine.id} routine={routine} />
-            ))}
-        </div>
-      );
-  }
+    return viewMode === 'card' ? (
+      <div className="grid gap-4 md:grid-cols-2">
+        {routinesToRender.map(routine => (
+          <RoutineCard key={routine.id} routine={routine} />
+        ))}
+      </div>
+    ) : (
+      <div className="space-y-2">
+        {routinesToRender.map(routine => (
+          <SimpleRoutineItem key={routine.id} routine={routine} />
+        ))}
+      </div>
+    );
+  };
 
   const renderCompletedRoutines = (logs: any[]) => {
-     return viewMode === 'card' ? (
-        <div className="space-y-4">
-            {logs.map(log => (
-              <CardCompletedRoutineItem key={log.id} log={log} />
-            ))}
-        </div>
-      ) : (
-        <div className="space-y-2">
-            {logs.map(log => (
-              <SimpleCompletedRoutineItem key={log.id} log={log} />
-            ))}
-        </div>
-      );
-  }
-
+    return viewMode === 'card' ? (
+      <div className="space-y-4">
+        {logs.map(log => (
+          <CardCompletedRoutineItem key={log.id} log={log} />
+        ))}
+      </div>
+    ) : (
+      <div className="space-y-2">
+        {logs.map(log => (
+          <SimpleCompletedRoutineItem key={log.id} log={log} />
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-col h-full">
       <header className="p-4 border-b">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-                 <h1 className="text-3xl font-bold text-primary">
-                  Today's Plans & Routines
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                  Your agenda for {format(new Date(), 'MMMM d, yyyy')}.
-                </p>
-                 {isLoaded && (
-                  <div className="flex items-center gap-2 mt-2 text-sm font-medium text-accent">
-                    <Clock className="h-4 w-4" />
-                    <span>
-                      Productive Time Today: {formatProductiveTime(todaysProductiveTime)}
-                    </span>
-                  </div>
-                )}
+          <div>
+            <h1 className="text-3xl font-bold text-primary">
+              Plans & Routines
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Your agenda for {format(selectedDate, 'MMMM d, yyyy')}.
+            </p>
+            {isLoaded && (
+              <div className="flex items-center gap-2 mt-2 text-sm font-medium text-accent">
+                <Clock className="h-4 w-4" />
+                <span>
+                  Productive Time:{' '}
+                  {formatProductiveTime(productiveTimeForDay)}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant={'outline'}>
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(selectedDate, 'PPP')}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={date => date && setSelectedDate(date)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <PlusCircle /> Add New
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={openAddTaskDialog}>
+                  <CalendarPlus />
+                  New Task
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={openAddRoutineDialog}>
+                  <Repeat />
+                  New Routine
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
+              <Button
+                variant={viewMode === 'card' ? 'secondary' : 'ghost'}
+                size="sm"
+                className="h-8 px-2.5"
+                onClick={() => setViewMode('card')}
+              >
+                <LayoutGrid className="h-4 w-4" />
+                <span className="sr-only">Card View</span>
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                size="sm"
+                className="h-8 px-2.5"
+                onClick={() => setViewMode('list')}
+              >
+                <List className="h-4 w-4" />
+                <span className="sr-only">List View</span>
+              </Button>
             </div>
-            <div className="flex items-center gap-2">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button>
-                            <PlusCircle /> Add New
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={openAddTaskDialog}>
-                            <CalendarPlus />
-                            New Task
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={openAddRoutineDialog}>
-                            <Repeat />
-                            New Routine
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-                
-                <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
-                    <Button
-                    variant={viewMode === 'card' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    className="h-8 px-2.5"
-                    onClick={() => setViewMode('card')}
-                    >
-                    <LayoutGrid className="h-4 w-4" />
-                    <span className="sr-only">Card View</span>
-                    </Button>
-                    <Button
-                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    className="h-8 px-2.5"
-                    onClick={() => setViewMode('list')}
-                    >
-                    <List className="h-4 w-4" />
-                    <span className="sr-only">List View</span>
-                    </Button>
-                </div>
-            </div>
+          </div>
         </div>
       </header>
       <main className="flex-1 p-2 sm:p-4 overflow-y-auto">
@@ -239,22 +304,22 @@ export default function PlansPage() {
           <TabsContent value="upcoming" className="mt-6 space-y-6">
             {!isLoaded ? (
               <Skeleton className="h-40 w-full" />
-            ) : todaysPendingTasks.length > 0 || todaysRoutines.length > 0 ? (
+            ) : pendingTasks.length > 0 || selectedDayRoutines.length > 0 ? (
               <>
-                {todaysRoutines.length > 0 && (
+                {selectedDayRoutines.length > 0 && (
                   <section>
                     <h2 className="text-xl font-semibold text-primary mb-3">
-                      Today's Routines
+                      Routines for this Day
                     </h2>
-                    {renderRoutines(todaysRoutines)}
+                    {renderRoutines(selectedDayRoutines)}
                   </section>
                 )}
-                {todaysPendingTasks.length > 0 && (
+                {pendingTasks.length > 0 && (
                   <section>
                     <h2 className="text-xl font-semibold text-primary mb-3">
-                      Today's Tasks
+                      Pending Tasks
                     </h2>
-                    {renderTaskList(todaysPendingTasks)}
+                    {renderTaskList(pendingTasks)}
                   </section>
                 )}
               </>
@@ -262,7 +327,7 @@ export default function PlansPage() {
               <div className="pt-16">
                 <EmptyState
                   onAddTask={openAddTaskDialog}
-                  title="All Clear for Today!"
+                  title="All Clear for this Day!"
                   message="No upcoming tasks or routines. Enjoy the peace or plan a new task."
                   buttonText="Plan New Task"
                 />
@@ -274,23 +339,22 @@ export default function PlansPage() {
           <TabsContent value="completed" className="mt-6 space-y-6">
             {!isLoaded ? (
               <Skeleton className="h-40 w-full" />
-            ) : todaysCompletedTasks.length > 0 ||
-              todaysCompletedRoutines.length > 0 ? (
+            ) : completedTasks.length > 0 || completedRoutines.length > 0 ? (
               <>
-                {todaysCompletedRoutines.length > 0 && (
+                {completedRoutines.length > 0 && (
                   <section>
                     <h2 className="text-xl font-semibold text-primary mb-3">
                       Completed Routines
                     </h2>
-                     {renderCompletedRoutines(todaysCompletedRoutines)}
+                    {renderCompletedRoutines(completedRoutines)}
                   </section>
                 )}
-                {todaysCompletedTasks.length > 0 && (
+                {completedTasks.length > 0 && (
                   <section>
                     <h2 className="text-xl font-semibold text-primary mb-3">
                       Completed Tasks
                     </h2>
-                    {renderTaskList(todaysCompletedTasks)}
+                    {renderTaskList(completedTasks)}
                   </section>
                 )}
               </>
@@ -331,25 +395,25 @@ export default function PlansPage() {
         </Tabs>
       </main>
 
-       {isTaskDialogOpen && (
-          <TaskDialog
-            isOpen={isTaskDialogOpen}
-            onOpenChange={setTaskDialogOpen}
-            onAddTask={addTask}
-            onUpdateTask={updateTask}
-            taskToEdit={editingTask}
-          />
-        )}
-
-       {isRoutineDialogOpen && (
-        <AddRoutineDialog
-            isOpen={isRoutineDialogOpen}
-            onOpenChange={setRoutineDialogOpen}
-            onAddRoutine={addRoutine}
-            onUpdateRoutine={updateRoutine}
-            routineToEdit={editingRoutine}
+      {isTaskDialogOpen && (
+        <TaskDialog
+          isOpen={isTaskDialogOpen}
+          onOpenChange={setTaskDialogOpen}
+          onAddTask={addTask}
+          onUpdateTask={updateTask}
+          taskToEdit={editingTask}
         />
-       )}
+      )}
+
+      {isRoutineDialogOpen && (
+        <AddRoutineDialog
+          isOpen={isRoutineDialogOpen}
+          onOpenChange={setRoutineDialogOpen}
+          onAddRoutine={addRoutine}
+          onUpdateRoutine={updateRoutine}
+          routineToEdit={editingRoutine}
+        />
+      )}
     </div>
   );
 }
