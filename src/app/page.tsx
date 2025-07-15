@@ -130,7 +130,7 @@ export default function DashboardPage() {
             <Button asChild className="w-full sm:w-auto">
               <Link href="/plans">
                 <PlusCircle />
-                Manage Plans
+                <span className="hidden sm:inline ml-2">Manage Plans</span>
               </Link>
             </Button>
           </div>

@@ -24,7 +24,7 @@ import {zodResolver} from '@hookform/resolvers/zod';
 import {z} from 'zod';
 import {useEffect} from 'react';
 import type {Badge} from '@/lib/types';
-import {useToast} from '@/hooks/use-toast';
+import toast from 'react-hot-toast';
 import {X} from 'lucide-react';
 import {useGlobalState} from '@/hooks/use-global-state';
 import {DurationInput} from './duration-input';
@@ -97,7 +97,6 @@ export function BadgeDialog({
   badgeToEdit,
 }: BadgeDialogProps) {
   const isEditing = !!badgeToEdit;
-  const {toast} = useToast();
   const {
     state: {routines},
   } = useGlobalState();
@@ -168,16 +167,10 @@ export function BadgeDialog({
 
     if (isEditing && badgeToEdit) {
       onUpdateBadge({...badgeToEdit, ...badgeData});
-      toast({
-        title: 'Badge Updated!',
-        description: 'Your changes have been saved.',
-      });
+      toast.success('Badge Updated!');
     } else {
       onAddBadge(badgeData);
-      toast({
-        title: 'Badge Created!',
-        description: 'Your new challenge is ready.',
-      });
+      toast.success('Badge Created!');
     }
     onOpenChange(false);
   };

@@ -26,7 +26,7 @@ import {
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
 import {cn} from '@/lib/utils';
-import {useToast} from '@/hooks/use-toast';
+import toast from 'react-hot-toast';
 import type {StudyTask, TaskStatus, TaskPriority} from '@/lib/types';
 import {format, parseISO, parse} from 'date-fns';
 import {
@@ -81,7 +81,6 @@ export function TaskCard({
   onEdit,
 }: TaskCardProps) {
   const [isTimerOpen, setTimerOpen] = useState(false);
-  const {toast} = useToast();
   const {fire} = useConfetti();
   const {state} = useGlobalState();
   const {activeItem} = state;
@@ -94,10 +93,7 @@ export function TaskCard({
 
     if (newStatus === 'completed' && oldStatus !== 'completed') {
       fire();
-      toast({
-        title: 'Task Completed!',
-        description: `You've earned ${task.points} points for this task!`,
-      });
+      toast.success(`Task Completed! You've earned ${task.points} points!`);
     }
     onUpdate({...task, status: newStatus});
   };

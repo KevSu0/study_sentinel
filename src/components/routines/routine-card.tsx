@@ -13,7 +13,7 @@ import {
 import {Button} from '@/components/ui/button';
 import {PlayCircle, Timer, Clock} from 'lucide-react';
 import {Routine} from '@/lib/types';
-import {useToast} from '@/hooks/use-toast';
+import toast from 'react-hot-toast';
 import {useGlobalState} from '@/hooks/use-global-state';
 
 interface RoutineCardProps {
@@ -21,7 +21,6 @@ interface RoutineCardProps {
 }
 
 export function RoutineCard({routine}: RoutineCardProps) {
-  const {toast} = useToast();
   const {
     state: {activeItem},
     startTimer,
@@ -33,19 +32,13 @@ export function RoutineCard({routine}: RoutineCardProps) {
 
   const handleStartTimer = () => {
     if (isAnyTimerActive) {
-      toast({
-        variant: 'destructive',
-        title: 'Another Timer is Active',
-        description:
-          'You can only have one timer (task or routine) running at a time.',
-      });
+      toast.error(
+          'You can only have one timer (task or routine) running at a time.'
+      );
       return;
     }
     startTimer(routine);
-    toast({
-      title: 'Routine Started!',
-      description: `Timer for "${routine.title}" is now running.`,
-    });
+    toast.success(`Timer for "${routine.title}" is now running.`);
   };
 
   return (

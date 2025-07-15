@@ -21,7 +21,7 @@ import {
 import {cn} from '@/lib/utils';
 import type {StudyTask} from '@/lib/types';
 import {useConfetti} from '@/components/providers/confetti-provider';
-import {useToast} from '@/hooks/use-toast';
+import toast from 'react-hot-toast';
 import {format} from 'date-fns';
 import {useGlobalState} from '@/hooks/use-global-state';
 
@@ -52,7 +52,6 @@ export function SimpleTaskItem({
     activeItem?.type === 'task' && activeItem.item.id === task.id;
   const isCompleted = task.status === 'completed';
   const {fire} = useConfetti();
-  const {toast} = useToast();
   const [isTimerOpen, setTimerOpen] = useState(false);
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   const isOverdue = !isCompleted && task.date < todayStr;
@@ -61,10 +60,7 @@ export function SimpleTaskItem({
     const newStatus = isCompleted ? 'todo' : 'completed';
     if (newStatus === 'completed') {
       fire();
-      toast({
-        title: 'Task Completed!',
-        description: `You've earned ${task.points} points!`,
-      });
+      toast.success(`Task Completed! You've earned ${task.points} points!`);
     }
     onUpdate({...task, status: newStatus});
   };

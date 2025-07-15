@@ -16,7 +16,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import {useGlobalState} from '@/hooks/use-global-state';
-import {useToast} from '@/hooks/use-toast';
+import toast from 'react-hot-toast';
 import {Skeleton} from '@/components/ui/skeleton';
 import {UserProfile} from '@/lib/types';
 
@@ -33,7 +33,6 @@ const profileSchema = z.object({
 export default function ProfilePage() {
   const {state, updateProfile} = useGlobalState();
   const {profile, isLoaded} = state;
-  const {toast} = useToast();
 
   const {
     register,
@@ -53,10 +52,7 @@ export default function ProfilePage() {
 
   const onSubmit = (data: UserProfile) => {
     updateProfile(data);
-    toast({
-      title: 'Profile Saved',
-      description: 'Your information has been updated successfully.',
-    });
+    toast.success('Your information has been updated successfully.');
     reset(data);
   };
 

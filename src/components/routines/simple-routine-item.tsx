@@ -5,7 +5,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { PlayCircle, Timer, Clock } from 'lucide-react';
 import type { Routine } from '@/lib/types';
-import { useToast } from '@/hooks/use-toast';
+import toast from 'react-hot-toast';
 import { useGlobalState } from '@/hooks/use-global-state';
 import { cn } from '@/lib/utils';
 
@@ -14,7 +14,6 @@ interface SimpleRoutineItemProps {
 }
 
 export function SimpleRoutineItem({ routine }: SimpleRoutineItemProps) {
-  const { toast } = useToast();
   const {
     state: { activeItem },
     startTimer,
@@ -26,18 +25,11 @@ export function SimpleRoutineItem({ routine }: SimpleRoutineItemProps) {
 
   const handleStartTimer = () => {
     if (isAnyTimerActive) {
-      toast({
-        variant: 'destructive',
-        title: 'Another Timer is Active',
-        description: 'You can only have one timer (task or routine) running at a time.',
-      });
+      toast.error('You can only have one timer (task or routine) running at a time.');
       return;
     }
     startTimer(routine);
-    toast({
-      title: 'Routine Started!',
-      description: `Timer for "${routine.title}" is now running.`,
-    });
+    toast.success(`Timer for "${routine.title}" is now running.`);
   };
 
   return (

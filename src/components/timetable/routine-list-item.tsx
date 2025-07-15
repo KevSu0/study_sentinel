@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {Badge} from '@/components/ui/badge';
 import {Routine} from '@/lib/types';
-import {useToast} from '@/hooks/use-toast';
+import toast from 'react-hot-toast';
 import {useGlobalState} from '@/hooks/use-global-state';
 import {
   AlertDialog,
@@ -54,7 +54,6 @@ export const RoutineListItem = memo(function RoutineListItem({
   onEdit,
   onDelete,
 }: RoutineListItemProps) {
-  const {toast} = useToast();
   const {
     state: {activeItem},
     startTimer,
@@ -68,12 +67,9 @@ export const RoutineListItem = memo(function RoutineListItem({
 
   const handleStartTimer = () => {
     if (isAnyTimerActive && !isTimerActiveForThis) {
-      toast({
-        variant: 'destructive',
-        title: 'Another Timer is Active',
-        description:
-          'You can only have one timer (task or routine) running at a time.',
-      });
+      toast.error(
+        'You can only have one timer (task or routine) running at a time.'
+      );
       return;
     }
 
@@ -81,10 +77,7 @@ export const RoutineListItem = memo(function RoutineListItem({
       openRoutineLogDialog('stop');
     } else {
       startTimer(routine);
-      toast({
-        title: 'Routine Started!',
-        description: `Timer for "${routine.title}" is now running.`,
-      });
+      toast.success(`Timer for "${routine.title}" is now running.`);
     }
   };
 

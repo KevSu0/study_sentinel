@@ -122,8 +122,7 @@ function AppLayout({children}: {children: ReactNode}) {
                   <SidebarMenuButton
                     asChild
                     isActive={
-                      pathname === item.href ||
-                      (pathname === '/lets-start' && item.href === '/')
+                      pathname === item.href
                     }
                     tooltip={item.label}
                     onClick={handleMenuClick}

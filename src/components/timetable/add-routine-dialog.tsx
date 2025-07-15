@@ -16,7 +16,7 @@ import {z} from 'zod';
 import {useEffect} from 'react';
 import {Routine} from '@/lib/types';
 import {cn} from '@/lib/utils';
-import { toast } from '@/hooks/use-toast';
+import toast from 'react-hot-toast';
 
 const routineSchema = z.object({
     title: z.string().min(3, 'Title must be at least 3 characters.'),
@@ -100,10 +100,10 @@ export function AddRoutineDialog({
   const onSubmit = (data: RoutineFormData) => {
     if (isEditing && routineToEdit) {
       onUpdateRoutine({ ...routineToEdit, ...data });
-      toast({ title: "Routine Updated!" });
+      toast.success("Routine Updated!");
     } else {
       onAddRoutine(data);
-      toast({ title: "Routine Added!" });
+      toast.success("Routine Added!");
     }
     onOpenChange(false);
   };

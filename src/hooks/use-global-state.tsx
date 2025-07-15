@@ -23,7 +23,7 @@ import {
 } from '@/lib/types';
 import {addDays, format, formatISO, subDays, parseISO} from 'date-fns';
 import {useConfetti} from '@/components/providers/confetti-provider';
-import {useToast} from './use-toast';
+import toast from 'react-hot-toast';
 import {SYSTEM_BADGES, checkBadge} from '@/lib/badges';
 
 // --- Constants for localStorage keys ---
@@ -164,7 +164,6 @@ const getSessionDate = () => {
 export function GlobalStateProvider({children}: {children: ReactNode}) {
   const [state, setState] = useState<AppState>(initialAppState);
   const {fire} = useConfetti();
-  const {toast} = useToast();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // --- Main Hydration and State Derivation Effect (CLIENT-SIDE ONLY) ---
@@ -509,10 +508,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
         newlyEarnedBadges.forEach(badge => {
           newEarnedMap.set(badge.id, todayStr);
           setTimeout(() => {
-            toast({
-              title: `Badge Unlocked: ${badge.name}! 🎉`,
-              description: badge.motivationalMessage,
-            });
+            toast.success(`Badge Unlocked: ${badge.name}! 🎉`);
           }, 500);
         });
         localStorage.setItem(
@@ -522,7 +518,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
         return {earnedBadges: newEarnedMap};
       });
     }
-  }, [state.isLoaded, state.allCompletedWork, state.tasks, fire, toast]);
+  }, [state.isLoaded, state.allCompletedWork, state.tasks, fire]);
 
   // --- Public API ---
   const addTask = useCallback(
@@ -644,11 +640,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
   const startTimer = useCallback(
     (item: StudyTask | Routine) => {
       if (state.activeItem) {
-        toast({
-          title: 'Timer Already Active',
-          description: `Please stop or complete the timer for "${state.activeItem.item.title}" first.`,
-          variant: 'destructive',
-        });
+        toast.error(`Please stop or complete the timer for "${state.activeItem.item.title}" first.`);
         return;
       }
 
@@ -675,7 +667,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
       localStorage.setItem(TIMER_KEY, JSON.stringify(timerData));
       setState(prev => ({...prev, activeItem: timerData.item, isPaused: false}));
     },
-    [state.activeItem, addLog, updateTask, toast]
+    [state.activeItem, addLog, updateTask]
   );
 
   const togglePause = useCallback(() => {
@@ -794,10 +786,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
         });
 
         fire();
-        toast({
-          title: 'Task Completed!',
-          description: `You've earned ${item.item.points} points!`,
-        });
+        toast.success(`Task Completed! You've earned ${item.item.points} points!`);
       } else {
         // Routine
         const elapsed = savedTimer.isPaused
@@ -815,12 +804,9 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
           studyLog,
         });
         fire();
-        toast({
-          title: 'Routine Completed!',
-          description: `You logged ${formatTime(
+        toast.success(`You logged ${formatTime(
             durationInSeconds
-          )} and earned ${points} points.`,
-        });
+          )} and earned ${points} points.`);
       }
       localStorage.removeItem(TIMER_KEY);
       setStateAndDerive(prev => ({
@@ -830,7 +816,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
         timeDisplay: '00:00',
       }));
     },
-    [updateTask, addLog, fire, toast]
+    [updateTask, addLog, fire]
   );
 
   const openRoutineLogDialog = useCallback((action: 'complete' | 'stop') => {
