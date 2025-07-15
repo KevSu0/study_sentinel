@@ -1,7 +1,9 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
+  output: 'export',
   reactStrictMode: false,
   typescript: {
     ignoreBuildErrors: true,
@@ -10,6 +12,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
@@ -22,13 +25,14 @@ const nextConfig: NextConfig = {
   // Ignore the .genkit directory to prevent dev server restarts
   webpack(config, {isServer, dev}) {
     if (dev) {
-      // Ensure watchOptions is an object before modifying it.
-      config.watchOptions = config.watchOptions || {};
-      const ignored = config.watchOptions.ignored || [];
-      config.watchOptions.ignored = [
-          ...(Array.isArray(ignored) ? ignored : [ignored]),
+      const originalWatchOptions = config.watchOptions;
+      config.watchOptions = {
+        ...originalWatchOptions,
+        ignored: [
+          ...(originalWatchOptions.ignored || []),
           '**/.genkit/**',
-      ];
+        ],
+      };
     }
     return config;
   },
