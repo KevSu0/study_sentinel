@@ -1,19 +1,13 @@
-
 'use client';
 import React from 'react';
 import type { ActivityFeedItem } from '@/hooks/use-global-state';
-import { CompletedTaskCard } from '@/components/dashboard/activity/completed-task-card';
-import { CompletedRoutineCard } from '@/components/dashboard/activity/completed-routine-card';
-import { StoppedTaskCard } from '@/components/dashboard/activity/stopped-task-card';
 import { CheckCircle2 } from 'lucide-react';
-import { EmptyState } from '@/components/tasks/empty-state';
+import { ActivityItem } from '@/components/dashboard/activity/activity-item';
 
 export const CompletedTodayWidget = ({
   todaysActivity,
-  onEditTask,
 }: {
   todaysActivity: ActivityFeedItem[];
-  onEditTask: (task: any) => void;
 }) => {
   if (!todaysActivity || todaysActivity.length === 0) {
     return (
@@ -29,29 +23,16 @@ export const CompletedTodayWidget = ({
     );
   }
 
-  const renderActivityItem = (item: ActivityFeedItem) => {
-    switch (item.type) {
-      case 'TASK_COMPLETE':
-        return <CompletedTaskCard key={`task-${item.data.id}`} task={item.data} />;
-      case 'ROUTINE_COMPLETE':
-        return <CompletedRoutineCard key={`routine-${item.data.id}`} log={item.data} />;
-      case 'TASK_STOPPED':
-        return <StoppedTaskCard key={`stopped-${item.data.id}`} log={item.data} />;
-      default:
-        return null;
-    }
-  };
-
   return (
     <section>
       <h2 className="text-xl font-semibold text-primary mb-3">
         Today's Activity
       </h2>
-      <div className="space-y-4">
-        {todaysActivity.map(item => renderActivityItem(item))}
+      <div className="space-y-3">
+        {todaysActivity.map((item, index) => (
+            <ActivityItem key={`${item.type}-${'id' in item.data ? item.data.id : index}`} item={item} />
+        ))}
       </div>
     </section>
   );
 };
-
-    
