@@ -2,9 +2,9 @@
 /**
  * @fileOverview Generates a daily motivational summary based on the previous day's activity log and user profile.
  *
- * - generateDailySummary - A function that analyzes yesterday's logs and provides a motivational summary.
- * - DailySummaryInput - The input type for the generateDailySummary function.
- * - DailySummaryOutput - The return type for the generateDailySummary function.
+ * - generateDailySummary - A flow that analyzes yesterday's logs and provides a motivational summary.
+ * - DailySummaryInput - The input type for the generateDailySummary flow.
+ * - DailySummaryOutput - The return type for the generateDailySummary flow.
  */
 
 import {ai} from '@/ai/genkit';
@@ -67,12 +67,6 @@ const DailySummaryOutputSchema = z.object({
 });
 export type DailySummaryOutput = z.infer<typeof DailySummaryOutputSchema>;
 
-export async function generateDailySummary(
-  input: DailySummaryInput
-): Promise<DailySummaryOutput> {
-  return generateDailySummaryFlow(input);
-}
-
 const prompt = ai.definePrompt({
   name: 'generateDailySummaryPrompt',
   input: {schema: DailySummaryInputSchema},
@@ -103,7 +97,7 @@ This information provides the "why" behind their efforts.
 This data shows the "what" and "how" of their actions.
 {{#if logs}}
 {{#each logs}}
-- [{{timestamp}}] Event: {{type}} - Details: {{JSONstringify payload}}
+- [{{timestamp}}] Event: {{type}} - Details: {{JSON.stringify payload}}
 {{/each}}
 {{else}}
 The student had no recorded activity yesterday.
@@ -115,15 +109,11 @@ The student had no recorded activity yesterday.
 
 2.  **Motivational Paragraph**: This is where you connect the "what" with the "why". Write a powerful, motivating paragraph for the upcoming day. Use insights from your evaluation and *explicitly connect them to the student's stated dream, passion, and education from their profile*. If they were distracted, frame a strategy to stay focused as a necessary step towards their goal. If they were consistent, inspire them to maintain momentum. Address the user by name if they provided one. Your motivation must be deeply personal and directly reference their profile information.
 `,
-  // A custom Handlebars helper to stringify the payload object
-  custom: {
-    JSONstringify: (obj: any) => JSON.stringify(obj),
-  },
 });
 
-const generateDailySummaryFlow = ai.defineFlow(
+export const generateDailySummary = ai.defineFlow(
   {
-    name: 'generateDailySummaryFlow',
+    name: 'generateDailySummary',
     inputSchema: DailySummaryInputSchema,
     outputSchema: DailySummaryOutputSchema,
   },

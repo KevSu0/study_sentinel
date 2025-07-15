@@ -1,8 +1,9 @@
+
 'use server';
 /**
  * @fileOverview A positive psychology chatbot flow.
  *
- * - getChatbotResponse - A function that handles the chatbot conversation.
+ * - getChatbotResponse - A flow that handles the chatbot conversation.
  */
 
 import {ai} from '@/ai/genkit';
@@ -12,17 +13,11 @@ import {
   PositivePsychologistOutput,
   PositivePsychologistOutputSchema,
 } from '@/lib/types';
-import type {MessageData} from 'genkit';
+import {MessageData} from 'genkit';
 
-export async function getChatbotResponse(
-  input: PositivePsychologistInput
-): Promise<PositivePsychologistOutput> {
-  return positivePsychologistFlow(input);
-}
-
-const positivePsychologistFlow = ai.defineFlow(
+export const getChatbotResponse = ai.defineFlow(
   {
-    name: 'positivePsychologistFlow',
+    name: 'getChatbotResponse',
     inputSchema: PositivePsychologistInputSchema,
     outputSchema: PositivePsychologistOutputSchema,
   },
@@ -49,10 +44,10 @@ const positivePsychologistFlow = ai.defineFlow(
     const prompt = lastMessage.content;
 
     // 3. Convert our app's chat format to the one Genkit requires.
-    const historyForApi = history.map(msg => ({
+    const historyForApi: MessageData[] = history.map(msg => ({
       role: msg.role,
-      parts: [{text: msg.content}],
-    })) as MessageData[];
+      content: [{text: msg.content}],
+    }));
 
     // 4. Build the system prompt to define the AI's personality and context.
     const {profile, dailySummary} = input;
@@ -90,21 +85,22 @@ You MUST follow these rules:
     }
 
     if (contextParts.length > 0) {
-      systemPrompt += `\nHere is some context about the user:\n- ${contextParts.join(
-        '\n- '
-      )}`;
+      systemPrompt += `
+
+Here is some context about the user:
+- ${contextParts.join('\n- ')}`;
     }
 
     // 5. Call the AI with the correctly structured request.
     try {
-      const response = await ai.generate({
+      const {text} = await ai.generate({
         model: 'googleai/gemini-1.5-flash-latest',
         system: systemPrompt,
         prompt: prompt,
         history: historyForApi,
       });
 
-      return {response: response.text};
+      return {response: text};
     } catch (e: any) {
       console.error('Gemini API call failed:', e);
       throw new Error(
