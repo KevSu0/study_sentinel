@@ -30,8 +30,6 @@ import Link from 'next/link';
 import {DailyBriefingWidget} from '@/components/dashboard/widgets/daily-briefing-widget';
 import {StatsOverviewWidget} from '@/components/dashboard/widgets/stats-overview-widget';
 import {UnlockedBadgesWidget} from '@/components/dashboard/widgets/unlocked-badges-widget';
-import {TodaysRoutinesWidget} from '@/components/dashboard/widgets/todays-routines-widget';
-import {TodaysPlanWidget} from '@/components/dashboard/widgets/todays-plan-widget';
 import {CompletedTodayWidget} from '@/components/dashboard/widgets/completed-today-widget';
 import {EmptyState} from '@/components/tasks/empty-state';
 
@@ -115,8 +113,6 @@ export default function LetsStartPage() {
     daily_briefing: DailyBriefingWidget,
     stats_overview: StatsOverviewWidget,
     unlocked_badges: UnlockedBadgesWidget,
-    todays_routines: TodaysRoutinesWidget,
-    todays_plan: TodaysPlanWidget,
     completed_today: CompletedTodayWidget,
   };
 

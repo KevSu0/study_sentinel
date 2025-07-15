@@ -14,8 +14,6 @@ export type DashboardWidgetType =
   | 'daily_briefing'
   | 'stats_overview'
   | 'unlocked_badges'
-  | 'todays_routines'
-  | 'todays_plan'
   | 'completed_today';
 
 export interface DashboardWidget {
@@ -29,8 +27,6 @@ export const WIDGET_NAMES: Record<DashboardWidgetType, string> = {
   daily_briefing: 'Daily Briefing / Quote',
   stats_overview: 'Statistics Overview',
   unlocked_badges: 'Badges Unlocked Today',
-  todays_routines: "Today Routines",
-  todays_plan: "Today Plan",
   completed_today: 'Completed Today',
 };
 
@@ -38,8 +34,6 @@ const DEFAULT_LAYOUT: DashboardWidget[] = [
   {id: 'daily_briefing', isVisible: true},
   {id: 'stats_overview', isVisible: true},
   {id: 'unlocked_badges', isVisible: true},
-  {id: 'todays_routines', isVisible: true},
-  {id: 'todays_plan', isVisible: true},
   {id: 'completed_today', isVisible: true},
 ];
 
