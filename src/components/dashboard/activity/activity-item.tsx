@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -12,6 +13,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { ActivityFeedItem } from '@/hooks/use-global-state';
 import { cn } from '@/lib/utils';
+import type { StudyTask } from '@/lib/types';
 
 const formatDuration = (seconds: number) => {
     if (seconds < 60) return `${seconds}s`;
@@ -33,7 +35,10 @@ export function ActivityItem({ item }: { item: ActivityFeedItem }) {
 
   switch (item.type) {
     case 'TASK_COMPLETE': {
-      const { data: task } = item;
+      const { task, log } = item.data as { task: StudyTask, log: any | null };
+      const duration = log ? log.payload.duration : task.duration * 60;
+      const points = log ? log.payload.points : task.points;
+      
       return (
         <div className={cn(baseClasses, "border-green-500/50")}>
           <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
@@ -44,11 +49,11 @@ export function ActivityItem({ item }: { item: ActivityFeedItem }) {
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <Timer className="h-4 w-4" />
-                Completed ({task.duration} min)
+                Completed ({formatDuration(duration)})
               </span>
               <span className="flex items-center gap-1.5">
                 <Star className="h-4 w-4 text-yellow-400" />
-                {task.points} pts
+                {points} pts
               </span>
               <Badge variant="secondary" className="capitalize">{task.priority} Priority</Badge>
             </div>

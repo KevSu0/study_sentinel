@@ -41,7 +41,12 @@ export const CompletedTodayWidget = ({
 
     // Sorting
     const getTime = (item: ActivityFeedItem): number => {
-      if (item.type === 'TASK_COMPLETE') return item.data.duration * 60;
+      // Correctly access duration for each type
+      if (item.type === 'TASK_COMPLETE') {
+        const sessionLog = item.data.log;
+        // Use session duration if available, otherwise fall back to task's planned duration
+        return sessionLog ? sessionLog.payload.duration : (item.data.task.duration * 60);
+      }
       if (item.type === 'ROUTINE_COMPLETE') return item.data.payload.duration || 0;
       if (item.type === 'TASK_STOPPED') return item.data.payload.timeSpentSeconds || 0;
       return 0;

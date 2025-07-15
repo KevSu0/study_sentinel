@@ -50,7 +50,7 @@ type StoredTimer = {
 // Represents any item that can appear in the "Today's Activity" feed
 export type ActivityFeedItem = {
   type: 'TASK_COMPLETE' | 'ROUTINE_COMPLETE' | 'TASK_STOPPED';
-  data: any; // StudyTask for TASK_COMPLETE, LogEvent for others
+  data: any; 
   timestamp: string; // ISO string for consistent sorting
 };
 
@@ -304,13 +304,24 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     const todaysCompletedTasks = tasks.filter(t => t.status === 'completed' && t.date === todayStr);
     const todaysPendingTasks = tasks.filter(t => t.date === todayStr && (t.status === 'todo' || t.status === 'in_progress'));
     
-    // --- New: Build Today's Activity Feed ---
     const activity: ActivityFeedItem[] = [];
-
+    
     // 1. Add completed tasks
-    for (const task of todaysCompletedTasks) {
-        activity.push({ type: 'TASK_COMPLETE', data: task, timestamp: formatISO(new Date(`${task.date}T${task.time}`)) });
+    const completedSessionLogs = todaysLogs.filter(log => log.type === 'TIMER_SESSION_COMPLETE');
+    for (const log of completedSessionLogs) {
+        const task = tasks.find(t => t.id === log.payload.taskId);
+        if (task) {
+            activity.push({ type: 'TASK_COMPLETE', data: { task, log }, timestamp: log.timestamp });
+        }
     }
+    const manuallyCompleted = todaysLogs.filter(log => log.type === 'TASK_COMPLETE');
+     for (const log of manuallyCompleted) {
+        const task = tasks.find(t => t.id === log.payload.taskId);
+        if (task) {
+            activity.push({ type: 'TASK_COMPLETE', data: { task, log: null }, timestamp: log.timestamp });
+        }
+    }
+
     // 2. Add completed routines
     for (const log of todaysCompletedRoutines) {
         activity.push({ type: 'ROUTINE_COMPLETE', data: log, timestamp: log.timestamp });
@@ -321,7 +332,6 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
         activity.push({ type: 'TASK_STOPPED', data: log, timestamp: log.timestamp });
     }
 
-    // Sort the combined feed by timestamp DESC
     activity.sort((a, b) => {
         return parseISO(b.timestamp).getTime() - parseISO(a.timestamp).getTime();
     });
