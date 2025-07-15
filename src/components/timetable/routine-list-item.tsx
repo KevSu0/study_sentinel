@@ -57,7 +57,7 @@ export const RoutineListItem = React.memo(function RoutineListItem({
   const {
     state: {activeItem},
     startTimer,
-    stopTimer,
+    openRoutineLogDialog,
   } = useGlobalState();
   const [isAlertOpen, setAlertOpen] = useState(false);
 
@@ -77,10 +77,7 @@ export const RoutineListItem = React.memo(function RoutineListItem({
     }
 
     if (isTimerActiveForThis) {
-      stopTimer('Stopped routine timer manually');
-      toast({
-        title: 'Routine Timer Stopped',
-      });
+      openRoutineLogDialog('stop');
     } else {
       startTimer(routine);
       toast({
@@ -89,8 +86,6 @@ export const RoutineListItem = React.memo(function RoutineListItem({
       });
     }
   };
-
-  const sortedDays = dayOrder.filter(d => routine.days.includes(d));
 
   return (
     <>

@@ -5,6 +5,7 @@ import type {StudyTask, Routine} from '@/lib/types';
 import {Button} from '@/components/ui/button';
 import {Timer, CheckCircle, XCircle, Pause, Play} from 'lucide-react';
 import {StopTimerDialog} from './stop-timer-dialog';
+import { RoutineLogDialog } from '../routines/routine-log-dialog';
 
 export function GlobalTimerBar() {
   const {
@@ -12,10 +13,11 @@ export function GlobalTimerBar() {
     togglePause,
     completeTimer,
     stopTimer,
+    openRoutineLogDialog
   } = useGlobalState();
   const {activeItem, timeDisplay, isPaused, isOvertime} = state;
 
-  const [isStopDialogOpen, setStopDialogOpen] = useState(false);
+  const [isStopTaskDialogOpen, setStopTaskDialogOpen] = useState(false);
 
   if (!activeItem) {
     return null;
@@ -29,15 +31,23 @@ export function GlobalTimerBar() {
       if (!isPaused) {
         togglePause();
       }
-      setStopDialogOpen(true);
+      setStopTaskDialogOpen(true);
     } else {
-      stopTimer('Stopped routine timer from global bar');
+      openRoutineLogDialog('stop');
     }
   };
+  
+  const handleComplete = () => {
+    if (isTask) {
+        completeTimer();
+    } else {
+        openRoutineLogDialog('complete');
+    }
+  }
 
   const handleConfirmStopTask = (reason: string) => {
     stopTimer(reason);
-    setStopDialogOpen(false);
+    setStopTaskDialogOpen(false);
   };
 
   return (
@@ -82,7 +92,7 @@ export function GlobalTimerBar() {
             <Button
               size="sm"
               variant="secondary"
-              onClick={completeTimer}
+              onClick={handleComplete}
               className="bg-green-500 hover:bg-green-600 text-white px-2 sm:px-3"
             >
               <CheckCircle />
@@ -103,11 +113,12 @@ export function GlobalTimerBar() {
       </div>
       {isTask && (
         <StopTimerDialog
-          isOpen={isStopDialogOpen}
-          onOpenChange={setStopDialogOpen}
+          isOpen={isStopTaskDialogOpen}
+          onOpenChange={setStopTaskDialogOpen}
           onConfirm={handleConfirmStopTask}
         />
       )}
+      <RoutineLogDialog />
     </>
   );
 }

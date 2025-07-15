@@ -53,6 +53,10 @@ export type ActivityFeedItem =
     | { type: 'ROUTINE_COMPLETE'; data: LogEvent }
     | { type: 'TASK_STOPPED'; data: LogEvent };
 
+type RoutineLogDialogState = {
+    isOpen: boolean;
+    action: 'complete' | 'stop' | null;
+}
 
 interface AppState {
   isLoaded: boolean;
@@ -66,6 +70,7 @@ interface AppState {
   timeDisplay: string;
   isPaused: boolean;
   isOvertime: boolean;
+  routineLogDialog: RoutineLogDialogState;
   // --- Derived state ---
   todaysLogs: LogEvent[];
   previousDayLogs: LogEvent[];
@@ -88,8 +93,8 @@ interface GlobalStateContextType {
   pushTaskToNextDay: (taskId: string) => void;
   startTimer: (item: StudyTask | Routine) => void;
   togglePause: () => void;
-  completeTimer: () => void;
-  stopTimer: (reason: string) => void;
+  completeTimer: (studyLog?: string) => void;
+  stopTimer: (reason: string, studyLog?: string) => void;
   addRoutine: (routine: Omit<Routine, 'id'>) => void;
   updateRoutine: (routine: Routine) => void;
   deleteRoutine: (routineId: string) => void;
@@ -97,6 +102,8 @@ interface GlobalStateContextType {
   updateBadge: (badge: Badge) => void;
   deleteBadge: (badgeId: string) => void;
   updateProfile: (newProfileData: Partial<UserProfile>) => void;
+  openRoutineLogDialog: (action: 'complete' | 'stop') => void;
+  closeRoutineLogDialog: () => void;
 }
 
 const defaultProfile: UserProfile = {
@@ -121,6 +128,7 @@ const initialAppState: AppState = {
   timeDisplay: '00:00',
   isPaused: true,
   isOvertime: false,
+  routineLogDialog: { isOpen: false, action: null },
   // Derived state starts empty
   todaysLogs: [],
   previousDayLogs: [],
@@ -650,7 +658,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
   }, [addLog]);
 
   const stopTimer = useCallback(
-    (reason: string) => {
+    (reason: string, studyLog: string = '') => {
       const savedTimerJSON = localStorage.getItem(TIMER_KEY);
       if (!savedTimerJSON) return;
       const savedTimer: StoredTimer = JSON.parse(savedTimerJSON);
@@ -666,20 +674,29 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
           : 0;
         durationInSeconds = Math.round((originalDuration - timeRemaining) / 1000);
         updateTask({...item.item, status: 'todo'});
-      } else {
+        addLog('TIMER_STOP', {
+            title: item.item.title,
+            reason,
+            timeSpentSeconds: Math.max(0, durationInSeconds),
+        });
+      } else { // Routine
         const elapsed = savedTimer.isPaused
           ? savedTimer.pausedDuration
           : savedTimer.startTime
           ? Date.now() - savedTimer.startTime + savedTimer.pausedDuration
           : 0;
         durationInSeconds = Math.round(elapsed / 1000);
+         const points = Math.floor(durationInSeconds / 60 / 10); // Same as complete for partial credit
+         addLog('ROUTINE_SESSION_COMPLETE', {
+            routineId: item.item.id,
+            title: item.item.title,
+            duration: durationInSeconds,
+            points,
+            studyLog,
+            stopped: true
+         });
       }
 
-      addLog('TIMER_STOP', {
-        title: item.item.title,
-        reason,
-        timeSpentSeconds: Math.max(0, durationInSeconds),
-      });
       localStorage.removeItem(TIMER_KEY);
       setStateAndDerive(prev => ({
         activeItem: null,
@@ -691,63 +708,76 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     [updateTask, addLog]
   );
 
-  const completeTimer = useCallback(() => {
-    const savedTimerJSON = localStorage.getItem(TIMER_KEY);
-    if (!savedTimerJSON) return;
-    const savedTimer: StoredTimer = JSON.parse(savedTimerJSON);
-    const {item} = savedTimer;
+  const completeTimer = useCallback(
+    (studyLog: string = '') => {
+      const savedTimerJSON = localStorage.getItem(TIMER_KEY);
+      if (!savedTimerJSON) return;
+      const savedTimer: StoredTimer = JSON.parse(savedTimerJSON);
+      const {item} = savedTimer;
 
-    if (item.type === 'task') {
-      const overtimeElapsed =
-        savedTimer.isPaused || !savedTimer.endTime || savedTimer.endTime > Date.now()
-          ? 0
-          : Math.round((Date.now() - savedTimer.endTime) / 1000);
-      const totalDurationSecs = item.item.duration * 60 + overtimeElapsed;
+      if (item.type === 'task') {
+        const overtimeElapsed =
+          savedTimer.isPaused || !savedTimer.endTime || savedTimer.endTime > Date.now()
+            ? 0
+            : Math.round((Date.now() - savedTimer.endTime) / 1000);
+        const totalDurationSecs = item.item.duration * 60 + overtimeElapsed;
 
-      updateTask({...item.item, status: 'completed' as const});
-      addLog('TIMER_SESSION_COMPLETE', {
-        taskId: item.item.id,
-        title: item.item.title,
-        duration: totalDurationSecs,
-        points: item.item.points,
-        priority: item.item.priority,
-      });
+        updateTask({...item.item, status: 'completed' as const});
+        addLog('TIMER_SESSION_COMPLETE', {
+          taskId: item.item.id,
+          title: item.item.title,
+          duration: totalDurationSecs,
+          points: item.item.points,
+          priority: item.item.priority,
+        });
 
-      fire();
-      toast({
-        title: 'Task Completed!',
-        description: `You've earned ${item.item.points} points!`,
-      });
-    } else {
-      const elapsed = savedTimer.isPaused
-        ? savedTimer.pausedDuration
-        : savedTimer.startTime
-        ? Date.now() - savedTimer.startTime + savedTimer.pausedDuration
-        : 0;
-      const durationInSeconds = Math.round(elapsed / 1000);
-      const points = Math.floor(durationInSeconds / 60 / 10);
-      addLog('ROUTINE_SESSION_COMPLETE', {
-        routineId: item.item.id,
-        title: item.item.title,
-        duration: durationInSeconds,
-        points,
-      });
-      fire();
-      toast({
-        title: 'Routine Completed!',
-        description: `You logged ${formatTime(
-          durationInSeconds
-        )} and earned ${points} points.`,
-      });
-    }
-    localStorage.removeItem(TIMER_KEY);
-    setStateAndDerive(prev => ({
-      activeItem: null,
-      isPaused: true,
-      isOvertime: false,
-      timeDisplay: '00:00',
-    }));
-  }, [updateTask, addLog, fire, toast]);
+        fire();
+        toast({
+          title: 'Task Completed!',
+          description: `You've earned ${item.item.points} points!`,
+        });
+      } else { // Routine
+        const elapsed = savedTimer.isPaused
+          ? savedTimer.pausedDuration
+          : savedTimer.startTime
+          ? Date.now() - savedTimer.startTime + savedTimer.pausedDuration
+          : 0;
+        const durationInSeconds = Math.round(elapsed / 1000);
+        const points = Math.floor(durationInSeconds / 60 / 10);
+        addLog('ROUTINE_SESSION_COMPLETE', {
+          routineId: item.item.id,
+          title: item.item.title,
+          duration: durationInSeconds,
+          points,
+          studyLog
+        });
+        fire();
+        toast({
+          title: 'Routine Completed!',
+          description: `You logged ${formatTime(
+            durationInSeconds
+          )} and earned ${points} points.`,
+        });
+      }
+      localStorage.removeItem(TIMER_KEY);
+      setStateAndDerive(prev => ({
+        activeItem: null,
+        isPaused: true,
+        isOvertime: false,
+        timeDisplay: '00:00',
+      }));
+    },
+    [updateTask, addLog, fire, toast]
+  );
+  
+  const openRoutineLogDialog = useCallback((action: 'complete' | 'stop') => {
+    setState(prev => ({ ...prev, routineLogDialog: { isOpen: true, action } }));
+  }, []);
+
+  const closeRoutineLogDialog = useCallback(() => {
+    setState(prev => ({ ...prev, routineLogDialog: { isOpen: false, action: null } }));
+  }, []);
+
 
   const addRoutine = useCallback(
     (routine: Omit<Routine, 'id'>) => {
@@ -860,7 +890,9 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     updateBadge,
     deleteBadge,
     updateProfile,
-  }), [state, addTask, onEditTask, updateTask, archiveTask, unarchiveTask, pushTaskToNextDay, startTimer, togglePause, completeTimer, stopTimer, addRoutine, updateRoutine, deleteRoutine, addBadge, updateBadge, deleteBadge, updateProfile]);
+    openRoutineLogDialog,
+    closeRoutineLogDialog,
+  }), [state, addTask, onEditTask, updateTask, archiveTask, unarchiveTask, pushTaskToNextDay, startTimer, togglePause, completeTimer, stopTimer, addRoutine, updateRoutine, deleteRoutine, addBadge, updateBadge, deleteBadge, updateProfile, openRoutineLogDialog, closeRoutineLogDialog]);
 
   return (
     <GlobalStateContext.Provider value={contextValue}>

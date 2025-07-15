@@ -7,6 +7,7 @@ import {
   Star,
   XCircle,
   AlertTriangle,
+  BookText
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { ActivityFeedItem } from '@/hooks/use-global-state';
@@ -57,13 +58,13 @@ export function ActivityItem({ item }: { item: ActivityFeedItem }) {
     }
     case 'ROUTINE_COMPLETE': {
       const { data: log } = item;
-      const { title, duration, points } = log.payload;
+      const { title, duration, points, studyLog } = log.payload;
       return (
         <div className={cn(baseClasses, "border-accent/50")}>
           <CheckCircle className="h-5 w-5 text-accent shrink-0 mt-0.5" />
           <div className="flex-1 grid gap-1">
             <p className="font-medium text-muted-foreground line-through">
-              {title} (Routine)
+              {title}
             </p>
              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1.5">
@@ -75,6 +76,12 @@ export function ActivityItem({ item }: { item: ActivityFeedItem }) {
                   {points || 0} pts earned
                 </span>
              </div>
+             {studyLog && (
+                <div className="flex items-start gap-2 mt-2 p-2 rounded-md bg-muted/50 text-sm">
+                    <BookText className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                    <p className="text-muted-foreground">{studyLog}</p>
+                </div>
+             )}
           </div>
         </div>
       );
