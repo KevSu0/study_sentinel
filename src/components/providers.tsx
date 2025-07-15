@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {ReactNode} from 'react';
+import {ThemeProvider} from 'next-themes';
 import {
   Sidebar,
   SidebarProvider,
@@ -39,6 +40,7 @@ import {BottomNav} from './bottom-nav';
 import {useGlobalState, GlobalStateProvider} from '@/hooks/use-global-state';
 import {ViewModeProvider} from '@/hooks/use-view-mode.tsx';
 import {DashboardLayoutProvider} from '@/hooks/use-dashboard-layout.tsx';
+import {UserMenu} from './user-menu';
 
 function AppLayout({children}: {children: ReactNode}) {
   const pathname = usePathname();
@@ -112,7 +114,10 @@ function AppLayout({children}: {children: ReactNode}) {
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
-                    isActive={pathname === item.href || (pathname === '/' && item.href === '/lets-start')}
+                    isActive={
+                      pathname === item.href ||
+                      (pathname === '/' && item.href === '/lets-start')
+                    }
                     tooltip={item.label}
                     onClick={handleMenuClick}
                   >
@@ -125,7 +130,9 @@ function AppLayout({children}: {children: ReactNode}) {
               ))}
           </SidebarMenu>
         </SidebarContent>
-        <SidebarFooter className="p-2"></SidebarFooter>
+        <SidebarFooter className="p-2">
+          <UserMenu />
+        </SidebarFooter>
       </Sidebar>
       <SidebarInset>
         <div className="p-4 border-b flex items-center justify-between md:hidden sticky top-0 bg-background z-30">
@@ -143,16 +150,23 @@ function AppLayout({children}: {children: ReactNode}) {
 
 export function Providers({children}: {children: ReactNode}) {
   return (
-    <ConfettiProvider>
-      <GlobalStateProvider>
-        <SidebarProvider>
-          <ViewModeProvider>
-            <DashboardLayoutProvider>
-              <AppLayout>{children}</AppLayout>
-            </DashboardLayoutProvider>
-          </ViewModeProvider>
-        </SidebarProvider>
-      </GlobalStateProvider>
-    </ConfettiProvider>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+    >
+      <ConfettiProvider>
+        <GlobalStateProvider>
+          <SidebarProvider>
+            <ViewModeProvider>
+              <DashboardLayoutProvider>
+                <AppLayout>{children}</AppLayout>
+              </DashboardLayoutProvider>
+            </ViewModeProvider>
+          </SidebarProvider>
+        </GlobalStateProvider>
+      </ConfettiProvider>
+    </ThemeProvider>
   );
 }
