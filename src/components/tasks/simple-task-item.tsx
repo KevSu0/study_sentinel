@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, {useState, Suspense, lazy, useMemo} from 'react';
@@ -38,7 +37,7 @@ interface SimpleTaskItemProps {
   onEdit: (task: StudyTask) => void;
 }
 
-export function SimpleTaskItem({
+export const SimpleTaskItem = React.memo(function SimpleTaskItem({
   task,
   onUpdate,
   onArchive,
@@ -181,4 +180,4 @@ export function SimpleTaskItem({
       )}
     </>
   );
-}
+});

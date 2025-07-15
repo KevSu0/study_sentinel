@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -20,7 +19,9 @@ interface RoutineCardProps {
   routine: Routine;
 }
 
-export function RoutineCard({routine}: RoutineCardProps) {
+export const RoutineCard = React.memo(function RoutineCard({
+  routine,
+}: RoutineCardProps) {
   const {
     state: {activeItem},
     startTimer,
@@ -78,4 +79,4 @@ export function RoutineCard({routine}: RoutineCardProps) {
       </CardFooter>
     </Card>
   );
-}
+});

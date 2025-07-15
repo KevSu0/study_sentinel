@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -13,7 +12,7 @@ interface SimpleRoutineItemProps {
   routine: Routine;
 }
 
-export function SimpleRoutineItem({ routine }: SimpleRoutineItemProps) {
+export const SimpleRoutineItem = React.memo(function SimpleRoutineItem({ routine }: SimpleRoutineItemProps) {
   const {
     state: { activeItem },
     startTimer,
@@ -66,4 +65,4 @@ export function SimpleRoutineItem({ routine }: SimpleRoutineItemProps) {
       </Button>
     </div>
   );
-}
+});

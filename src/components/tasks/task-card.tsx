@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, {useState, lazy, Suspense, useMemo} from 'react';
@@ -38,6 +37,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {useConfetti} from '@/components/providers/confetti-provider';
 import {useGlobalState} from '@/hooks/use-global-state';
+import { Checkbox } from '../ui/checkbox';
 
 const TimerDialog = lazy(() =>
   import('./timer-dialog').then(module => ({default: module.TimerDialog}))
@@ -73,7 +73,7 @@ const priorityConfig: Record<
   },
 };
 
-export function TaskCard({
+export const TaskCard = React.memo(function TaskCard({
   task,
   onUpdate,
   onArchive,
@@ -103,6 +103,10 @@ export function TaskCard({
     onUpdate({...task, status: newStatus});
   };
 
+  const handleToggleComplete = () => {
+    handleStatusChange(isCompleted ? 'todo' : 'completed');
+  };
+
   const formattedDate = format(parseISO(task.date), 'MMM d, yyyy');
   const formattedTime = format(parse(task.time, 'HH:mm', new Date()), 'p');
 
@@ -127,44 +131,6 @@ export function TaskCard({
     );
   }
 
-  const renderStatusControl = () => {
-    switch (task.status) {
-      case 'todo':
-        return (
-          <Button size="sm" onClick={() => handleStatusChange('in_progress')}>
-            <PlayCircle className="mr-2" />
-            Start Task
-          </Button>
-        );
-      case 'in_progress':
-        return (
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-accent text-accent hover:bg-accent/10 hover:text-accent"
-            onClick={() => handleStatusChange('completed')}
-          >
-            <CheckCircle2 className="mr-2" />
-            Mark as Complete
-          </Button>
-        );
-      case 'completed':
-        return (
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => handleStatusChange('in_progress')}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <RotateCcw className="mr-2 h-4 w-4" />
-            Undo Complete
-          </Button>
-        );
-      default:
-        return null;
-    }
-  };
-
   return (
     <>
       <Card
@@ -178,35 +144,40 @@ export function TaskCard({
           isTimerActive && 'ring-2 ring-primary'
         )}
       >
-        <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
-            <div className="flex-grow">
-              <CardTitle className={cn("text-lg font-semibold", isCompleted && "line-through text-muted-foreground")}>
-                {task.title}
-              </CardTitle>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
-                <span className={cn("flex items-center gap-2", isOverdue && "text-destructive font-semibold")}>
-                  <Calendar className="h-4 w-4" /> {formattedDate}
-                </span>
-                <span className="flex items-center gap-2">
-                  <Clock className="h-4 w-4" /> {formattedTime} ({task.duration}
-                  {' min)'}
-                </span>
-              </div>
+        <CardHeader className="flex flex-row items-start gap-4 p-4 pb-2">
+            <Checkbox
+                id={`card-task-${task.id}`}
+                checked={isCompleted}
+                onCheckedChange={handleToggleComplete}
+                aria-label={`Mark task ${task.title} as ${isCompleted ? 'incomplete' : 'complete'}`}
+                className={cn(
+                    "mt-1 h-5 w-5",
+                    isCompleted && 'data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600'
+                )}
+            />
+            <div className="flex-1 grid gap-1">
+                <label htmlFor={`card-task-${task.id}`} className={cn("text-lg font-semibold leading-none", isCompleted && "line-through text-muted-foreground")}>
+                    {task.title}
+                </label>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
+                    <span className={cn("flex items-center gap-2", isOverdue && "text-destructive font-semibold")}>
+                    <Calendar className="h-4 w-4" /> {formattedDate}
+                    </span>
+                    <span className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" /> {formattedTime} ({task.duration}{' min)'}
+                    </span>
+                </div>
             </div>
-            <div className="flex-shrink-0 w-full sm:w-auto pt-2 sm:pt-0">
-              {renderStatusControl()}
-            </div>
-          </div>
         </CardHeader>
 
-        <CardContent className="flex-grow pb-4 space-y-4">
+
+        <CardContent className="flex-grow py-2 px-4 pl-14">
           {task.description && (
             <p className={cn("text-sm text-foreground/80", isCompleted && "text-muted-foreground")}>{task.description}</p>
           )}
         </CardContent>
 
-        <CardFooter className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+        <CardFooter className="flex flex-col sm:flex-row gap-2 justify-between items-start sm:items-center p-4 pt-2 pl-14">
           <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="secondary" className="flex items-center gap-1.5">
               <Award className="h-3.5 w-3.5 text-amber-500" /> {task.points} pts
@@ -237,22 +208,21 @@ export function TaskCard({
               <TimerIcon className="mr-2 h-4 w-4" />
               {isTimerActive ? 'View Timer' : 'Start Timer'}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onEdit(task)}
-              disabled={task.status === 'completed'}
-            >
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit
-            </Button>
+            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="More actions">
+                <Button variant="ghost" size="icon" aria-label="More actions" className="h-9 w-9">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
+                <DropdownMenuItem
+                    onSelect={() => onEdit(task)}
+                    disabled={task.status === 'completed'}
+                >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit Task
+                </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => onPushToNextDay(task.id)}>
                   <SendToBack className="mr-2 h-4 w-4" />
                   Push to Next Day
@@ -281,4 +251,4 @@ export function TaskCard({
       )}
     </>
   );
-}
+});
