@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, {useState, useCallback} from 'react';
@@ -74,7 +73,7 @@ function SortableWidget({
   );
 }
 
-export default function LetsStartPage() {
+export default function DashboardPage() {
   const {
     state,
     addTask,
@@ -132,14 +131,18 @@ export default function LetsStartPage() {
     viewMode,
   };
 
+  const hasContent =
+    visibleWidgets.length > 0 ||
+    state.todaysPendingTasks.length > 0 ||
+    state.todaysRoutines.length > 0 ||
+    state.todaysActivity.length > 0;
+
   return (
     <div className="flex flex-col h-full">
       <header className="p-4 border-b">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div>
-            <h1 className="text-3xl font-bold text-primary">
-              Let's Start
-            </h1>
+            <h1 className="text-3xl font-bold text-primary">Dashboard</h1>
             <p className="text-muted-foreground">
               Your achievements for {format(new Date(), 'MMMM d, yyyy')}.
             </p>
@@ -154,9 +157,9 @@ export default function LetsStartPage() {
               <span className="hidden sm:inline ml-2">Customize</span>
             </Button>
             <Button asChild className="w-full sm:w-auto">
-              <Link href="/tasks">
+              <Link href="/plans">
                 <PlusCircle />
-                Manage Tasks
+                Manage Plans
               </Link>
             </Button>
           </div>
@@ -170,7 +173,7 @@ export default function LetsStartPage() {
             <Skeleton className="h-40 w-full" />
             <Skeleton className="h-28 w-full" />
           </div>
-        ) : (
+        ) : hasContent ? (
           <DndContext
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
@@ -189,34 +192,25 @@ export default function LetsStartPage() {
                     </SortableWidget>
                   );
                 })}
-
-                {state.todaysPendingTasks.length === 0 &&
-                  state.todaysRoutines.length === 0 &&
-                  state.todaysActivity.length === 0 && (
-                    <div className="flex items-center justify-center pt-16">
-                      <EmptyState
-                        onAddTask={() => {}}
-                        title="A Fresh Start!"
-                        message="No tasks or routines scheduled for today. Let's plan your day!"
-                      >
-                        <div className="flex flex-col sm:flex-row gap-4 mt-6">
-                          <Button asChild>
-                            <Link href="/tasks">
-                              <PlusCircle /> Plan Tasks
-                            </Link>
-                          </Button>
-                          <Button asChild variant="outline">
-                            <Link href="/timetable">
-                              <PlusCircle /> Set up Routines
-                            </Link>
-                          </Button>
-                        </div>
-                      </EmptyState>
-                    </div>
-                  )}
               </div>
             </SortableContext>
           </DndContext>
+        ) : (
+          <div className="flex items-center justify-center pt-16">
+            <EmptyState
+              onAddTask={() => {}}
+              title="A Fresh Start!"
+              message="No tasks or routines scheduled for today. Let's plan your day!"
+            >
+              <div className="flex flex-col sm:flex-row gap-4 mt-6">
+                <Button asChild>
+                  <Link href="/plans">
+                    <PlusCircle /> Plan Tasks & Routines
+                  </Link>
+                </Button>
+              </div>
+            </EmptyState>
+          </div>
         )}
       </main>
       <TaskDialog

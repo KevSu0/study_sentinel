@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, {useState, memo} from 'react';
@@ -90,6 +89,11 @@ export const RoutineListItem = memo(function RoutineListItem({
 
   const sortedDays = dayOrder.filter(day => routine.days.includes(day));
 
+  const handleDeleteConfirm = () => {
+    onDelete(routine.id);
+    setAlertOpen(false);
+  };
+
   return (
     <>
       <Card className="flex flex-col">
@@ -168,7 +172,7 @@ export const RoutineListItem = memo(function RoutineListItem({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => onDelete(routine.id)}>
+            <AlertDialogAction onClick={handleDeleteConfirm}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

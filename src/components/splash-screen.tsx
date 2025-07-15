@@ -1,4 +1,4 @@
-import { Flame } from 'lucide-react';
+import {Flame} from 'lucide-react';
 
 export function SplashScreen() {
   return (
@@ -10,7 +10,7 @@ export function SplashScreen() {
         </h1>
       </div>
       <p className="text-xl text-muted-foreground italic px-4">
-        "Study for your passion, This is your only purpose"
+        "The secret of getting ahead is getting started."
       </p>
     </div>
   );

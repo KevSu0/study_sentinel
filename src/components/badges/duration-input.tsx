@@ -37,7 +37,9 @@ export function DurationInput({value, onChange}: DurationInputProps) {
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 space-y-1">
-        <Label htmlFor="hours" className="sr-only">Hours</Label>
+        <Label htmlFor="hours" className="sr-only">
+          Hours
+        </Label>
         <Input
           id="hours"
           type="number"
@@ -49,7 +51,9 @@ export function DurationInput({value, onChange}: DurationInputProps) {
       </div>
       <span className="text-muted-foreground pt-5">h</span>
       <div className="flex-1 space-y-1">
-        <Label htmlFor="minutes" className="sr-only">Minutes</Label>
+        <Label htmlFor="minutes" className="sr-only">
+          Minutes
+        </Label>
         <Input
           id="minutes"
           type="number"
@@ -61,7 +65,7 @@ export function DurationInput({value, onChange}: DurationInputProps) {
           step="1"
         />
       </div>
-       <span className="text-muted-foreground pt-5">m</span>
+      <span className="text-muted-foreground pt-5">m</span>
     </div>
   );
 }
