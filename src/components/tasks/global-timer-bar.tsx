@@ -1,13 +1,16 @@
+
 'use client';
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
+import { useRouter } from 'next/navigation';
 import {useGlobalState} from '@/hooks/use-global-state';
 import type {StudyTask, Routine} from '@/lib/types';
 import {Button} from '@/components/ui/button';
-import {Timer, CheckCircle, XCircle, Pause, Play} from 'lucide-react';
+import {Timer, CheckCircle, XCircle, Pause, Play, Expand} from 'lucide-react';
 import {StopTimerDialog} from './stop-timer-dialog';
 import { RoutineLogDialog } from '../routines/routine-log-dialog';
 
 export function GlobalTimerBar() {
+  const router = useRouter();
   const {
     state,
     togglePause,
@@ -17,6 +20,14 @@ export function GlobalTimerBar() {
   const {activeItem, timeDisplay, isPaused, isOvertime} = state;
 
   const [isStopTaskDialogOpen, setStopTaskDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.active?.postMessage({ type: 'HARD_REFRESH' });
+      });
+    }
+  }, []);
 
   if (!activeItem) {
     return null;
@@ -45,9 +56,11 @@ export function GlobalTimerBar() {
   }
 
   const handleConfirmStopTask = (reason: string) => {
-    // The stopTimer logic is now inside the dialog confirmation
-    // So we just close the dialog. The global state will handle the rest.
     setStopTaskDialogOpen(false);
+  };
+  
+  const handleExpand = () => {
+    router.push('/timer');
   };
 
   return (
@@ -78,6 +91,15 @@ export function GlobalTimerBar() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+             <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleExpand}
+              className="hover:bg-white/20 px-2 sm:px-3"
+            >
+              <Expand />
+              <span className="hidden sm:inline">Expand</span>
+            </Button>
             <Button
               size="sm"
               variant="ghost"

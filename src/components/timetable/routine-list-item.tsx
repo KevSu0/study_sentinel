@@ -18,6 +18,7 @@ import {
   Trash2,
   Clock,
   Timer,
+  CheckCircle,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -44,6 +45,7 @@ interface RoutineListItemProps {
   routine: Routine;
   onEdit: (routine: Routine) => void;
   onDelete: (routineId: string) => void;
+  onComplete: (routine: Routine) => void;
 }
 
 const daysMap = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -53,6 +55,7 @@ export const RoutineListItem = memo(function RoutineListItem({
   routine,
   onEdit,
   onDelete,
+  onComplete,
 }: RoutineListItemProps) {
   const {
     state: {activeItem},
@@ -134,11 +137,19 @@ export const RoutineListItem = memo(function RoutineListItem({
             ))}
           </div>
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex flex-col sm:flex-row gap-2">
+          <Button
+            onClick={() => onComplete(routine)}
+            className="w-full sm:w-auto"
+            variant="outline"
+          >
+            <CheckCircle className="mr-2 h-4 w-4" />
+            Complete
+          </Button>
           <Button
             onClick={handleStartTimer}
             disabled={isAnyTimerActive && !isTimerActiveForThis}
-            className="w-full"
+            className="w-full flex-grow"
             variant={isTimerActiveForThis ? 'destructive' : 'default'}
           >
             {isTimerActiveForThis ? (
@@ -149,7 +160,7 @@ export const RoutineListItem = memo(function RoutineListItem({
             ) : (
               <>
                 <PlayCircle className="mr-2 h-4 w-4" />
-                Start Infinity Timer
+                Start Timer
               </>
             )}
           </Button>

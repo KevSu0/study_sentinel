@@ -14,7 +14,11 @@ export type DashboardWidgetType =
   | 'daily_briefing'
   | 'stats_overview'
   | 'unlocked_badges'
-  | 'completed_today';
+  | 'todays_routines'
+  | 'todays_plan'
+  | 'completed_today'
+  | 'achievement_countdown'
+  | 'daily_active_productivity';
 
 export interface DashboardWidget {
   id: DashboardWidgetType;
@@ -27,14 +31,22 @@ export const WIDGET_NAMES: Record<DashboardWidgetType, string> = {
   daily_briefing: 'Daily Briefing / Quote',
   stats_overview: 'Statistics Overview',
   unlocked_badges: 'Badges Unlocked Today',
+  todays_routines: "Today's Routines",
+  todays_plan: "Today's Plan",
   completed_today: "Today's Activity",
+  achievement_countdown: 'Achievement Countdown',
+  daily_active_productivity: 'Daily Active Productivity',
 };
 
 const DEFAULT_LAYOUT: DashboardWidget[] = [
+  {id: 'achievement_countdown', isVisible: true},
   {id: 'daily_briefing', isVisible: true},
   {id: 'stats_overview', isVisible: true},
+  {id: 'daily_active_productivity', isVisible: true},
   {id: 'completed_today', isVisible: true},
   {id: 'unlocked_badges', isVisible: true},
+  {id: 'todays_routines', isVisible: false},
+  {id: 'todays_plan', isVisible: false},
 ];
 
 interface DashboardLayoutContextType {
@@ -44,13 +56,11 @@ interface DashboardLayoutContextType {
   ) => void;
   toggleWidgetVisibility: (widgetId: DashboardWidgetType) => void;
   isLoaded: boolean;
-  visibleWidgets: DashboardWidget[];
 }
 
-const DashboardLayoutContext =
+export const DashboardLayoutContext =
   createContext<DashboardLayoutContextType | null>(null);
 
-// This is a helper function to ensure localStorage is only accessed on the client
 const getLayoutFromStorage = (): DashboardWidget[] | null => {
   if (typeof window === 'undefined') {
     return null;
@@ -76,28 +86,20 @@ export function DashboardLayoutProvider({children}: {children: ReactNode}) {
     let initialLayout: DashboardWidget[];
 
     if (savedLayout) {
-      // Create a map of saved widgets for efficient lookup
       const savedWidgetMap = new Map(savedLayout.map(w => [w.id, w]));
-
-      // Merge with defaults to ensure new widgets are included
       const mergedLayout = DEFAULT_LAYOUT.map(defaultWidget =>
         savedWidgetMap.has(defaultWidget.id)
-          ? savedWidgetMap.get(defaultWidget.id)! // Use saved config
-          : defaultWidget // Use default for new widgets
+          ? savedWidgetMap.get(defaultWidget.id)!
+          : defaultWidget
       );
-
-      // Re-order based on saved order, appending any new widgets at the end
       const finalLayout = [
-        // Start with widgets in the order they were saved
         ...savedLayout
           .map(saved => mergedLayout.find(m => m.id === saved.id))
           .filter((w): w is DashboardWidget => !!w),
-        // Add any new widgets from the default layout that weren't in the saved layout
         ...mergedLayout.filter(
           merged => !savedLayout.some(saved => saved.id === merged.id)
         ),
       ];
-
       initialLayout = finalLayout;
     } else {
       initialLayout = DEFAULT_LAYOUT;
@@ -138,16 +140,11 @@ export function DashboardLayoutProvider({children}: {children: ReactNode}) {
     [setLayout]
   );
 
-  const visibleWidgets = useMemo(() => {
-    return layout.filter(w => w.isVisible);
-  }, [layout]);
-
   const value = {
     layout,
     setLayout,
     toggleWidgetVisibility,
     isLoaded,
-    visibleWidgets,
   };
 
   return (

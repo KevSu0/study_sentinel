@@ -1,0 +1,22 @@
+{
+  "name": "KuKe's Motivation",
+  "short_name": "KuKe",
+  "description": "Your personal AI-powered motivator to track and conquer your goals.",
+  "theme_color": "#1c192c",
+  "background_color": "#1c192c",
+  "start_url": "/",
+  "display": "standalone",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

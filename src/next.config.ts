@@ -1,18 +1,23 @@
 
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
+
+const withPWA = require('next-pwa')({
+    dest: 'public',
+    register: true,
+    skipWaiting: true,
+    customWorkerDir: 'src/worker',
+    disable: process.env.NODE_ENV === 'development',
+});
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  output: 'export',
-  reactStrictMode: false,
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  reactStrictMode: true,
+  // This is required to allow the Next.js dev server to accept requests from the
+  // Firebase Studio environment.
+  allowedDevOrigins: [
+    '*.cloudworkstations.dev',
+    'https://6000-firebase-studio-1752054198332.cluster-sumfw3zmzzhzkx4mpvz3ogth4y.cloudworkstations.dev',
+  ],
   images: {
-    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
@@ -22,15 +27,42 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Ignore the .genkit directory to prevent dev server restarts
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN',
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+        ],
+      },
+    ];
+  },
   webpack(config, {isServer, dev}) {
     if (dev) {
-      const originalWatchOptions = config.watchOptions;
       config.watchOptions = {
-        ...originalWatchOptions,
+        ...config.watchOptions,
+        poll: 1000,
+        aggregateTimeout: 300,
         ignored: [
-          ...(originalWatchOptions.ignored || []),
+          ...(Array.isArray(config.watchOptions.ignored)
+            ? config.watchOptions.ignored
+            : []),
           '**/.genkit/**',
+          '**/.next/**',
         ],
       };
     }
@@ -39,4 +71,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['handlebars', 'dotprompt', '@genkit-ai/core'],
 };
 
-export default nextConfig;
+// Only wrap with PWA in production
+const finalConfig = process.env.NODE_ENV === 'production' ? withPWA(nextConfig) : nextConfig;
+
+export default finalConfig;

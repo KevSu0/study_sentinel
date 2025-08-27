@@ -1,0 +1,578 @@
+'use client';
+
+import {useMemo, useCallback} from 'react';
+import {format, subDays, startOfDay, parseISO, isSameDay, set, parse, addDays} from 'date-fns';
+import { getStudyDateForTimestamp, getTimeSinceStudyDayStart, getStudyDay } from '@/lib/utils';
+import { useLiveQuery } from 'dexie-react-hooks';
+import {
+  profileRepository,
+  taskRepository,
+  sessionRepository,
+  statsDailyRepository,
+  badgeRepository,
+} from '@/lib/repositories';
+import type {
+  StudyTask,
+  CompletedWork,
+  Badge,
+  BadgeCategory,
+  UserProfile,
+  LogEvent,
+} from '@/lib/types';
+import { RoutineStat } from '@/components/stats/routine-stats-list';
+import type { Activity } from '@/components/stats/daily-activity-timeline';
+
+interface UseStatsProps {
+  timeRange: string;
+  selectedDate: Date;
+}
+
+// Simple hash function to generate a color from a string
+const generateColorFromString = (str: string) => {
+    if (!str) return '#CCCCCC';
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    const shortened = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+    return `#${"00000".substring(0, 6 - shortened.length)}${shortened}`;
+};
+
+
+export function useStats({
+  timeRange,
+  selectedDate,
+}: UseStatsProps) {
+  const { timeRange: timeRangeDep, selectedDate: selectedDateDep } = { timeRange, selectedDate };
+
+  const dateRange = useMemo(() => {
+    const now = startOfDay(new Date());
+    if (timeRange === 'daily') {
+      const startDate = format(selectedDate, 'yyyy-MM-dd');
+      return { startDate, endDate: startDate };
+    }
+    if (timeRange === 'overall') {
+      return { startDate: '1970-01-01', endDate: '9999-12-31' };
+    }
+    const daysToSubtract = timeRange === 'weekly' ? 7 : 30;
+    const startDate = format(subDays(now, daysToSubtract), 'yyyy-MM-dd');
+    const endDate = format(now, 'yyyy-MM-dd');
+    return { startDate, endDate };
+  }, [timeRange, selectedDate]);
+
+  const tasks = useLiveQuery(() => taskRepository.getByDateRange(dateRange.startDate, dateRange.endDate), [dateRange]);
+  const allCompletedWork = useLiveQuery(() => sessionRepository.getByDateRange(dateRange.startDate, dateRange.endDate), [dateRange]);
+  const profile = useLiveQuery(() => profileRepository.getById('user-profile'), []);
+  const allBadges = useLiveQuery(() => badgeRepository.getAll(), []);
+  const earnedBadges = useLiveQuery(() => profileRepository.getById('user-profile').then(p => p?.earnedBadges), []);
+
+  const filteredTasks = useMemo(() => {
+    if (!tasks || !Array.isArray(tasks)) return [];
+    return tasks.filter(t => t.status !== 'archived');
+  }, [tasks]);
+
+  const filteredCompletedTasks = useMemo(
+    () => filteredTasks?.filter(t => t.status === 'completed') || [],
+    [filteredTasks]
+  );
+
+  const filteredWork = useMemo(() => {
+    if (!allCompletedWork || !Array.isArray(allCompletedWork)) return [];
+    return allCompletedWork.filter(w => !w.isUndone && !isNaN(new Date(w.timestamp).getTime()));
+  }, [allCompletedWork]);
+
+  const timeRangeStats = useMemo(() => {
+    if (!filteredWork || !filteredTasks || !filteredCompletedTasks) {
+      return {
+        totalHours: '0.0',
+        totalPoints: 0,
+        completedCount: 0,
+        completionRate: 0,
+        avgSessionDuration: '0',
+        focusScore: 100,
+      };
+    }
+    const totalSeconds = filteredWork.reduce(
+      (sum, work) => sum + work.duration,
+      0
+    );
+    const totalPausedSeconds = filteredWork.reduce(
+        (sum, work) => sum + (work.pausedDuration || 0),
+        0
+    );
+    const totalProductiveSeconds = totalSeconds - totalPausedSeconds;
+
+    const totalHours = (totalProductiveSeconds / 3600).toFixed(1);
+    const totalPoints = filteredWork.reduce(
+      (sum, work) => sum + work.points,
+      0
+    );
+
+    const completionRate =
+      filteredTasks.length > 0
+        ? (filteredCompletedTasks.length / filteredTasks.length) * 100
+        : 0;
+
+    const avgSessionDuration =
+      filteredWork.length > 0
+        ? (totalSeconds / 60 / filteredWork.length).toFixed(0)
+        : '0';
+
+    const focusScore = totalSeconds > 0 ? (totalProductiveSeconds / totalSeconds) * 100 : 100;
+
+    return {
+      totalHours,
+      totalPoints,
+      completedCount: filteredWork.length,
+      completionRate,
+      avgSessionDuration,
+      focusScore,
+    };
+  }, [filteredWork, filteredTasks, filteredCompletedTasks]);
+
+  const studyStreak = useMemo(() => {
+    if (!allCompletedWork || allCompletedWork.length === 0) return 0;
+    const completedDates = new Set(allCompletedWork.filter((w: CompletedWork) => !w.isUndone).map((w: CompletedWork) => w.date));
+    if (completedDates.size === 0) return 0;
+  
+    let streak = 0;
+    let currentStudyDay = getStudyDay(new Date());
+  
+    const todayStr = format(currentStudyDay, 'yyyy-MM-dd');
+    const yesterdayStr = format(subDays(currentStudyDay, 1), 'yyyy-MM-dd');
+  
+    if (!completedDates.has(todayStr) && !completedDates.has(yesterdayStr)) {
+      return 0;
+    }
+  
+    if (!completedDates.has(todayStr)) {
+      currentStudyDay = subDays(currentStudyDay, 1);
+    }
+  
+    while (completedDates.has(format(currentStudyDay, 'yyyy-MM-dd'))) {
+      streak++;
+      currentStudyDay = subDays(currentStudyDay, 1);
+    }
+    return streak;
+  }, [allCompletedWork]);
+
+  const badgeStats = useMemo(() => {
+    const earnedCount = earnedBadges ? Object.keys(earnedBadges).length : 0;
+    const totalCount = allBadges ? allBadges.length : 0;
+    return {earnedCount, totalCount};
+  }, [earnedBadges, allBadges]);
+
+  const categorizedBadges = useMemo(() => {
+    const categories: Record<BadgeCategory, Badge[]> = {
+      daily: [],
+      weekly: [],
+      monthly: [],
+      overall: [],
+    };
+    if (!allBadges) return categories;
+    for (const badge of allBadges) {
+      if (!badge.isEnabled) continue;
+      const category = (badge.isCustom ? 'overall' : badge.category) as BadgeCategory;
+      categories[category].push(badge);
+    }
+    return categories;
+  }, [allBadges]);
+
+    const dailyPieChartData = useMemo(() => {
+    if (!filteredWork) return [];
+    const workForDay = filteredWork.filter(w =>
+      isSameDay(getStudyDateForTimestamp(w.timestamp), selectedDate)
+    );
+
+    const workByTask = workForDay.reduce(
+      (acc, work) => {
+        const name = `${work.type === 'task' ? 'Task' : 'Routine'}: ${work.title}`;
+        if (!acc[name]) {
+          acc[name] = {
+            totalDuration: 0,
+            pausedDuration: 0,
+            pauseCount: 0,
+          };
+        }
+        acc[name].totalDuration += work.duration;
+        acc[name].pausedDuration += work.pausedDuration || 0;
+        acc[name].pauseCount += (work as any).pauseCount || 0;
+        return acc;
+      },
+      {} as Record<
+        string,
+        {
+          totalDuration: number;
+          pausedDuration: number;
+          pauseCount: number;
+        }
+      >
+    );
+
+    const data = Object.entries(workByTask).map(([name, value]) => {
+      const productiveDuration = (value as { totalDuration: number; pausedDuration: number }).totalDuration - (value as { totalDuration: number; pausedDuration: number }).pausedDuration;
+      const focusPercentage = (value as { totalDuration: number }).totalDuration > 0 ? (productiveDuration / (value as { totalDuration: number }).totalDuration) * 100 : 100;
+      return {
+        name,
+        productiveDuration,
+        pausedDuration: (value as { pausedDuration: number }).pausedDuration,
+        pauseCount: (value as { pauseCount: number }).pauseCount,
+        focusPercentage,
+      };
+    });
+    return data;
+  }, [filteredWork, selectedDate]);
+  
+  const dailyActivityTimelineData: Activity[] = useMemo(() => {
+    if (!filteredWork) return [];
+    const logsForSelectedDay = filteredWork.filter(log =>
+        isSameDay(getStudyDateForTimestamp(log.timestamp), selectedDate)
+    );
+  
+    return logsForSelectedDay.map(log => {
+      const date = new Date(log.timestamp);
+      const startHour = date.getHours() + date.getMinutes() / 60;
+      
+      let adjustedStartHour = startHour;
+      if (startHour < 4) {
+          adjustedStartHour += 24;
+      }
+      
+      const endHour = adjustedStartHour + log.duration / 3600;
+  
+      return {
+        name: log.title,
+        time: [adjustedStartHour, endHour] as [number, number],
+        type: log.type,
+        duration: log.duration,
+        pausedDuration: log.pausedDuration,
+        color: generateColorFromString(`${log.type}-${log.title}`),
+        pauseCount: (log as any).pauseCount,
+      };
+    });
+  }, [filteredWork, selectedDate]);
+  
+  const dailyComparisonStats = useMemo(() => {
+    if (!allCompletedWork) return undefined;
+    const getSessionTimes = (work: CompletedWork[]) => {
+      if (work.length === 0) return null;
+      const start = Math.min(...work.map(w => parseISO(w.timestamp).getTime()));
+      const end = Math.max(...work.map(w => parseISO(w.timestamp).getTime() + w.duration * 1000));
+      return { start, end };
+    };
+
+    const workByStudyDay = (allCompletedWork as CompletedWork[]).reduce((acc: Record<string, { duration: number; points: number; work: CompletedWork[] }>, work: CompletedWork) => {
+      const day = work.date;
+      if (!acc[day]) {
+        acc[day] = { duration: 0, points: 0, work: [] };
+      }
+      acc[day].duration += work.duration;
+      acc[day].points += work.points;
+      acc[day].work.push(work);
+      return acc;
+    }, {} as Record<string, { duration: number; points: number; work: CompletedWork[] }>);
+
+    const getAggregatedStats = (days: string[]) => {
+      const stats = { duration: 0, points: 0, start: 0, end: 0, count: 0 };
+      const sessionTimes: { start: number; end: number }[] = [];
+
+      for (const day of days) {
+        const dayData = workByStudyDay[day];
+        if (dayData) {
+          stats.duration += dayData.duration;
+          stats.points += dayData.points;
+          const session = getSessionTimes(dayData.work);
+          if(session) sessionTimes.push(session);
+          stats.count++;
+        }
+      }
+      
+      if (sessionTimes.length > 0) {
+        stats.start = sessionTimes.reduce((sum, s) => sum + s.start, 0) / sessionTimes.length;
+        stats.end = sessionTimes.reduce((sum, s) => sum + s.end, 0) / sessionTimes.length;
+      }
+
+      return stats;
+    };
+
+    const currentStudyDay = getStudyDay(selectedDate);
+    const todayStr = format(currentStudyDay, 'yyyy-MM-dd');
+    const todayData = workByStudyDay[todayStr] || { duration: 0, points: 0, work: [] };
+    const todaySession = getSessionTimes(todayData.work);
+    const todayStats = { ...todayData, points: Math.round(todayData.points), start: todaySession?.start || 0, end: todaySession?.end || 0 };
+
+    const yesterdayStr = format(subDays(currentStudyDay, 1), 'yyyy-MM-dd');
+    const yesterdayData = workByStudyDay[yesterdayStr] || { duration: 0, points: 0, work: [] };
+    const yesterdaySession = getSessionTimes(yesterdayData.work);
+    const yesterdayStats = { ...yesterdayData, points: Math.round(yesterdayData.points), start: yesterdaySession?.start || 0, end: yesterdaySession?.end || 0 };
+
+    const allDaysWithWork = Object.keys(workByStudyDay);
+    const overallStats = getAggregatedStats(allDaysWithWork);
+
+    const last3Days = Array.from({ length: 3 }, (_, i) => format(subDays(currentStudyDay, i + 1), 'yyyy-MM-dd'));
+    const last3DaysStats = getAggregatedStats(last3Days);
+
+    const last7Days = Array.from({ length: 7 }, (_, i) => format(subDays(currentStudyDay, i), 'yyyy-MM-dd'));
+    const weeklyStats = getAggregatedStats(last7Days);
+    
+    const last30Days = Array.from({ length: 30 }, (_, i) => format(subDays(currentStudyDay, i), 'yyyy-MM-dd'));
+    const monthlyStats = getAggregatedStats(last30Days);
+
+    const calcAverage = (stats: { duration: number; points: number; start: number; end: number; count: number; }, days: number) => ({
+        duration: stats.count > 0 ? stats.duration / days : 0,
+        points: stats.count > 0 ? Math.round(stats.points / days) : 0,
+        start: stats.start,
+        end: stats.end,
+    });
+
+    const dailyAverage = {
+        duration: overallStats.count > 0 ? overallStats.duration / overallStats.count : 0,
+        points: overallStats.count > 0 ? Math.round(overallStats.points / overallStats.count) : 0,
+        start: overallStats.start,
+        end: overallStats.end,
+    }
+
+    const data = {
+      today: todayStats,
+      yesterday: yesterdayStats,
+      dailyAverage: dailyAverage,
+      last3DaysAverage: calcAverage(last3DaysStats, 3),
+      weeklyAverage: calcAverage(weeklyStats, 7),
+      monthlyAverage: calcAverage(monthlyStats, 30),
+    };
+    return data;
+  }, [allCompletedWork, selectedDate]);
+
+  const barChartData = useMemo(() => {
+    if (!profile || !filteredWork) return [];
+    const now = new Date();
+    const dailyGoal = profile.dailyStudyGoal || 8;
+
+    if (timeRange === 'daily') {
+        return dailyPieChartData.map(item => ({
+            name: item.name.length > 20 ? `${item.name.substring(0, 18)}...` : item.name,
+            hours: parseFloat((item.productiveDuration / 3600).toFixed(2)),
+            goal: dailyGoal / (dailyPieChartData.length || 1),
+        }));
+    }
+
+    if (timeRange === 'overall') {
+      const monthlyData = filteredWork.reduce(
+        (acc, work) => {
+          const monthKey = format(parseISO(work.date), 'yyyy-MM');
+          acc[monthKey] = (acc[monthKey] || 0) + work.duration;
+          return acc;
+        },
+        {} as Record<string, number>
+      );
+
+      return Object.keys(monthlyData)
+        .sort()
+        .map(monthKey => ({
+          name: format(parseISO(`${monthKey}-01`), 'MMM yy'),
+          hours: parseFloat((monthlyData[monthKey] / 3600).toFixed(2)),
+          goal: dailyGoal * 30,
+        }));
+    }
+
+    const dataPoints = timeRange === 'weekly' ? 7 : 30;
+    const data: {name: string; hours: number; goal: number}[] = [];
+    for (let i = dataPoints - 1; i >= 0; i--) {
+      const date = subDays(now, i);
+      const dayName =
+        timeRange === 'weekly' ? format(date, 'eee') : format(date, 'd');
+
+      const durationOnDay = filteredWork
+        .filter(work => isSameDay(getStudyDateForTimestamp(work.timestamp), date))
+        .reduce((sum, work) => sum + work.duration, 0);
+
+      data.push({
+        name: dayName,
+        hours: parseFloat((durationOnDay / 3600).toFixed(2)),
+        goal: dailyGoal,
+      });
+    }
+    return data;
+  }, [filteredWork, profile?.dailyStudyGoal, timeRange, dailyPieChartData]);
+
+  const chartDetails = useMemo(() => {
+    if (timeRange === 'daily') {
+      return {
+        title: "Today's Study Breakdown",
+        description: 'Hours spent on each completed session today.',
+      };
+    }
+    if (timeRange === 'weekly') {
+      return {
+        title: 'Study Activity',
+        description: 'Hours studied in the last 7 days.',
+      };
+    }
+    if (timeRange === 'monthly') {
+      return {
+        title: 'Study Activity',
+        description: 'Hours studied in the last 30 days.',
+      };
+    }
+    return {
+      title: 'Overall Study Activity',
+      description: 'Total hours studied per month.',
+    };
+  }, [timeRange]);
+
+  const performanceCoachStats = useMemo(() => {
+    if (!filteredWork) return undefined;
+    const getSessionTimes = (work: CompletedWork[]) => {
+      if (work.length === 0) return null;
+      const start = Math.min(
+        ...work.map(w => parseISO(w.timestamp).getTime())
+      );
+      const end = Math.max(
+        ...work.map(
+          w => parseISO(w.timestamp).getTime() + w.duration * 1000
+        )
+      );
+      return {start, end};
+    };
+
+    const workForSelectedDate = filteredWork.filter(w =>
+      isSameDay(getStudyDateForTimestamp(w.timestamp), selectedDate)
+    );
+    const selectedDateSession = getSessionTimes(workForSelectedDate);
+
+    const weekEnd = selectedDate;
+    const weeklyWork = filteredWork.filter(w => {
+      const studyDate = getStudyDateForTimestamp(w.timestamp);
+      return studyDate >= subDays(weekEnd, 7) && studyDate <= weekEnd;
+    });
+
+    const getAverageTimes = (work: CompletedWork[]) => {
+      const workByDay: Record<string, CompletedWork[]> = work.reduce(
+        (acc, w) => {
+          const day = format(getStudyDateForTimestamp(w.timestamp), 'yyyy-MM-dd');
+          (acc[day] = acc[day] || []).push(w);
+          return acc;
+        },
+        {} as Record<string, CompletedWork[]>
+      );
+
+      const sessions = Object.values(workByDay)
+        .map(getSessionTimes)
+        .filter((item): item is { start: number; end: number; } => item !== null);
+
+      if (sessions.length === 0) return {avgStart: null, avgEnd: null};
+      
+      const totalStartOffset = sessions.reduce((sum, s) => sum + (getTimeSinceStudyDayStart(s.start) || 0), 0);
+      const totalEndOffset = sessions.reduce((sum, s) => sum + (getTimeSinceStudyDayStart(s.end) || 0), 0);
+
+      const avgStartOffset = totalStartOffset / sessions.length;
+      const avgEndOffset = totalEndOffset / sessions.length;
+
+      const selectedStudyDayStart = set(startOfDay(selectedDate), { hours: 4 });
+
+      return {
+        avgStart: selectedStudyDayStart.getTime() + avgStartOffset,
+        avgEnd: selectedStudyDayStart.getTime() + avgEndOffset,
+      };
+    };
+
+    const data = {
+      selectedDateSession,
+      week: getAverageTimes(weeklyWork),
+    };
+    return data;
+  }, [filteredWork, selectedDate]);
+
+  const routineStats = useMemo(() => {
+    const routineWork = filteredWork.filter(w => w.type === 'routine');
+    const stats: Record<string, RoutineStat> = {};
+
+    for (const work of routineWork) {
+      if (!stats[work.title]) {
+        stats[work.title] = { name: work.title, totalSeconds: 0, sessionCount: 0, points: 0 };
+      }
+      stats[work.title].totalSeconds += work.duration;
+      stats[work.title].sessionCount += 1;
+      stats[work.title].points += work.points;
+    }
+    
+    return Object.values(stats);
+  }, [filteredWork]);
+
+  const peakProductivityData = useMemo(() => {
+    const workByHour = filteredWork.reduce((acc, work) => {
+      try {
+        const hour = format(parseISO(work.timestamp), 'ha'); // e.g., '10AM', '3PM'
+        acc[hour] = (acc[hour] || 0) + work.duration;
+      } catch (e) {
+        // Silently ignore entries with invalid timestamps
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(workByHour).map(([hour, totalSeconds]) => ({
+      hour,
+      totalSeconds: totalSeconds as number,
+    }));
+  }, [filteredWork]);
+
+  const calculateProductivityForDay = useCallback((date: Date) => {
+    if (!filteredWork || !profile) return { real: 0, active: 0 };
+    const workForDay = filteredWork.filter(w => isSameDay(getStudyDateForTimestamp(w.timestamp), date));
+    const productiveSeconds = workForDay.reduce((sum, work) => sum + (work.duration - (work.pausedDuration || 0)), 0);
+
+    // Real Productivity
+    const startOfStudyDay = set(startOfDay(date), { hours: 4 });
+    const nowForDay = isSameDay(date, new Date()) ? new Date() : set(addDays(startOfDay(date), 1), { hours: 3, minutes: 59, seconds: 59 });
+    const totalSecondsInDay = Math.max(1, (nowForDay.getTime() - startOfStudyDay.getTime()) / 1000);
+    const realProductivity = (productiveSeconds / totalSecondsInDay) * 100;
+
+    // Active Productivity
+    const dailyGoalSeconds = (profile.dailyStudyGoal || 8) * 3600;
+    const activeProductivity = (productiveSeconds / dailyGoalSeconds) * 100;
+
+    return { real: realProductivity, active: activeProductivity };
+  }, [filteredWork, profile]);
+
+
+  const getProductivityTrend = useCallback((days: number) => {
+    const trendData = [];
+    const today = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+        const date = subDays(today, i);
+        const { real, active } = calculateProductivityForDay(date);
+        trendData.push({
+            day: format(date, 'eee'),
+            real: real,
+            active: active
+        });
+    }
+    return trendData;
+  }, [calculateProductivityForDay]);
+
+  const productivityTrend = useMemo(() => getProductivityTrend(7), [getProductivityTrend]);
+
+  const dailyProductivity = useMemo(() => {
+    return calculateProductivityForDay(selectedDate);
+  }, [selectedDate, calculateProductivityForDay]);
+
+  return {
+    timeRangeStats,
+    studyStreak,
+    badgeStats,
+    categorizedBadges,
+    barChartData,
+    chartDetails,
+    dailyPieChartData,
+    dailyComparisonStats,
+    dailyActivityTimelineData,
+    performanceCoachStats,
+    routineStats,
+    peakProductivityData,
+    realProductivityData: productivityTrend.map(p => ({ day: p.day, productivity: p.real })),
+    activeProductivityData: productivityTrend.map(p => ({ day: p.day, productivity: p.active })),
+    dailyRealProductivity: dailyProductivity.real,
+    dailyActiveProductivity: dailyProductivity.active,
+  };
+}

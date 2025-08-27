@@ -3,7 +3,8 @@
 
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {ReactNode} from 'react';
+import {ReactNode, Suspense, lazy} from 'react';
+import dynamic from 'next/dynamic';
 import {ThemeProvider} from 'next-themes';
 import {
   Sidebar,
@@ -19,7 +20,7 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar';
-import {Toaster} from '@/components/ui/toaster';
+import {Toaster as HotToaster} from 'react-hot-toast';
 import {Logo} from '@/components/logo';
 import {
   LayoutDashboard,
@@ -28,22 +29,42 @@ import {
   Sparkles,
   User,
   ClipboardList,
+  MessageCircle,
+  Settings,
+  Calendar,
 } from 'lucide-react';
 import {ConfettiProvider} from './providers/confetti-provider';
 import {SplashScreen} from '@/components/splash-screen';
 import {GlobalTimerBar} from './tasks/global-timer-bar';
-import {BottomNav} from './bottom-nav';
-import {useGlobalState, GlobalStateProvider} from '@/hooks/use-global-state';
-import {ViewModeProvider} from '@/hooks/use-view-mode.tsx';
-import {DashboardLayoutProvider} from '@/hooks/use-dashboard-layout.tsx';
-import {UserMenu} from './user-menu';
+import {GlobalStateProvider, useGlobalState} from '@/hooks/use-global-state';
+import {ViewModeProvider} from '@/hooks/use-view-mode';
+import {DashboardLayoutProvider} from '@/hooks/use-dashboard-layout';
+import {Skeleton} from './ui/skeleton';
+import { RoutineLogDialog } from './routines/routine-log-dialog';
+import { AnimatePresence, motion } from 'framer-motion';
+import { QuickStartSheet } from './dashboard/quick-start-sheet';
+
+const UserMenu = dynamic(() => import('./user-menu').then(m => m.UserMenu), {
+  ssr: false,
+  loading: () => <Skeleton className="h-14 w-full" />,
+});
+
+const BottomNav = dynamic(
+  () => import('./bottom-nav').then(m => m.BottomNav),
+  {ssr: false}
+);
 
 function AppContent({children}: {children: ReactNode}) {
   const {state} = useGlobalState();
   const {isLoaded} = state;
+  const pathname = usePathname();
 
   if (!isLoaded) {
     return <SplashScreen />;
+  }
+  
+  if (pathname === '/timer') {
+    return children;
   }
 
   return (
@@ -64,28 +85,14 @@ function AppLayout({children}: {children: ReactNode}) {
   };
 
   const menuItems = [
-    {
-      href: '/',
-      label: 'Dashboard',
-      icon: LayoutDashboard,
-    },
-    {
-      href: '/plans',
-      label: 'Plans & Routines',
-      icon: ClipboardList,
-    },
-    {
-      href: '/briefing',
-      label: 'Daily Briefing',
-      icon: Sparkles,
-    },
-    {
-      href: '/stats',
-      label: 'Stats',
-      icon: TrendingUp,
-    },
-    {href: '/badges', label: 'Badges', icon: Award},
-    {href: '/profile', label: 'Profile', icon: User},
+    { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/plans', label: 'Plans', icon: ClipboardList },
+    { href: '/calendar', label: 'Calendar', icon: Calendar },
+    { href: '/chat', label: 'AI Coach', icon: MessageCircle },
+    { href: '/stats', label: 'Stats', icon: TrendingUp },
+    { href: '/badges', label: 'Badges', icon: Award },
+    { href: '/profile', label: 'Profile', icon: User },
+    { href: '/settings', label: 'Settings', icon: Settings },
   ];
 
   return (
@@ -119,15 +126,19 @@ function AppLayout({children}: {children: ReactNode}) {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <div className="p-4 border-b flex items-center justify-between md:hidden sticky top-0 bg-background z-30">
-          <Logo />
-          <SidebarTrigger />
+        <div className="flex flex-col h-svh">
+          <div className="p-4 border-b flex items-center justify-between md:hidden sticky top-0 bg-background z-30 shrink-0">
+            <Logo />
+            <SidebarTrigger />
+          </div>
+          <GlobalTimerBar />
+          <div className="flex-1 pb-20 md:pb-0 overflow-y-auto">{children}</div>
         </div>
-        <GlobalTimerBar />
-        <div className="pb-16 md:pb-0">{children}</div>
       </SidebarInset>
-      <Toaster />
+      <HotToaster position="top-center" toastOptions={{duration: 3000}} />
       <BottomNav />
+      <RoutineLogDialog />
+      <QuickStartSheet />
     </>
   );
 }
@@ -140,15 +151,15 @@ export function Providers({children}: {children: ReactNode}) {
       enableSystem
       disableTransitionOnChange
     >
-      <ConfettiProvider>
-        <GlobalStateProvider>
-          <ViewModeProvider>
-            <DashboardLayoutProvider>
-              <AppContent>{children}</AppContent>
-            </DashboardLayoutProvider>
-          </ViewModeProvider>
-        </GlobalStateProvider>
-      </ConfettiProvider>
+        <ConfettiProvider>
+            <GlobalStateProvider>
+                <ViewModeProvider>
+                    <DashboardLayoutProvider>
+                        <AppContent>{children}</AppContent>
+                    </DashboardLayoutProvider>
+                </ViewModeProvider>
+            </GlobalStateProvider>
+        </ConfettiProvider>
     </ThemeProvider>
   );
 }

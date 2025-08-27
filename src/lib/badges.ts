@@ -18,6 +18,7 @@ import {
 export const SYSTEM_BADGES: readonly Omit<Badge, 'id' | 'isCustom' | 'isEnabled'>[] = [
   {
     name: 'First Step',
+    requiredCount: 0,
     description: 'Complete your first study task.',
     motivationalMessage:
       "The journey of a thousand miles begins with a single step. You've taken yours. Keep going!",
@@ -34,6 +35,7 @@ export const SYSTEM_BADGES: readonly Omit<Badge, 'id' | 'isCustom' | 'isEnabled'
   },
   {
     name: 'Routine Rookie',
+    requiredCount: 0,
     description: 'Complete your first timed routine session.',
     motivationalMessage:
       'You started your first routine! Building consistent habits is the key to long-term success. Keep it up!',
@@ -50,6 +52,7 @@ export const SYSTEM_BADGES: readonly Omit<Badge, 'id' | 'isCustom' | 'isEnabled'
   },
   {
     name: 'Daily Dedication',
+    requiredCount: 0,
     description: 'Study for at least 2 hours in a single day.',
     motivationalMessage:
       "Two hours of focused study! That's discipline in action. Imagine what you can do tomorrow. Keep building the momentum!",
@@ -66,6 +69,7 @@ export const SYSTEM_BADGES: readonly Omit<Badge, 'id' | 'isCustom' | 'isEnabled'
   },
   {
     name: 'Hardcore Hustle',
+    requiredCount: 0,
     description: 'Study for at least 4 hours in a single day.',
     motivationalMessage:
       'Four hours in a day! You are pushing your limits and it shows. This dedication is what separates the good from the great.',
@@ -82,6 +86,7 @@ export const SYSTEM_BADGES: readonly Omit<Badge, 'id' | 'isCustom' | 'isEnabled'
   },
     {
     name: 'Deep Work Novice',
+    requiredCount: 0,
     description: 'Study for 90 minutes in a single session.',
     motivationalMessage:
       'A full 90-minute session! You tapped into a state of deep focus, which is where real learning happens. Fantastic work!',
@@ -98,6 +103,7 @@ export const SYSTEM_BADGES: readonly Omit<Badge, 'id' | 'isCustom' | 'isEnabled'
   },
   {
     name: 'Momentum Builder',
+    requiredCount: 0,
     description: 'Study every day for 3 days in a row.',
     motivationalMessage:
       'Three days in a row! You\'re building a powerful habit. Don\'t break the chain now, you\'re just getting started!',
@@ -114,6 +120,7 @@ export const SYSTEM_BADGES: readonly Omit<Badge, 'id' | 'isCustom' | 'isEnabled'
   },
   {
     name: 'Consistent Week',
+    requiredCount: 0,
     description: 'Study every day for 7 days in a row.',
     motivationalMessage:
       'A full week of consistent effort! This is how habits are forged and greatness is built. You are on the right path.',
@@ -130,6 +137,7 @@ export const SYSTEM_BADGES: readonly Omit<Badge, 'id' | 'isCustom' | 'isEnabled'
   },
   {
     name: 'Flawless Finisher',
+    requiredCount: 0,
     description: 'Complete all planned tasks for a single day.',
     motivationalMessage:
       'You planned your day and executed it flawlessly. This level of discipline is rare and incredibly powerful. Well done!',
@@ -146,6 +154,7 @@ export const SYSTEM_BADGES: readonly Omit<Badge, 'id' | 'isCustom' | 'isEnabled'
   },
   {
     name: 'Productivity Powerhouse',
+    requiredCount: 0,
     description: 'Complete 10 tasks in a single day.',
     motivationalMessage:
       '10 tasks in one day! Your productivity is off the charts. You didn\'t just have a good day; you had a great day.',
@@ -162,6 +171,7 @@ export const SYSTEM_BADGES: readonly Omit<Badge, 'id' | 'isCustom' | 'isEnabled'
   },
     {
     name: 'Monthly Marathon',
+    requiredCount: 0,
     description: 'Study for a total of 40 hours in a month.',
     motivationalMessage:
       '40 hours in a month! That\'s equivalent to a full work week dedicated to your growth. Your long-term commitment is truly inspiring.',
@@ -178,6 +188,7 @@ export const SYSTEM_BADGES: readonly Omit<Badge, 'id' | 'isCustom' | 'isEnabled'
   },
   {
     name: 'Task Master',
+    requiredCount: 0,
     description: 'Complete 50 tasks in total.',
     motivationalMessage:
       '50 tasks completed! You are no longer an apprentice; you are a master of your routine. Your knowledge is compounding!',
@@ -194,6 +205,7 @@ export const SYSTEM_BADGES: readonly Omit<Badge, 'id' | 'isCustom' | 'isEnabled'
   },
     {
     name: 'Point Collector',
+    requiredCount: 0,
     description: 'Earn a total of 1,000 points.',
     motivationalMessage:
       '1,000 points! Each point represents a moment of effort and dedication. Look how far you\'ve come. Keep collecting!',
@@ -266,9 +278,11 @@ function getAllCompletedWork(
       return {
         date: l.timestamp.split('T')[0],
         duration: Math.round(l.payload.duration / 60),
-        type: isRoutine ? 'routine' : 'task',
-        subjectId: isRoutine ? l.payload.routineId : l.payload.taskId,
-        points: l.payload.points || 0,
+        type: isRoutine ? ('routine' as const) : ('task' as const),
+        subjectId: (isRoutine
+          ? l.payload.routineId
+          : l.payload.taskId) as string,
+        points: Number(l.payload.points || 0),
       };
     })
   );
@@ -279,7 +293,7 @@ function getAllCompletedWork(
   workItems.push(
     ...manuallyCompletedTasks.map(t => ({
       date: t.date,
-      duration: t.duration,
+      duration: t.duration ?? 0,
       type: 'task' as const,
       subjectId: t.id,
       points: t.points,

@@ -17,8 +17,16 @@ import {
 } from '@/components/ui/card';
 import {cn} from '@/lib/utils';
 
+interface PieChartData {
+  name: string;
+  productiveDuration: number;
+  pausedDuration: number;
+  pauseCount: number;
+  focusPercentage: number;
+}
 interface ProductivityPieChartProps {
-  data: {name: string; value: number}[];
+  data: PieChartData[];
+  focusScore?: number;
 }
 
 const COLORS = [
@@ -32,17 +40,20 @@ const COLORS = [
 ];
 
 const formatTime = (totalSeconds: number) => {
-  if (totalSeconds < 1) return '0s';
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = Math.floor(totalSeconds % 60);
+  if (totalSeconds < 0) totalSeconds = 0;
+  if (totalSeconds < 60) {
+    return totalSeconds > 0 ? '<1m' : '0m';
+  }
+  const totalMinutes = Math.round(totalSeconds / 60);
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
 
   const parts = [];
   if (hours > 0) parts.push(`${hours}h`);
   if (minutes > 0) parts.push(`${minutes}m`);
-  if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
 
-  return parts.join(' ');
+  return parts.length > 0 ? parts.join(' ') : '0m';
 };
 
 const renderActiveShape = (props: any) => {
@@ -55,7 +66,7 @@ const renderActiveShape = (props: any) => {
     <g>
       <text
         x={cx}
-        y={cy - 10}
+        y={cy - 20}
         dy={8}
         textAnchor="middle"
         fill="hsl(var(--foreground))"
@@ -65,13 +76,31 @@ const renderActiveShape = (props: any) => {
       </text>
       <text
         x={cx}
-        y={cy + 10}
+        y={cy}
         dy={8}
         textAnchor="middle"
-        fill="hsl(var(--muted-foreground))"
-        className="text-xs"
+        className="text-xs fill-muted-foreground"
       >
-        {formatTime(payload.value)} ({type})
+        Productive: {formatTime(payload.productiveDuration)}
+      </text>
+       <text
+        x={cx}
+        y={cy + 15}
+        dy={8}
+        textAnchor="middle"
+        className="text-xs fill-muted-foreground"
+      >
+        Paused: {formatTime(payload.pausedDuration)} ({payload.pauseCount} times)
+      </text>
+      <text
+        x={cx}
+        y={cy + 30}
+        dy={8}
+        textAnchor="middle"
+        className="text-xs font-bold"
+        style={{ fill }}
+      >
+        Focus: {payload.focusPercentage.toFixed(0)}%
       </text>
       <Sector
         cx={cx}
@@ -97,9 +126,10 @@ const renderActiveShape = (props: any) => {
 
 export default function ProductivityPieChart({
   data,
+  focusScore,
 }: ProductivityPieChartProps) {
-  const totalSeconds = useMemo(
-    () => data.reduce((sum, item) => sum + item.value, 0),
+  const totalProductiveSeconds = useMemo(
+    () => data.reduce((sum, item) => sum + item.productiveDuration, 0),
     [data]
   );
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -115,9 +145,9 @@ export default function ProductivityPieChart({
     setActiveIndex(null);
   }, [setActiveIndex]);
 
-  if (totalSeconds === 0) {
+  if (totalProductiveSeconds === 0) {
     return (
-      <Card className="h-full flex flex-col">
+      <Card className="h-full min-h-[380px] flex flex-col">
         <CardHeader>
           <CardTitle>Today's Productivity</CardTitle>
           <CardDescription>
@@ -132,7 +162,7 @@ export default function ProductivityPieChart({
   }
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full min-h-[380px] flex flex-col">
       <CardHeader>
         <CardTitle>Today's Productivity</CardTitle>
         <CardDescription>
@@ -141,25 +171,28 @@ export default function ProductivityPieChart({
       </CardHeader>
       <CardContent className="flex-grow flex items-center justify-center p-0 pb-2 relative">
         {activeIndex === null && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-            <p className="text-2xl font-bold tracking-tight">
-              {formatTime(totalSeconds)}
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+            <p className="text-4xl font-bold tracking-tighter">
+              {formatTime(totalProductiveSeconds)}
             </p>
-            <p className="text-xs text-muted-foreground">Total Time</p>
+            <p className="text-sm text-muted-foreground">Productive Time</p>
+            {focusScore !== undefined && (
+                 <p className="text-2xl font-bold text-green-500 mt-2">{focusScore.toFixed(0)}% <span className="text-sm font-medium text-muted-foreground">Focus</span></p>
+            )}
           </div>
         )}
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              activeIndex={activeIndex as number}
+              activeIndex={activeIndex === null ? -1 : activeIndex}
               activeShape={renderActiveShape}
               data={data}
               cx="50%"
               cy="50%"
-              dataKey="value"
+              dataKey="productiveDuration"
               nameKey="name"
-              innerRadius="65%"
-              outerRadius="90%"
+              innerRadius="85%"
+              outerRadius="99%"
               paddingAngle={2}
               stroke="hsl(var(--background))"
               strokeWidth={2}

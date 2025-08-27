@@ -324,16 +324,6 @@ Based on the file names in `src/components/tasks/`, the following components are
 *   **`/src/components/tasks/task-list.tsx`**: A component that renders a list of `TaskCard` components. The main component for displaying the user's tasks.
 *   **`/src/components/tasks/timer-dialog.tsx`**: A dialog component specifically for managing a task timer. Likely displayed when a timer is started or interacted with, providing controls and showing elapsed time.
 
-## Routine-Specific Components
-
-Based on the file names in `src/components/routines/` and `src/components/timetable/`, the following components are likely used for managing and displaying routines:
-
-*   **`/src/components/routines/routine-card.tsx`**: A card component displaying details of a routine. May show name, description, scheduled time, and actions (start, log, edit).
-*   **`/src/components/routines/routine-log-dialog.tsx`**: A dialog component for logging the completion of a routine. May allow specifying completion time, duration, or adding notes.
-*   **`/src/components/routines/simple-routine-item.tsx`**: A simplified representation of a routine, possibly used in lists or smaller displays. Shows basic info like name and time.
-*   **`/src/components/timetable/add-routine-dialog.tsx`**: A dialog component for adding or scheduling new routines to the timetable. Likely includes form fields for routine details and scheduling information.
-*   **`/src/components/timetable/routine-list-item.tsx`**: An item component used within a list to display a scheduled routine in the timetable view. Shows routine name, time, and possibly actions.
-
 ## Badge-Specific Components
 
 Based on the file names in `src/components/badges/`, the following components are likely related to displaying and managing badges:
@@ -375,16 +365,3 @@ Based on the file names in `src/components/dashboard/`, the following components
 
 
 
-
-**Purpose:** The container component where toast messages are rendered.
-**Properties/States:** Typically includes configuration for positioning and appearance of toasts.
-
-## Tooltip
-
-**Purpose:** Displays a small, informative popover when the user hovers over or focuses on an element.
-**Properties/States:**
-*   `TooltipProvider`: Wrapper to enable tooltips.
-*   `Tooltip`: The tooltip component itself.
-*   `TooltipTrigger`: The element that triggers the tooltip.
-*   `TooltipContent`: The content displayed within the tooltip.
-*   `delayDuration`: The time to wait before showing the tooltip.

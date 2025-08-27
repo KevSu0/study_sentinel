@@ -11,8 +11,8 @@ Based on the project files and typical architecture for this type of application
 *   **AI Integration:** Genkit or a similar AI SDK (`src/ai/genkit.ts`) is used to integrate with AI models for features like generating summaries (`src/ai/flows/generate-daily-summary.ts`) or providing coaching/psychological support (`src/ai/flows/positive-psychologist-flow.ts`).
 
 ## Data Processing
+
 The backend handles data processing for various application features:
-The backend processes data in various ways:
 
 *   **CRUD Operations:** Standard Create, Read, Update, and Delete operations on database records for managing user data, tasks, routines, logs, badges, etc.
 *   **Authentication and Authorization:** Verifying user identity and ensuring users only access their own data.
@@ -25,8 +25,8 @@ The backend processes data in various ways:
 *   **Background Tasks:** Potentially running scheduled tasks or tasks triggered by specific events (e.g., sending notifications, generating daily reports).
 
 ## Database Interaction
+
 Interaction with the database (primarily Firebase) is central to the backend's function:
-The backend interacts with the database to:
 
 *   Store and retrieve user profiles and settings.
 *   Save and load task lists, including status, priority, and due dates.
@@ -40,10 +40,7 @@ Data is typically accessed and manipulated via the Firebase SDK, with the backen
 The backend integrates with several external services to provide the full application functionality:
 
 *   **Authentication Service (Firebase Authentication):** Handles user registration, login, and session management. The backend verifies authentication tokens to secure API endpoints.
-*   **AI Models (via Genkit):** Communicates with external AI providers (like Gemini, depending on configuration in `/home/runner/work/mission-control/mission-control/src/ai/genkit.ts`) to power features like daily summaries and the positive psychologist flow. This involves sending structured prompts and processing the AI's responses.
-*   **Other Potential Services:** Depending on future features, could interact with notification services, cloud storage, or other third-party APIs.
-*   **AI Models:** The backend communicates with external AI model APIs (via Genkit or similar) to send prompts and receive generated content. This involves formatting input for the models and processing their responses.
-*   **Authentication Service:** Interacts with the authentication service to verify user credentials and manage sessions.
+*   **AI Models (via Genkit):** Communicates with external AI providers (like Gemini, depending on configuration in `src/ai/genkit.ts`) to power features like daily summaries and the positive psychologist flow. This involves sending structured prompts and processing the AI's responses.
 *   **Other Potential Services:** Depending on future features, could interact with notification services, cloud storage, or other third-party APIs.
 
 ## Logic Flow Example (Generating Daily Summary)

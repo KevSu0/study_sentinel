@@ -1,0 +1,744 @@
+Thought
+Components/stats/daily-polar-chart
+· typescript
+'use client'
+
+
+import React from 'react'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Expand } from 'lucide-react'
+import { useTheme } from 'next-themes'
+import {
+  ResponsiveContainer,
+  RadialBarChart,
+  RadialBar,
+  PolarAngleAxis,
+  Tooltip,
+  Cell,
+} from 'recharts'
+import type { Activity } from '@/components/stats/daily-activity-timeline'
+import { FullscreenChartDialog } from '@/components/stats/fullscreen-chart-dialog'
+
+
+/**
+ * DailyPolarChart — phone‑first 24h radial chart
+ *
+ * Props: pass the same Activity[] you already build for the Gantt (dailyActivityTimelineData).
+ * This component bins the sessions into 24 hour buckets (4→28 domain = study day),
+ * and renders a clock‑like radial bar chart. It also keeps the existing Fullscreen
+ * Gantt dialog behind an "Expand" button.
+ */
+export default function DailyPolarChart({ data }: { data: Activity[] }) {
+  const { theme } = useTheme()
+  const [isExpanded, setExpanded] = React.useState(false)
+
+
+  // --- 1) Transform Activity[] -> 24 hourly bins ---
+  type HourBin = { idx: number; hourLabel: string; productive: number; paused: number }
+
+
+  const bins: HourBin[] = React.useMemo(() => {
+    const arr: HourBin[] = Array.from({ length: 24 }, (_, k) => ({
+      idx: k,
+      hourLabel: ((k + 4) % 24).toString().padStart(2, '0'), // 4am start of study day
+      productive: 0,
+      paused: 0,
+    }))
+
+
+    const clamp = (x: number, a: number, b: number) => Math.min(Math.max(x, a), b)
+
+
+    for (const s of data) {
+      let start = clamp(s.time[0], 4, 28)
+      const end = clamp(s.time[1], 4, 28)
+      if (end <= start) continue
+
+
+      while (start < end) {
+        const hourStart = Math.floor(start)
+        const next = Math.min(end, hourStart + 1)
+        const overlapHrs = next - start
+        const bucketIdx = (hourStart - 4 + 24) % 24
+        // store minutes for a nicer tooltip resolution
+        arr[bucketIdx].productive += overlapHrs * 60
+        start = next
+      }
+    }
+
+
+    // NOTE: paused currently set to 0 (no pause events in payload).
+    // If you later add PAUSE/RESUME events, aggregate them into arr[idx].paused.
+
+
+    return arr
+  }, [data])
+
+
+  // Scale for the radial bars. We map minutes→visual radius.
+  const maxMin = React.useMemo(() => Math.max(60, ...bins.map(b => b.productive)), [bins])
+
+
+  // Recharts expects a numeric key; we use "productive". A ghost ring for weekly avg can be added later.
+  const chartData = bins.map(b => ({ ...b, value: Math.round(b.productive) }))
+
+
+  // Colors
+  const isDark = theme === 'dark'
+  const productColor = isDark ? 'hsl(var(--primary))' : 'hsl(var(--primary))'
+  const pausedColor = 'hsl(var(--muted-foreground))'
+
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (!active || !payload || !payload.length) return null
+    const p = payload[0].payload as HourBin & { value: number }
+
+Awesome—starting with file 1. I’ve added a new React component:
+
+components/stats/daily-polar-chart.tsx
+A phone-first 24-hour radial chart that bins your existing Activity[] (from dailyActivityTimelineData) into hourly wedges and keeps your current fullscreen Gantt on the “Expand” button.
+
+To wire it in next:
+
+In your stats page, replace the old Gantt card with:
+
+import DailyPolarChart from '@/components/stats/daily-polar-chart';
+// ...
+<DailyPolarChart data={dailyActivityTimelineData} />
+
+
+Want me to create the next file (optional weekly-average bins hook, or a Radar alternative) now?
+
+You said:
+continue 
+ChatGPT said:
+Thought for 42s
+
+Nice—File 2 is in.
+
+Created: lib/stats/useDailyPolarData.ts
+
+Hook + pure functions to build the 24 hourly bins for the radial chart.
+
+Distributes each session across hours, honors durationSec if present, infers pausedSec if missing, and computes weekly average per hour when you pass last7.
+
+How to wire with the component (next step):
+
+import DailyPolarChart from '@/components/stats/daily-polar-chart'
+import { useDailyPolarData } from '@/lib/stats/useDailyPolarData'
+
+// inside your page/component:
+const { bins } = useDailyPolarData({ today: todaysLogs, last7: last7DaysLogs })
+<DailyPolarChart data={todaysLogs /* keep existing for Gantt */} />
+
+
+(Next turn I’ll update the DailyPolarChart to consume the hook for weekly averages and add an overlay legend.)
+
+Say “continue” and I’ll add File 3: Radar alternative or update the Polar component to show weekly avg + pause ring—your call; I’ll proceed with weekly-avg overlay by default.
+
+You said:
+continue 
+ChatGPT said:
+Thought for 1m 5s
+Lib/stats/use Daily Polar Data
+· typescript
+'use client'
+
+
+import React from 'react'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Expand } from 'lucide-react'
+import { useTheme } from 'next-themes'
+import {
+  ResponsiveContainer,
+  RadialBarChart,
+  RadialBar,
+  PolarAngleAxis,
+  Tooltip,
+  Cell,
+} from 'recharts'
+import { FullscreenChartDialog } from '@/components/stats/fullscreen-chart-dialog'
+import type { Activity } from '@/components/stats/daily-activity-timeline'
+import { useDailyPolarData, type PolarActivity } from '@/lib/stats/useDailyPolarData'
+
+
+/**
+ * DailyPolarChart — phone‑first 24h radial chart with weekly‑avg overlay
+ *
+ * Props
+ *  - today:   sessions for the current day (4→4 window)
+ *  - last7:   array of day-arrays for weekly average (optional)
+ *  - ganttData: pass your existing Activity[] so the Expand dialog keeps the Gantt
+ */
+export default function DailyPolarChart({
+  today,
+  last7,
+  ganttData,
+}: {
+  today: PolarActivity[]
+  last7?: PolarActivity[][]
+  ganttData?: Activity[]
+}) {
+  const { theme } = useTheme()
+  const [isExpanded, setExpanded] = React.useState(false)
+
+
+  // --- build 24 bins and weekly averages ---
+  const { bins, maxProductiveMin, totalProductiveMin, totalPausedMin } = useDailyPolarData({ today, last7 })
+
+
+  // Compose chart-friendly data
+  const chartData = bins.map((b) => ({
+    idx: b.idx,
+    label: b.label,
+    productive: Math.round(b.productiveMin),
+    paused: Math.round(b.pausedMin),
+    weeklyAvg: Math.round(b.weeklyAvgProductiveMin),
+  }))
+
+
+  // colors (respect theme tokens)
+  const isDark = theme === 'dark'
+  const productColor = 'hsl(var(--primary))'
+  const avgColor = isDark ? 'rgba(148, 163, 184, 0.35)' : 'rgba(71, 85, 105, 0.35)'
+  const pausedColor = isDark ? 'rgba(148, 163, 184, 0.55)' : 'rgba(71, 85, 105, 0.55)'
+
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (!active || !payload || !payload.length) return null
+    // RadialBar passes each series separately; payload[0] will be whichever bar the user touched.
+    const p: any = payload[0].payload
+    const hour = Number(p.label)
+    const nextHour = (hour + 1) % 24
+    const asTime = (h: number) => new Date(0, 0, 0, h).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+
+    return (
+      <div className="rounded-lg border bg-background/90 p-2 text-sm shadow-md">
+        <div className="font-semibold">
+          {asTime(hour)} – {asTime(nextHour)}
+        </div>
+        <div className="text-muted-foreground">Productive: {p.productive} min</div>
+        {p.paused > 0 && <div className="text-muted-foreground">Paused: {p.paused} min</div>}
+        {p.weeklyAvg > 0 && <div className="text-muted-foreground">7‑day avg: {Math.round(p.weeklyAvg)} min</div>}
+        {p.productive + p.paused > 0 && (
+          <div className="text-muted-foreground">Paused %: {Math.round((p.paused / (p.productive + p.paused)) * 100)}%</div>
+        )}
+      </div>
+    )
+  }
+
+
+  return (
+
+Done ✅
+
+What I added just now
+
+Updated components/stats/daily-polar-chart.tsx to:
+
+Use the new hook useDailyPolarData.
+
+Show three rings on phones:
+
+Outer Productive ring (today).
+
+Ghost 7-day avg ring (overlay).
+
+Thin inner Paused ring.
+
+Mobile-friendly tooltip with hour window, mins, and paused %.
+
+Keeps your Expand → Fullscreen Gantt (only shown when ganttData is passed).
+
+How to wire it (drop-in)
+import DailyPolarChart from '@/components/stats/daily-polar-chart'
+import { useDailyPolarData, type PolarActivity } from '@/lib/stats/useDailyPolarData'
+
+// wherever you build today's sessions:
+const today: PolarActivity[] = todaysLogs.map(x => ({
+  time: [x.time[0], x.time[1]],
+  durationSec: x.duration,       // if you have it
+  pausedSec: x.paused ?? 0,      // if you track pauses
+}))
+const last7: PolarActivity[][] = last7DaysLogs // same shape, per day
+
+// Gantt detail data you already have:
+const ganttData = dailyActivityTimelineData
+
+<DailyPolarChart today={today} last7={last7} ganttData={ganttData} />
+
+
+Want me to add the Radar alternative as a separate component next, or proceed to slot this into your Stats page and push a minimal integration diff?
+
+You said:
+continue 
+ChatGPT said:
+Thought for 31s
+Components/stats/daily-radar-chart
+· typescript
+'use client'
+
+
+import React from 'react'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Expand } from 'lucide-react'
+import { useTheme } from 'next-themes'
+import {
+  ResponsiveContainer,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Tooltip,
+} from 'recharts'
+import { useDailyPolarData, type PolarActivity } from '@/lib/stats/useDailyPolarData'
+import type { Activity } from '@/components/stats/daily-activity-timeline'
+import { FullscreenChartDialog } from '@/components/stats/fullscreen-chart-dialog'
+
+
+/**
+ * DailyRadarChart — 24h radar (spider) view comparing Today vs 7‑day average.
+ * For readability on phones, we default to 8 spokes (every 3 hours). You can
+ * change `step` to 1 to show all 24 spokes.
+ */
+export default function DailyRadarChart({
+  today,
+  last7,
+  step = 3,
+  ganttData,
+}: {
+  today: PolarActivity[]
+  last7?: PolarActivity[][]
+  step?: 1 | 2 | 3 | 4
+  ganttData?: Activity[]
+}) {
+  const { theme } = useTheme()
+  const [isExpanded, setExpanded] = React.useState(false)
+  const { bins } = useDailyPolarData({ today, last7 })
+
+
+  const data = bins
+    .filter((_, i) => i % step === 0)
+    .map((b) => ({
+      label: b.hour.toString().padStart(2, '0'),
+      today: Math.round(b.productiveMin),
+      avg: Math.round(b.weeklyAvgProductiveMin),
+    }))
+
+
+  const primary = 'hsl(var(--primary))'
+  const avg = theme === 'dark' ? 'rgba(148,163,184,.6)' : 'rgba(71,85,105,.6)'
+
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload || !payload.length) return null
+    const p: any = payload[0].payload
+    const hour = Number(p.label)
+    const nextHour = (hour + 1) % 24
+    const asTime = (h: number) => new Date(0, 0, 0, h).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    return (
+      <div className="rounded-lg border bg-background/90 p-2 text-sm shadow-md">
+        <div className="font-semibold">{asTime(hour)} – {asTime(nextHour)}</div>
+        <div className="text-muted-foreground">Today: {p.today} min</div>
+        <div className="text-muted-foreground">7‑day avg: {p.avg} min</div>
+      </div>
+    )
+  }
+
+
+  return (
+    <>
+      <Card className="h-full">
+        <CardHeader>
+          <CardTitle>Daily Activity</CardTitle>
+          <CardDescription>Radar view • {24 / step} spokes</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-2">
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={data} outerRadius="80%">
+                <PolarGrid />
+Components/stats/daily-activity-card
+· typescript
+'use client'
+
+
+import React from 'react'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import DailyPolarChart from '@/components/stats/daily-polar-chart'
+import DailyRadarChart from '@/components/stats/daily-radar-chart'
+import type { PolarActivity } from '@/lib/stats/useDailyPolarData'
+import type { Activity } from '@/components/stats/daily-activity-timeline'
+
+
+/**
+ * DailyActivityCard — wrapper to switch between Polar & Radar views.
+ * Pass in today's sessions, last7, and gantt data once; user can toggle.
+ */
+export default function DailyActivityCard({
+  today,
+  last7,
+  ganttData,
+}: {
+  today: PolarActivity[]
+  last7?: PolarActivity[][]
+  ganttData?: Activity[]
+}) {
+  const [tab, setTab] = React.useState<'polar' | 'radar'>('polar')
+  return (
+    <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="polar">Clock</TabsTrigger>
+        <TabsTrigger value="radar">Radar</TabsTrigger>
+      </TabsList>
+      <TabsContent value="polar" className="mt-4">
+        <DailyPolarChart today={today} last7={last7} ganttData={ganttData} />
+      </TabsContent>
+      <TabsContent value="radar" className="mt-4">
+        <DailyRadarChart today={today} last7={last7} ganttData={ganttData} />
+      </TabsContent>
+    </Tabs>
+  )
+}
+
+
+
+Great—kept it moving.
+
+Added now
+
+components/stats/daily-radar-chart.tsx
+
+Radar (spider) view that compares Today vs 7-day average.
+
+Defaults to 8 spokes (every 3 hours) for phone readability; set step={1} to show all 24.
+
+components/stats/daily-activity-card.tsx
+
+A wrapper with tabs to switch between Clock (Polar) and Radar using the same data.
+
+Still supports the Expand → Gantt detail.
+
+Drop-in usage
+import DailyActivityCard from '@/components/stats/daily-activity-card'
+
+<DailyActivityCard
+  today={todayPolarActivities}      // PolarActivity[]
+  last7={last7PolarActivities}      // PolarActivity[][]
+  ganttData={dailyActivityTimelineData}
+/>
+
+
+Want me to patch your Stats page file to use this card, or generate a minimal PR-style diff?
+
+You said:
+continue 
+ChatGPT said:
+Thought for 26s
+Lib/stats/polar Adapters
+· typescript
+/**
+ * Adapters to convert your existing timeline/Gantt sessions
+ * into the generic PolarActivity shape used by the polar/radar charts.
+ */
+import type { PolarActivity } from '@/lib/stats/useDailyPolarData'
+
+
+// Extremely permissive session shape; adapt as needed
+export type AnySession = {
+  time: [number, number] // hours in 4..28
+  duration?: number // minutes or seconds (we detect via magnitude)
+  durationSec?: number
+  paused?: number // minutes
+  pausedSec?: number
+}
+
+
+function toSeconds(minOrSec?: number) {
+  if (!minOrSec || Number.isNaN(minOrSec)) return 0
+  // Heuristic: values > 180 likely already seconds
+  return minOrSec > 180 ? minOrSec : minOrSec * 60
+}
+
+
+/** Map a list of sessions to PolarActivity[] */
+export function sessionsToPolarActivities<T extends AnySession>(sessions: T[]): PolarActivity[] {
+  return sessions.map((s) => ({
+    time: s.time,
+    durationSec: s.durationSec ?? toSeconds(s.duration),
+    pausedSec: s.pausedSec ?? toSeconds(s.paused),
+  }))
+}
+
+
+/** Map an array of day-arrays into PolarActivity[][] */
+export function daysToPolarActivities<T extends AnySession>(days: T[][]): PolarActivity[][] {
+  return days.map((day) => sessionsToPolarActivities(day))
+}
+
+
+Components/stats/daily-activity-section
+· typescript
+'use client'
+
+
+import React from 'react'
+import DailyActivityCard from '@/components/stats/daily-activity-card'
+import { sessionsToPolarActivities, daysToPolarActivities, type AnySession } from '@/lib/stats/polarAdapters'
+import type { Activity } from '@/components/stats/daily-activity-timeline'
+
+
+/**
+ * DailyActivitySection — small wrapper to drop into your Stats page.
+ * Give it your existing data without refactors and it will adapt shapes.
+ */
+export default function DailyActivitySection({
+  todaySessions,
+  last7Sessions,
+  ganttData,
+}: {
+  todaySessions: AnySession[]
+  last7Sessions?: AnySession[][]
+  ganttData?: Activity[]
+}) {
+  const today = React.useMemo(() => sessionsToPolarActivities(todaySessions), [todaySessions])
+  const last7 = React.useMemo(() => (last7Sessions ? daysToPolarActivities(last7Sessions) : undefined), [last7Sessions])
+
+
+  return (
+    <DailyActivityCard today={today} last7={last7} ganttData={ganttData} />
+  )
+}
+
+
+
+Nice—continuing with two more pieces.
+
+Added
+
+lib/stats/polarAdapters.ts
+
+Adapters to convert your existing session shapes into the PolarActivity format.
+
+Handles minutes/seconds heuristics and paused fields.
+
+components/stats/daily-activity-section.tsx
+
+A drop-in wrapper for your Stats page:
+
+Accepts your today sessions, last7 sessions, and Gantt data (unchanged).
+
+Internally adapts shapes and renders the tabbed card (Clock / Radar) with Expand → Gantt.
+
+Minimal integration (Stats page)
+
+Replace your current daily activity widget with:
+
+import DailyActivitySection from '@/components/stats/daily-activity-section'
+
+// These are whatever you already compute:
+<DailyActivitySection
+  todaySessions={todaysLogs}           // [{ time:[h0,h1], duration|durationSec, paused|pausedSec }]
+  last7Sessions={last7DaysLogs}        // Array of day arrays
+  ganttData={dailyActivityTimelineData}
+/>
+
+
+Say “continue” and I’ll:
+
+add a type guard + unit tests (lightweight) for the adapters, or
+
+patch your Stats page file directly (provide a ready-to-paste diff), and
+
+optionally add a skeleton loading state for ultra-smooth mobile UX.
+
+You said:
+continue
+ChatGPT said:
+Thought for 35s
+Components/stats/daily-activity-skeleton
+· typescript
+'use client'
+
+
+import React from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+
+
+/**
+ * DailyActivitySkeleton — lightweight shimmer while sessions load.
+ * Matches the approximate layout/height of the DailyActivityCard charts.
+ */
+export default function DailyActivitySkeleton() {
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>
+          <Skeleton className="h-5 w-40" />
+        </CardTitle>
+        <CardDescription>
+          <Skeleton className="mt-2 h-4 w-56" />
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pt-2">
+        <div className="flex h-[300px] w-full items-center justify-center">
+          {/* faux radial rings */}
+          <div className="relative h-56 w-56">
+            <div className="absolute inset-0 rounded-full border-2 border-muted-foreground/20" />
+            <div className="absolute inset-4 rounded-full border-2 border-muted-foreground/20" />
+            <div className="absolute inset-8 rounded-full border-2 border-muted-foreground/20" />
+            <div className="absolute inset-12 rounded-full border-2 border-muted-foreground/20" />
+            <div className="absolute inset-0 animate-pulse rounded-full border-4 border-transparent border-t-muted-foreground/40" />
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <div className="mt-2">
+          <Skeleton className="h-3 w-64" />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+
+
+Added ✅
+
+components/stats/daily-activity-skeleton.tsx
+A lightweight shimmer skeleton that matches the chart card’s size—use while sessions load.
+
+How to use
+import DailyActivitySkeleton from '@/components/stats/daily-activity-skeleton'
+
+// if your data is loading:
+return <DailyActivitySkeleton />
+
+// else:
+return (
+  <DailyActivitySection
+    todaySessions={todaysLogs}
+    last7Sessions={last7DaysLogs}
+    ganttData={dailyActivityTimelineData}
+  />
+)
+
+
+Say “continue” and I’ll:
+
+provide a ready-to-paste integration diff for your src/app/stats/page.tsx, or
+
+add a tiny type guard + unit test for the adapters (Vitest/Jest), your pick.
+
+You said:
+continue
+Patches/stats-page-integration
+```diff
+--- a/src/app/stats/page.tsx
++++ b/src/app/stats/page.tsx
+@@
+-import React from 'react'
+-// (old imports)
++import React from 'react'
++import dynamic from 'next/dynamic'
++
++// New daily activity widgets (phone‑first)
++const DailyActivitySection = dynamic(
++  () => import('@/components/stats/daily-activity-section'),
++  { ssr: false }
++)
++const DailyActivitySkeleton = dynamic(
++  () => import('@/components/stats/daily-activity-skeleton'),
++  { ssr: false }
++)
+
+@@
+-export default function StatsPage() {
+-  // existing selectors / data builders
+-  const todaysLogs = useTodaysSessions()            // [{ time:[h0,h1], duration|durationSec, paused|pausedSec }]
+-  const last7DaysLogs = useLast7DaysSessions()      // T[][]
+-  const dailyActivityTimelineData = useGanttData()  // Activity[] for fullscreen
+-  // ...
+-  return (
+-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+-      {/* Old DailyActivityChart card here */}
+-      <Card>
+-        <CardHeader>
+-          <CardTitle>Daily Activity</CardTitle>
+-          <CardDescription>Timeline</CardDescription>
+-        </CardHeader>
+-        <CardContent>
+-          <DailyActivityChart data={dailyActivityTimelineData} />
+-        </CardContent>
+-      </Card>
+-      {/* ...rest of cards */}
+-    </div>
+-  )
+-}
++export default function StatsPage() {
++  // existing selectors / data builders (keep your actual hooks)
++  const todaysLogs = useTodaysSessions()            // [{ time:[h0,h1], duration|durationSec, paused|pausedSec }]
++  const last7DaysLogs = useLast7DaysSessions()      // T[][] where each T has { time, duration? , paused? }
++  const dailyActivityTimelineData = useGanttData()  // Activity[] for fullscreen Gantt
++
++  const isLoading = !todaysLogs || todaysLogs.length === 0
++
++  return (
++    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
++      {/* New: Phone‑first Clock/Radar with Expand → Gantt */}
++      <div className="col-span-1 md:col-span-2 lg:col-span-1">
++        {isLoading ? (
++          <DailyActivitySkeleton />
++        ) : (
++          <DailyActivitySection
++            todaySessions={todaysLogs}
++            last7Sessions={last7DaysLogs}
++            ganttData={dailyActivityTimelineData}
++          />
++        )}
++      </div>
++
++      {/* ...rest of your cards remain unchanged */}
++    </div>
++  )
++}
+```
+
+**Notes**
+
+* Keep your actual hooks/selectors (`useTodaysSessions`, `useLast7DaysSessions`, `useGanttData`). The comments are placeholders.
+* The new widget renders a **Clock (Radial Bar)** by default with tabs to **Radar**, and preserves your **Expand → Fullscreen Gantt**.
+* `ssr: false` avoids hydration mismatch for Recharts on Next.js.
+* Replace the container `col-span` values to fit your layout if needed.
+
+Notes
+
+Keep your actual hooks/selectors (useTodaysSessions, useLast7DaysSessions, useGanttData). The comments are placeholders.
+
+The new widget renders a Clock (Radial Bar) by default with tabs to Radar, and preserves your Expand → Fullscreen Gantt.
+
+ssr: false avoids hydration mismatch for Recharts on Next.js.
+
+Replace the container col-span values to fit your layout if needed.
+
+Pushed an integration patch ✅
+
+I added patches/stats-page-integration.diff in the canvas with a ready-to-paste unified diff that:
+
+Dynamically imports the new DailyActivitySection and Skeleton.
+
+Replaces your old timeline card with the Clock/Radar card (and keeps Expand → Gantt).
+
+Uses a simple isLoading guard.
+
+Apply that patch (or copy the snippet) and you’re set.
+Want me to add tiny type guards + unit tests for the adapters next, or move on to the 365-circle year view you mentioned?

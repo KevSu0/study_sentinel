@@ -49,9 +49,9 @@ export default function LogPage() {
           <div className="space-y-4">
             {logs
               .slice()
-              .reverse()
+              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
               .map(log => (
-                <Card key={log.id} className="bg-card/70">
+                <Card key={log.id} className="bg-card/70" data-testid="log-item">
                   <CardContent className="p-4 flex items-start gap-4">
                     <span className="text-xl mt-1">
                       {getIconForLogType(log.type)}

@@ -3,7 +3,7 @@ import {BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveC
 import {Card, CardContent, CardHeader, CardTitle, CardDescription} from '@/components/ui/card';
 
 interface StudyActivityChartProps {
-    data: { name: string; hours: number }[];
+    data: { name: string; hours: number; goal?: number }[];
     title: string;
     description: string;
     timeRange: string;
@@ -42,7 +42,7 @@ export default function StudyActivityChart({ data, title, description, timeRange
                             fontSize={12} 
                             tickLine={false} 
                             axisLine={false} 
-                            interval={timeRange === 'monthly' ? 4 : 'auto'}
+                            interval={timeRange === 'monthly' ? 4 : 0}
                         />
                         <YAxis 
                             stroke="hsl(var(--muted-foreground))" 
@@ -60,11 +60,17 @@ export default function StudyActivityChart({ data, title, description, timeRange
                             }}
                         />
                         <Legend wrapperStyle={{fontSize: "0.875rem"}}/>
-                        <Bar 
-                            dataKey="hours" 
-                            fill="hsl(var(--primary))" 
-                            radius={[4, 4, 0, 0]} 
-                            name="Hours Studied" 
+                        <Bar
+                            dataKey="hours"
+                            fill="hsl(var(--primary))"
+                            radius={[4, 4, 0, 0]}
+                            name="Hours Studied"
+                        />
+                        <Bar
+                             dataKey="goal"
+                             fill="hsl(var(--secondary))"
+                             radius={[4, 4, 0, 0]}
+                             name="Goal"
                         />
                     </BarChart>
                 </ResponsiveContainer>

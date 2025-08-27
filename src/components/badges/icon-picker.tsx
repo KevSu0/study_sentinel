@@ -24,10 +24,14 @@ export const iconList = Object.keys(Icons).filter(
 interface IconPickerProps {
   selectedIcon: string;
   onSelectIcon: (iconName: string) => void;
-  color: string;
+  color?: string;
 }
 
-export function IconPicker({selectedIcon, onSelectIcon, color}: IconPickerProps) {
+export function IconPicker({
+  selectedIcon,
+  onSelectIcon,
+  color = 'currentColor',
+}: IconPickerProps) {
   const [isOpen, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 

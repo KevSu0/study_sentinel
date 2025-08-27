@@ -5,7 +5,10 @@ import dynamic from 'next/dynamic';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Skeleton} from '@/components/ui/skeleton';
 import {Award as BadgeIcon, Star} from 'lucide-react';
-import type {Badge, CompletedWork} from '@/lib/types';
+import type {Badge} from '@/lib/types';
+import { useGlobalState } from '@/hooks/use-global-state';
+import { useStats } from '@/hooks/use-stats';
+import { getSessionDate } from '@/lib/utils';
 
 const ProductivityPieChart = dynamic(
   () => import('@/components/dashboard/productivity-pie-chart'),
@@ -16,28 +19,32 @@ const ProductivityPieChart = dynamic(
 );
 
 interface StatsOverviewWidgetProps {
-  todaysPoints: number;
   todaysBadges: Badge[];
-  todaysCompletedWork: CompletedWork[];
 }
 
 export const StatsOverviewWidget = ({
-  todaysPoints = 0,
   todaysBadges = [],
-  todaysCompletedWork = [],
 }: StatsOverviewWidgetProps) => {
-  const chartData = useMemo(() => {
-    return todaysCompletedWork.map((work, index) => ({
-      name: `${work.type === 'task' ? 'Task' : 'Routine'}: ${work.title}`,
-      value: work.duration, // duration is in seconds
-    }));
-  }, [todaysCompletedWork]);
+  const { state } = useGlobalState();
+  const { tasks, allCompletedWork, todaysLogs, allBadges, earnedBadges, profile } =
+    state;
+
+  const { dailyPieChartData, timeRangeStats } = useStats({
+    timeRange: 'daily',
+    selectedDate: getSessionDate(),
+  });
+
+  const chartData = dailyPieChartData;
+  const todaysPoints = timeRangeStats.totalPoints;
+  const completedSessions = timeRangeStats.completedCount;
+  const focusScore = timeRangeStats.focusScore;
+
 
   return (
     <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div className="lg:col-span-1 min-h-[260px]">
+      <div className="lg:col-span-1 min-h-[380px]">
         <Suspense fallback={<Skeleton className="h-full w-full" />}>
-          <ProductivityPieChart data={chartData} />
+            <ProductivityPieChart data={chartData} focusScore={focusScore} />
         </Suspense>
       </div>
 
@@ -71,7 +78,7 @@ export const StatsOverviewWidget = ({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{chartData.length}</div>
+            <div className="text-2xl font-bold">{completedSessions}</div>
             <p className="text-xs text-muted-foreground">
               Total number of timed tasks and routines.
             </p>

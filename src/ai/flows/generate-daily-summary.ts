@@ -1,115 +1,14 @@
 'use server';
 /**
- * @fileOverview Generates a daily motivational summary based on the previous day's activity log and user profile.
- *
- * - generateDailySummary - A flow that analyzes yesterday's logs and provides a motivational summary.
- * - DailySummaryInput - The input type for the generateDailySummary flow.
- * - DailySummaryOutput - The return type for the generateDailySummary flow.
+ * @fileOverview A flow to generate a daily summary for the user.
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-
-// Define Zod schema for a single LogEvent
-const LogEventSchema = z.object({
-  id: z.string(),
-  timestamp: z.string().describe('The ISO 8601 timestamp of the event.'),
-  type: z.string().describe('The type of event that occurred.'),
-  payload: z
-    .record(z.any())
-    .describe('A payload containing event-specific data.'),
-});
-
-// Define Zod schema for the user's profile
-const UserProfileSchema = z.object({
-  name: z.string().optional().describe("The user's name."),
-  passion: z
-    .string()
-    .optional()
-    .describe('The subjects the user is passionate about.'),
-  dream: z
-    .string()
-    .optional()
-    .describe("The user's long-term dream or goal."),
-  education: z
-    .string()
-    .optional()
-    .describe("The user's current education qualification."),
-  reasonForUsing: z
-    .string()
-    .optional()
-    .describe('Why the user is using this application.'),
-});
-
-const DailySummaryInputSchema = z.object({
-  logs: z
-    .array(LogEventSchema)
-    .describe(
-      "An array of user activity logs from the previous day (4 AM to 4 AM)."
-    ),
-  profile: UserProfileSchema.describe(
-    "The user's profile information."
-  ).optional(),
-});
-export type DailySummaryInput = z.infer<typeof DailySummaryInputSchema>;
-
-const DailySummaryOutputSchema = z.object({
-  evaluation: z
-    .string()
-    .describe(
-      "A detailed evaluation of the previous day's performance, mentioning total study time and tasks completed."
-    ),
-  motivationalParagraph: z
-    .string()
-    .describe(
-      'An inspiring and motivating paragraph for the student for the upcoming day.'
-    ),
-});
-export type DailySummaryOutput = z.infer<typeof DailySummaryOutputSchema>;
-
-const prompt = ai.definePrompt({
-  name: 'generateDailySummaryPrompt',
-  input: {schema: DailySummaryInputSchema},
-  output: {schema: DailySummaryOutputSchema},
-  prompt: `You are an extremely strict but fair study supervisor and productivity coach. Your feedback must be firm, motivating, and always pushing the student towards excellence.
-
-Your task is to synthesize information from two key sources: the student's personal profile and their detailed activity log from yesterday. Use this combined context to generate a personalized daily briefing.
-
-**1. Student Profile:**
-This information provides the "why" behind their efforts.
-{{#if profile.name}}
-- **Name:** {{profile.name}}
-{{/if}}
-{{#if profile.passion}}
-- **Passion:** {{profile.passion}}
-{{/if}}
-{{#if profile.dream}}
-- **Dream Goal:** {{profile.dream}}
-{{/if}}
-{{#if profile.education}}
-- **Currently Studying:** {{profile.education}}
-{{/if}}
-{{#if profile.reasonForUsing}}
-- **Reason for Using App:** {{profile.reasonForUsing}}
-{{/if}}
-
-**2. Student's Activity Log from Yesterday:**
-This data shows the "what" and "how" of their actions.
-{{#if logs}}
-{{#each logs}}
-- [{{timestamp}}] Event: {{type}} - Details: {{JSON.stringify payload}}
-{{/each}}
-{{else}}
-The student had no recorded activity yesterday.
-{{/if}}
-
-**Your Response (MUST be in two parts):**
-
-1.  **Evaluation**: Based *only on the activity log*, provide a detailed evaluation of their performance. Calculate the total study time from completed tasks. Analyze their patterns: When did they start? Did they complete what they started? Did they get distracted (look for TIMER_STOP events and their reasons)? Were they productive? Be critical but constructive. If they did well, acknowledge it, but challenge them to do even better.
-
-2.  **Motivational Paragraph**: This is where you connect the "what" with the "why". Write a powerful, motivating paragraph for the upcoming day. Use insights from your evaluation and *explicitly connect them to the student's stated dream, passion, and education from their profile*. If they were distracted, frame a strategy to stay focused as a necessary step towards their goal. If they were consistent, inspire them to maintain momentum. Address the user by name if they provided one. Your motivation must be deeply personal and directly reference their profile information.
-`,
-});
+import {
+  DailySummaryInputSchema,
+  DailySummaryOutputSchema,
+} from '@/lib/types';
+import {generateWithFallback} from '@/ai/core';
 
 export const generateDailySummary = ai.defineFlow(
   {
@@ -117,17 +16,48 @@ export const generateDailySummary = ai.defineFlow(
     inputSchema: DailySummaryInputSchema,
     outputSchema: DailySummaryOutputSchema,
   },
-  async input => {
-    // If there are no logs, return a default encouraging message
-    if (!input.logs || input.logs.length === 0) {
-      return {
-        evaluation:
-          'There was no activity logged yesterday. A fresh start awaits!',
-        motivationalParagraph:
-          "Today is a blank canvas. It's a new opportunity to build the habits that will lead to your success. Plan your day, commit to your tasks, and make today count. Your 12-hour goal is achieved one focused session at a time. Let's begin.",
-      };
-    }
-    const {output} = await prompt(input);
-    return output!;
+  async (input) => {
+    const {profile, tasks, routines, logs} = input;
+
+    const prompt = `
+      As an expert life coach and data analyst, your task is to provide a concise, motivational, and insightful daily summary for a user based on their activity.
+
+      **User Profile:**
+      - Name: ${profile.name}
+      - Dream: ${profile.dream}
+
+      **Today's Activity:**
+      - Completed Tasks: ${tasks.length}
+      - Completed Routines: ${routines.length}
+      - Total Logs: ${logs.length}
+
+      **Instructions:**
+      Your response MUST be structured in two parts, separated by a specific delimiter.
+      1.  **Evaluation:** Start with "EVALUATION:". Briefly evaluate the user's productivity and consistency. Highlight wins and areas for gentle improvement.
+      2.  **Motivational Paragraph:** Start with "MOTIVATION:". Write a short, powerful, and personalized paragraph to inspire the user for tomorrow. Connect it to their dream.
+
+      Example:
+      EVALUATION: Great job on completing ${
+        tasks.length
+      } tasks today! Your focus is clear.
+      MOTIVATION: Every step you take brings you closer to your dream of "${
+        profile.dream
+      }". Keep that vision in mind and let it fuel you.
+
+      Keep the tone positive, encouraging, and empathetic.
+    `;
+
+    const result = await generateWithFallback({
+      prompt,
+    });
+
+    const text = result.text;
+    const evaluationMatch = text.match(/EVALUATION:([\s\S]*?)(?=MOTIVATION:|$)/);
+    const motivationMatch = text.match(/MOTIVATION:([\s\S]*)/);
+
+    return {
+      evaluation: evaluationMatch ? evaluationMatch[1].trim() : 'No evaluation generated.',
+      motivationalParagraph: motivationMatch ? motivationMatch[1].trim() : 'Keep up the great work!',
+    };
   }
 );
