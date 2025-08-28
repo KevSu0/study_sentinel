@@ -69,6 +69,7 @@ export type LogEventType =
   | 'TASK_ADD'
   | 'TASK_UPDATE'
   | 'TASK_COMPLETE'
+  | 'TASK_RETRY'
   | 'TASK_IN_PROGRESS'
   | 'TASK_ARCHIVE'
   | 'TASK_UNARCHIVE'
@@ -79,7 +80,8 @@ export type LogEventType =
   | 'TIMER_OVERTIME_STARTED'
   | 'TIMER_SESSION_COMPLETE'
   | 'TIMER_STOP'
-  | 'ROUTINE_SESSION_COMPLETE';
+  | 'ROUTINE_SESSION_COMPLETE'
+  | 'ROUTINE_RETRY';
 
 export type LogEvent = {
   id: string;

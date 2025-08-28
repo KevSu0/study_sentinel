@@ -2,16 +2,30 @@
   "name": "nextn",
   "version": "0.1.0",
   "private": true,
+  "sideEffects": [
+    "*.css",
+    "*.scss",
+    "src/app/globals.css",
+    "src/lib/db/init.ts",
+    "src/lib/pwa/register-sw.ts",
+    "src/components/providers.tsx"
+  ],
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbo",
+    "dev:fast": "cross-env NODE_ENV=development next dev --turbo --experimental-https",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "node --max-old-space-size=4096 node_modules/.bin/next build",
+    "build": "cross-env NODE_OPTIONS='--max-old-space-size=8192' next build",
+    "build:fast": "cross-env NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=production next build --experimental-build-mode=compile",
     "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit",
+    "lint": "next lint --fix",
+    "lint:check": "next lint",
+    "typecheck": "tsc --noEmit --incremental",
     "test": "jest",
-    "analyze": "ANALYZE=true next build"
+    "analyze": "cross-env ANALYZE=true NODE_OPTIONS='--max-old-space-size=8192' next build",
+    "clean": "rimraf .next out dist coverage",
+    "clean:cache": "rimraf .next/cache node_modules/.cache",
+    "prebuild": "npm run clean:cache"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",
@@ -78,7 +92,7 @@
   },
   "devDependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
-    "@next/bundle-analyzer": "^14.2.4",
+    "@next/bundle-analyzer": "^14.2.32",
     "@tailwindcss/nesting": "^0.0.0-insiders.565cd3e",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
@@ -90,6 +104,7 @@
     "@types/react-dom": "^18",
     "@types/react-window": "^1.8.8",
     "autoprefixer": "^10.4.21",
+    "cross-env": "^10.0.0",
     "eslint": "^8",
     "eslint-config-next": "14.2.4",
     "fake-indexeddb": "^6.1.0",
@@ -98,6 +113,7 @@
     "jest-localstorage-mock": "^2.4.26",
     "next-router-mock": "^1.0.2",
     "postcss": "^8",
+    "rimraf": "^6.0.1",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }

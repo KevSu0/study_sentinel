@@ -48,12 +48,14 @@ describe('ManualLogDialog', () => {
   };
   const mockRoutineItem: Routine = {
     id: 'routine-1',
-    shortId: 'r1',
-    title: 'Test Routine',
-    days: [1], // Monday
+    shortId: 'abc123',
+    title: 'Morning Review',
+    days: [1, 2, 3, 4, 5],
     startTime: '09:00',
     endTime: '10:00',
     priority: 'medium',
+    status: 'todo',
+    createdAt: Date.now(),
   };
 
   beforeEach(() => {

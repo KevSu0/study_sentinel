@@ -71,15 +71,20 @@ export const ActivityItem = memo(function ActivityItem({
       return { title: task.title, totalDuration, productiveDuration, pausedDuration, pauseCount, points, focusPercentage, priority: task.priority };
     }
     if (item.type === 'ROUTINE_COMPLETE') {
-      const {payload} = item.data;
-      const totalDuration = payload.duration ?? 0;
-      const productiveDuration = payload.productiveDuration ?? totalDuration;
-      const pausedDuration = payload.pausedDuration ?? 0;
-      const pauseCount = payload.pauseCount ?? 0;
-      const points = payload.points ?? 0;
+      const {routine, log} = item.data as {routine: any; log: any | null};
+      if (!routine) {
+        // Handle case where routine is undefined - use fallback values
+        const title = item.data.name || item.data.title || 'Unknown Routine';
+        return { title, totalDuration: 0, productiveDuration: 0, pausedDuration: 0, pauseCount: 0, points: 0, focusPercentage: 100 };
+      }
+      const totalDuration = log?.payload?.duration ?? 0;
+      const productiveDuration = log?.payload?.productiveDuration ?? totalDuration;
+      const pausedDuration = log?.payload?.pausedDuration ?? 0;
+      const pauseCount = log?.payload?.pauseCount ?? 0;
+      const points = log?.payload?.points ?? 0;
       const focusPercentage = totalDuration > 0 ? (productiveDuration / totalDuration) * 100 : 100;
 
-      return { title: payload.title, totalDuration, productiveDuration, pausedDuration, pauseCount, points, focusPercentage, studyLog: payload.studyLog, priority: payload.priority };
+      return { title: routine.title, totalDuration, productiveDuration, pausedDuration, pauseCount, points, focusPercentage, studyLog: log?.payload?.studyLog, priority: routine.priority };
     }
     return null;
   };
@@ -112,7 +117,7 @@ export const ActivityItem = memo(function ActivityItem({
                 <DropdownMenuItem onSelect={onUndo} disabled={isUndone}>
                   Retry
                 </DropdownMenuItem>
-                {onDelete && !isRoutine && (
+                {onDelete && (
                     <DropdownMenuItem onSelect={onDelete} className="text-destructive">
                         Delete Log
                     </DropdownMenuItem>

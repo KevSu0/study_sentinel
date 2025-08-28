@@ -38,6 +38,7 @@ import toast from 'react-hot-toast';
 import { useStats } from '@/hooks/use-stats';
 import { getSessionDate } from '@/lib/utils';
 import { DailyActiveProductivityWidget } from '@/components/dashboard/widgets/daily-active-productivity-widget';
+import type { StudyTask } from '@/lib/types';
 
 const CustomizeDialog = dynamic(
   () =>
@@ -73,7 +74,7 @@ function SortableWidget({
 }
 
 export default function DashboardPage() {
-  const {state, updateTask, updateLog, removeLog} = useGlobalState();
+  const {state, updateTask, updateLog, removeLog, retryItem} = useGlobalState();
   const {layout, setLayout, isLoaded: layoutLoaded} = useDashboardLayout();
 
   const [isCustomizeOpen, setCustomizeOpen] = React.useState(false);
@@ -101,24 +102,24 @@ export default function DashboardPage() {
   );
 
   const handleUndoComplete = (item: ActivityFeedItem) => {
-    if (item.type === 'ROUTINE_COMPLETE') {
-      updateLog(item.data.id, { isUndone: true });
-      toast.success('Routine completion undone.');
-    } else if (item.type === 'TASK_COMPLETE') {
-      updateTask({ ...item.data.task, status: 'todo' });
-      toast.success('Task marked as not complete.');
-    }
+    retryItem(item);
   };
 
   const handleHardUndo = (item: ActivityFeedItem) => {
     if (item.type === 'ROUTINE_COMPLETE') {
-      removeLog(item.data.id);
+      removeLog(item.data.log.id);
       toast.error('Routine completion permanently removed.');
     } else if (item.type === 'TASK_COMPLETE' && item.data.log) {
       removeLog(item.data.log.id);
       updateTask({ ...item.data.task, status: 'todo' });
       toast.error('Task completion has been permanently reset.');
     }
+  };
+
+  const handleUpdateTask = (task: StudyTask) => {
+    // Check if this is a manual completion (status changing to 'completed')
+    const isManualCompletion = task.status === 'completed';
+    updateTask(task, isManualCompletion);
   };
 
   const isLoaded = state.isLoaded && layoutLoaded;

@@ -137,7 +137,7 @@ const calculatePoints = (duration: number = 0, priority: TaskPriority) => {
   return Math.round(duration * priorityMultipliers[priority]);
 };
 
-function TaskForm({ onSubmit, onCancel, editingItem, selectedDate }: { onSubmit: (data: TaskFormData) => void; onCancel: () => void; editingItem?: StudyTask | null, selectedDate?: Date}) {
+function TaskForm({ onSubmit, onCancel, editingItem, selectedDate }: { onSubmit: (data: TaskFormData) => void; onCancel: () => void; editingItem?: StudyTask; selectedDate?: Date}) {
   const now = new Date();
   const roundedMinutes = Math.round(now.getMinutes() / 15) * 15;
   const roundedDate = new Date( now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), roundedMinutes);
@@ -380,8 +380,8 @@ export function AddItemDialog({ isOpen, onOpenChange, onAddTask, onUpdateTask, o
   const [activeTab, setActiveTab] = useState(itemType || 'task');
 
   const isEditing = !!editingItem;
-  const editingTask = isEditing && 'status' in editingItem ? editingItem : null;
-  const editingRoutine = isEditing && !('status' in editingItem) ? editingItem : null;
+  const editingTask: StudyTask | null = isEditing && 'date' in editingItem ? editingItem as StudyTask : null;
+  const editingRoutine = isEditing && 'days' in editingItem ? editingItem : null;
   
   useEffect(() => {
     setOpen(isOpen);
@@ -402,22 +402,39 @@ export function AddItemDialog({ isOpen, onOpenChange, onAddTask, onUpdateTask, o
       onUpdateTask({ ...editingTask, ...finalData });
     } else {
       const shortId = Math.random().toString(36).substring(2, 8);
-      onAddTask({ ...finalData, shortId });
+      const newTask = {
+        ...finalData,
+        shortId,
+        title: data.title || '',
+        description: data.description || '',
+        date: data.date || '',
+        time: data.time || '',
+        priority: data.priority || 'medium',
+        timerType: data.timerType || 'countdown'
+      };
+      onAddTask(newTask);
     }
     handleOpenChange(false);
   };
 
-  const onRoutineSubmit = (data: RoutineFormData) => {
+  const onRoutineSubmit = async (data: RoutineFormData) => {
+    console.log('onRoutineSubmit called with data:', data);
+    console.log('editingRoutine:', editingRoutine);
+    
     if (editingRoutine) {
-      onUpdateRoutine({ ...editingRoutine, ...data });
+      console.log('Updating routine with ID:', editingRoutine.id);
+      const updatedRoutine = { ...editingRoutine, ...data };
+      console.log('Updated routine object:', updatedRoutine);
+      await onUpdateRoutine(updatedRoutine);
     } else {
-      const newRoutine = {
+      console.log('Creating new routine');
+      const newRoutine: Omit<Routine, 'id'> = {
         ...data,
-        shortId: Math.random().toString(36).substring(2, 8),
+        createdAt: new Date().toISOString(),
       };
-      onAddRoutine(newRoutine);
+      await onAddRoutine(newRoutine);
     }
-    handleOpenChange(false);
+    setOpen(false);
   };
 
   const handleTabChange = (value: string) => {
@@ -442,7 +459,7 @@ export function AddItemDialog({ isOpen, onOpenChange, onAddTask, onUpdateTask, o
             </TabsList>
           )}
           <TabsContent value="task">
-             <TaskForm onSubmit={onTaskSubmit} onCancel={() => handleOpenChange(false)} editingItem={editingTask} selectedDate={selectedDate}/>
+             <TaskForm onSubmit={onTaskSubmit} onCancel={() => handleOpenChange(false)} editingItem={editingTask || undefined} selectedDate={selectedDate}/>
           </TabsContent>
           <TabsContent value="routine">
              <RoutineForm onSubmit={onRoutineSubmit} onCancel={() => handleOpenChange(false)} editingItem={editingRoutine} />

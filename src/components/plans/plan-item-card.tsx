@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { StudyTask, Routine, LogEvent } from '@/lib/types';
 import { format, parseISO, parse } from 'date-fns';
+import { getPriorityCardStyles, getPriorityTextStyles, getPriorityBadgeStyles } from '@/lib/priority-colors';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,14 +63,7 @@ interface PlanItemCardProps {
   onDeleteCompleteRoutine?: (logId: string) => void;
 }
 
-const getPriorityStyles = (priority: 'low' | 'medium' | 'high') => {
-  switch (priority) {
-    case 'high': return 'border-red-500/80 bg-red-500/5';
-    case 'medium': return 'border-yellow-500/80 bg-yellow-500/5';
-    case 'low': return 'border-blue-500/80 bg-blue-500/5';
-    default: return 'border-border';
-  }
-};
+
 
 const TaskDetails = ({ data }: { data: StudyTask }) => (
   <>
@@ -89,10 +83,16 @@ const TaskDetails = ({ data }: { data: StudyTask }) => (
 );
 
 const RoutineDetails = ({ data }: { data: Routine }) => (
-  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-    <Repeat className="h-3 w-3" />
-    <span>Routine</span>
-  </div>
+  <>
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <Repeat className="h-3 w-3" />
+      <span>Routine</span>
+    </div>
+    <div className="flex items-center gap-2 text-xs capitalize text-muted-foreground">
+      <Flame className={cn("h-3 w-3", getPriorityTextStyles(data.priority))} />
+      <span>{data.priority}</span>
+    </div>
+  </>
 );
 
 export const PlanItemCard = React.memo(function PlanItemCard({
@@ -155,8 +155,8 @@ export const PlanItemCard = React.memo(function PlanItemCard({
         <div
           className={cn(
             'flex items-center gap-2 sm:gap-3 rounded-lg border p-2 sm:p-3 transition-all',
-            isTask && !isCompleted && getPriorityStyles((item.data as StudyTask).priority),
-            isRoutine && !isCompleted && 'border-purple-500/50 bg-purple-500/5',
+            isTask && !isCompleted && getPriorityCardStyles((item.data as StudyTask).priority),
+            isRoutine && !isCompleted && getPriorityCardStyles((item.data as Routine).priority),
             isCompleted && 'bg-background border-dashed',
             isTimerActiveForThis && 'ring-2 ring-primary'
           )}
@@ -174,10 +174,10 @@ export const PlanItemCard = React.memo(function PlanItemCard({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => onUndoCompleteRoutine?.(item.data.id)}>
+                    <DropdownMenuItem onSelect={() => onUndoCompleteRoutine?.((item.data as any).log?.id || item.data.id)}>
                       Retry
                     </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => onDeleteCompleteRoutine?.(item.data.id)} className="text-destructive">
+                    <DropdownMenuItem onSelect={() => onDeleteCompleteRoutine?.((item.data as any).log?.id || item.data.id)} className="text-destructive">
                       Delete Log
                     </DropdownMenuItem>
                   </DropdownMenuContent>

@@ -18,34 +18,34 @@ import {z} from 'zod';
 import {useEffect, useState} from 'react';
 import type {StudyTask, Routine} from '@/lib/types';
 import {DurationInput} from '@/components/badges/duration-input';
-import { useGlobalState } from '@/hooks/use-global-state';
+import { useGlobalState, type ManualLogFormData } from '@/hooks/use-global-state';
 import { Input } from '../ui/input';
 import { format, parse } from 'date-fns';
+import { toast } from 'sonner';
 
 const logSchema = z.object({
-  logDate: z.string().min(1, 'Date is required.'),
-  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:mm)'),
-  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:mm)'),
-  productiveDuration: z.coerce.number().min(1, 'Productive duration must be at least 1 minute.'),
-  breaks: z.coerce.number().min(0, 'Breaks cannot be negative.').default(0),
+  logDate: z.string().min(1, 'Log date is required'),
+  startTime: z.string().min(1, 'Start time is required'),
+  endTime: z.string().min(1, 'End time is required'),
+  productiveDuration: z.number().min(0, 'Duration must be positive'),
+  breaks: z.number().min(0, 'Breaks must be positive'),
   notes: z.string().optional(),
-}).refine(data => {
-    const start = parse(data.startTime, 'HH:mm', new Date());
-    const end = parse(data.endTime, 'HH:mm', new Date());
-    return end > start;
+}).refine((data) => {
+  // Calculate total time from start and end time
+  const startTime = parse(data.startTime, 'HH:mm', new Date());
+  const endTime = parse(data.endTime, 'HH:mm', new Date());
+  let totalMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+  
+  // Handle case where end time is next day
+  if (totalMinutes < 0) {
+    totalMinutes += 24 * 60;
+  }
+  
+  return data.productiveDuration <= totalMinutes;
 }, {
-    message: "End time must be after start time.",
-    path: ["endTime"],
-}).refine(data => {
-    const start = parse(data.startTime, 'HH:mm', new Date());
-    const end = parse(data.endTime, 'HH:mm', new Date());
-    const totalDurationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-    return data.productiveDuration <= totalDurationMinutes;
-}, {
-    message: "Productive time cannot exceed total session time.",
-    path: ["productiveDuration"],
+  message: 'Productive time cannot exceed total session time',
+  path: ['productiveDuration']
 });
-
 
 type LogFormData = z.infer<typeof logSchema>;
 
@@ -61,7 +61,7 @@ export function ManualLogDialog({
   item,
 }: ManualLogDialogProps) {
   const { manuallyCompleteItem } = useGlobalState();
-  const { control, handleSubmit, reset, formState: { errors } } = useForm<LogFormData>({
+  const { control, register, handleSubmit, reset, formState: { errors } } = useForm<LogFormData>({
     resolver: zodResolver(logSchema),
     defaultValues: {
       productiveDuration: 30,
@@ -93,7 +93,37 @@ export function ManualLogDialog({
   }, [isOpen, item, reset]);
 
   const onSubmit = (data: LogFormData) => {
-    manuallyCompleteItem(item, data);
+    // Calculate total time for validation display
+    const startTime = parse(data.startTime, 'HH:mm', new Date());
+    const endTime = parse(data.endTime, 'HH:mm', new Date());
+    let totalMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+    
+    // Handle case where end time is next day
+    if (totalMinutes < 0) {
+      totalMinutes += 24 * 60;
+    }
+    
+    // Show toast error if productive time exceeds total time
+    if (data.productiveDuration > totalMinutes) {
+      toast.error(
+        `Productive time (${data.productiveDuration} min) cannot exceed total session time (${Math.round(totalMinutes)} min)`,
+        {
+          description: 'Please adjust your productive time or session duration.',
+          duration: 5000,
+        }
+      );
+      return;
+    }
+    
+    const formData: ManualLogFormData = {
+      logDate: data.logDate,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      productiveDuration: data.productiveDuration,
+      breaks: data.breaks,
+      notes: data.notes,
+    };
+    manuallyCompleteItem(item, formData);
     onOpenChange(false);
   };
   
@@ -109,19 +139,19 @@ export function ManualLogDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <Label htmlFor="logDate">Date of Session</Label>
-            <Input id="logDate" type="date" {...control.register('logDate')} className="mt-1" />
+            <Input id="logDate" type="date" {...register('logDate')} className="mt-1" />
             {errors.logDate && <p className="text-sm text-destructive mt-1">{errors.logDate.message}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
               <div>
                   <Label htmlFor="startTime">Start Time</Label>
-                  <Input id="startTime" type="time" {...control.register('startTime')} className="mt-1" />
+                  <Input id="startTime" type="time" {...register('startTime')} className="mt-1" />
                   {errors.startTime && <p className="text-sm text-destructive mt-1">{errors.startTime.message}</p>}
               </div>
               <div>
                   <Label htmlFor="endTime">End Time</Label>
-                  <Input id="endTime" type="time" {...control.register('endTime')} className="mt-1" />
+                  <Input id="endTime" type="time" {...register('endTime')} className="mt-1" />
                   {errors.endTime && <p className="text-sm text-destructive mt-1">{errors.endTime.message}</p>}
               </div>
           </div>
@@ -145,14 +175,14 @@ export function ManualLogDialog({
           </div>
           <div>
             <Label htmlFor="breaks">Number of Breaks</Label>
-            <Input id="breaks" type="number" {...control.register('breaks')} className="mt-1" min="0" />
+            <Input id="breaks" type="number" {...register('breaks', { valueAsNumber: true })} className="mt-1" min="0" />
             {errors.breaks && <p className="text-sm text-destructive mt-1">{errors.breaks.message}</p>}
           </div>
           <div>
             <Label htmlFor="notes">Notes (Optional)</Label>
             <Textarea
               id="notes"
-              {...control.register('notes')}
+              {...register('notes')}
               placeholder="What did you work on?"
             />
           </div>

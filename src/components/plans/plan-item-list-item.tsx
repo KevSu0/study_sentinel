@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { StudyTask, Routine, LogEvent } from '@/lib/types';
 import { format, parseISO } from 'date-fns';
+import { getPriorityCardStyles, getPriorityTextStyles } from '@/lib/priority-colors';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,14 +50,7 @@ interface PlanListItemProps {
   onDeleteCompleteRoutine?: (logId: string) => void;
 }
 
-const getPriorityColor = (priority: 'low' | 'medium' | 'high') => {
-  switch (priority) {
-    case 'high': return 'text-red-500';
-    case 'medium': return 'text-yellow-500';
-    case 'low': return 'text-blue-500';
-    default: return 'text-muted-foreground';
-  }
-};
+
 
 export const PlanListItem = React.memo(function PlanListItem({
   item,
@@ -110,7 +104,9 @@ export const PlanListItem = React.memo(function PlanListItem({
     <div
       className={cn(
         'flex items-center gap-2 sm:gap-3 rounded-lg p-2 transition-all hover:bg-muted/50',
-        isTimerActiveForThis && 'bg-primary/10'
+        isTimerActiveForThis && 'bg-primary/10',
+        (item.type === 'task' || item.type === 'completed_task') && getPriorityCardStyles((item.data as StudyTask).priority),
+        item.type === 'routine' && getPriorityCardStyles((item.data as Routine).priority)
       )}
     >
       <span className="text-xs font-mono text-muted-foreground w-10 sm:w-12 text-right">{time}</span>
@@ -145,13 +141,13 @@ export const PlanListItem = React.memo(function PlanListItem({
         </p>
         <div className="flex items-center gap-2 sm:gap-3 text-xs text-muted-foreground">
             {item.type === 'task' && <>
-                <Flame className={cn("h-3 w-3", getPriorityColor((item.data as StudyTask).priority))} />
+                <Flame className={cn("h-3 w-3", getPriorityTextStyles((item.data as StudyTask).priority))} />
                 { (item.data as StudyTask).timerType === 'infinity' ? 
                     <InfinityIcon className="h-3 w-3" /> : 
                     <span>{(item.data as StudyTask).duration} min</span>
                 }
             </>}
-            {item.type === 'routine' && <><Repeat className="h-3 w-3" /><span>Routine</span></>}
+            {item.type === 'routine' && <><Flame className={cn("h-3 w-3", getPriorityTextStyles((item.data as Routine).priority))} /><Repeat className="h-3 w-3" /><span>Routine</span></>}
             {item.type === 'completed_task' && <><Award className="h-3 w-3 text-green-500" /><span>Completed</span></>}
             {item.type === 'completed_routine' && <><Award className="h-3 w-3 text-green-500" /><span>Logged {format(parseISO(item.data.timestamp), 'p')}</span></>}
         </div>

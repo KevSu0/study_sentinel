@@ -10,10 +10,13 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
-import {PlayCircle, Timer, Clock} from 'lucide-react';
+import {PlayCircle, Timer, Clock, Flame} from 'lucide-react';
 import {Routine} from '@/lib/types';
 import toast from 'react-hot-toast';
 import {useGlobalState} from '@/hooks/use-global-state';
+import {getPriorityCardStyles, getPriorityBadgeStyles} from '@/lib/priority-colors';
+import {Badge} from '@/components/ui/badge';
+import {cn} from '@/lib/utils';
 
 interface RoutineCardProps {
   routine: Routine;
@@ -43,7 +46,10 @@ export const RoutineCard = React.memo(function RoutineCard({
   };
 
   return (
-    <Card className="flex flex-col bg-card/70">
+    <Card className={cn(
+      "flex flex-col border-l-4 transition-all duration-300",
+      getPriorityCardStyles(routine.priority)
+    )}>
       <CardHeader>
         <CardTitle>{routine.title}</CardTitle>
         <CardDescription className="mt-1 flex items-center gap-2 text-sm">
@@ -57,6 +63,18 @@ export const RoutineCard = React.memo(function RoutineCard({
         <p className="text-sm text-muted-foreground">
           {routine.description || 'No description'}
         </p>
+        <div className="mt-3">
+          <Badge
+            variant="outline"
+            className={cn(
+              "capitalize flex items-center gap-1.5 w-fit",
+              getPriorityBadgeStyles(routine.priority)
+            )}
+          >
+            <Flame className="h-3.5 w-3.5" />
+            {routine.priority}
+          </Badge>
+        </div>
       </CardContent>
       <CardFooter>
         <Button

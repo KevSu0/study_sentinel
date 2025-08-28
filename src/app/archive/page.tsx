@@ -5,6 +5,7 @@ import {TaskList} from '@/components/tasks/task-list';
 import {EmptyState} from '@/components/tasks/empty-state';
 import {Skeleton} from '@/components/ui/skeleton';
 import {Archive} from 'lucide-react';
+import type {StudyTask} from '@/lib/types';
 
 export default function ArchivePage() {
   const {
@@ -14,6 +15,12 @@ export default function ArchivePage() {
     pushTaskToNextDay,
     archiveTask,
   } = useGlobalState();
+
+  const handleUpdateTask = (task: StudyTask) => {
+    // Check if this is a manual completion (status changing to 'completed')
+    const isManualCompletion = task.status === 'completed';
+    updateTask(task, isManualCompletion);
+  };
 
   const archivedTasks = useMemo(
     () => state.tasks.filter(task => task.status === 'archived'),
@@ -39,7 +46,7 @@ export default function ArchivePage() {
         ) : archivedTasks.length > 0 ? (
           <TaskList
             tasks={archivedTasks}
-            onUpdate={updateTask}
+            onUpdate={handleUpdateTask}
             onArchive={archiveTask}
             onUnarchive={unarchiveTask}
             onPushToNextDay={pushTaskToNextDay}

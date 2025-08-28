@@ -2,7 +2,7 @@ import { Table } from 'dexie';
 import { db, Outbox } from '../db';
 import { logger } from '../logger';
 
-export class BaseRepository<T extends { id: TKey }, TKey extends string> {
+export class BaseRepository<T extends { id?: TKey }, TKey extends string | number> {
   protected db = db;
   constructor(protected table: Table<T, TKey>) {}
 
@@ -17,6 +17,15 @@ export class BaseRepository<T extends { id: TKey }, TKey extends string> {
   async add(item: T): Promise<TKey | undefined> {
     if (navigator.onLine) {
       try {
+        // Check if item already exists to prevent constraint errors
+        if (item.id) {
+          const existing = await this.table.get(item.id);
+          if (existing) {
+            logger.warn(`Item with id ${item.id} already exists in ${this.table.name}, updating instead`);
+            await this.table.put(item);
+            return item.id;
+          }
+        }
         return await this.table.add(item);
       } catch (error) {
         logger.error(`Failed to add item to ${this.table.name} in online mode`, error);

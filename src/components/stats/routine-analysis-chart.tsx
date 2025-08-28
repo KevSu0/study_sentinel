@@ -1,15 +1,15 @@
 'use client';
 import React from 'react';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
+  LazyBarChart as BarChart,
+  LazyBar as Bar,
+  LazyXAxis as XAxis,
+  LazyYAxis as YAxis,
+  LazyCartesianGrid as CartesianGrid,
+  LazyTooltip as Tooltip,
+  LazyLegend as Legend,
+  LazyResponsiveContainer as ResponsiveContainer,
+} from '@/components/lazy/chart-components';
 import {
   Card,
   CardContent,
@@ -55,11 +55,12 @@ export function RoutineAnalysisChart({data}: RoutineAnalysisChartProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={data} layout="vertical" margin={{left: 10, right: 10}}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" unit="h" />
+        <ResponsiveContainer {...({} as any)} width="100%" height={300}>
+          <BarChart {...({} as any)} data={data} layout="vertical" margin={{left: 10, right: 10}}>
+            <CartesianGrid {...({} as any)} strokeDasharray="3 3" />
+            <XAxis {...({} as any)} type="number" unit="h" />
             <YAxis
+              {...({} as any)}
               type="category"
               dataKey="name"
               width={80}
@@ -68,14 +69,15 @@ export function RoutineAnalysisChart({data}: RoutineAnalysisChartProps) {
               tickLine={false}
             />
             <Tooltip
+              {...({} as any)}
               contentStyle={{
                 backgroundColor: 'hsl(var(--background))',
                 border: '1px solid hsl(var(--border))',
               }}
               formatter={(value: number) => [`${value.toFixed(1)} hours`, 'Total Time']}
             />
-            <Legend />
-            <Bar dataKey="totalHours" name="Total Hours" fill="hsl(var(--chart-3))" radius={[0, 4, 4, 0]} />
+            <Legend {...({} as any)} />
+            <Bar {...({} as any)} dataKey="totalHours" name="Total Hours" fill="hsl(var(--chart-3))" radius={[0, 4, 4, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

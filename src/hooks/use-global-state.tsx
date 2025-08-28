@@ -160,7 +160,7 @@ interface AppState {
   quickStartOpen: boolean;
 }
 
-interface ManualLogFormData {
+export interface ManualLogFormData {
   logDate: string;
   startTime: string;
   endTime: string;
@@ -195,6 +195,7 @@ interface GlobalStateContextType {
   addLog: (type: LogEvent['type'], payload: LogEvent['payload']) => void;
   removeLog: (logId: string) => void;
   updateLog: (logId: string, updatedLog: Partial<LogEvent>) => void;
+  retryItem: (item: ActivityFeedItem) => void;
   openQuickStart: () => void;
   closeQuickStart: () => void;
 }
@@ -537,29 +538,58 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
         log.type === 'TIMER_STOP'
     ).sort((a, b) => parseISO(b.timestamp).getTime() - parseISO(a.timestamp).getTime());
 
-    for (const log of activityLogs) {
+    const processedTaskIds = new Set<string>();
+    const processedRoutineIds = new Set<string>();
+    
+    // Filter out undone logs
+    const activeLogs = activityLogs.filter(log => !log.isUndone);
+    
+    // Process all logs in a unified way
+    for (const log of activeLogs) {
         if (log.type === 'TIMER_SESSION_COMPLETE') {
             const task = state.tasks.find(t => t.id === log.payload.taskId);
-            if (task) activity.push({ type: 'TASK_COMPLETE', data: { task, log }, timestamp: log.timestamp });
-        } else if (log.type === 'TASK_COMPLETE') { // Manual completion
+            if (task && !processedTaskIds.has(log.payload.taskId)) {
+                activity.push({ type: 'TASK_COMPLETE', data: { task, log }, timestamp: log.timestamp });
+                processedTaskIds.add(log.payload.taskId);
+            }
+        } else if (log.type === 'TASK_COMPLETE') {
+            // Manual task completion - create consistent log structure
             const task = state.tasks.find(t => t.id === log.payload.taskId);
-            if (task) {
-                const fakeSessionLog = { id: log.id, payload: { duration: (task.duration || 0) * 60, points: task.points, pauseCount: 0, pausedDuration: 0 } };
-                activity.push({ type: 'TASK_COMPLETE', data: { task, log: fakeSessionLog }, timestamp: log.timestamp });
+            if (task && !processedTaskIds.has(log.payload.taskId)) {
+                // Create a proper session log structure instead of fake one
+                const sessionLog = {
+                    id: log.id,
+                    timestamp: log.timestamp,
+                    type: 'TIMER_SESSION_COMPLETE' as const,
+                    payload: {
+                        taskId: task.id,
+                        title: task.title,
+                        duration: (task.duration || 0) * 60,
+                        productiveDuration: (task.duration || 0) * 60,
+                        pausedDuration: 0,
+                        pauseCount: 0,
+                        points: task.points,
+                        priority: task.priority,
+                        manual: true
+                    }
+                };
+                activity.push({ type: 'TASK_COMPLETE', data: { task, log: sessionLog }, timestamp: log.timestamp });
+                processedTaskIds.add(log.payload.taskId);
             }
         } else if (log.type === 'ROUTINE_SESSION_COMPLETE') {
             const routine = state.routines.find(r => r.id === log.payload.routineId);
-            if (routine) {
+            if (routine && !processedRoutineIds.has(log.payload.routineId)) {
                 activity.push({ type: 'ROUTINE_COMPLETE', data: { routine, log }, timestamp: log.timestamp });
-            } else {
+                processedRoutineIds.add(log.payload.routineId);
+            } else if (!routine) {
                 console.warn('Routine not found for activity feed:', log.payload.routineId, 'Available routines:', state.routines.map(r => r.id));
             }
         } else if (log.type === 'TIMER_STOP') {
             activity.push({ type: 'TIMER_STOP', data: log, timestamp: log.timestamp });
         }
     }
-    return activity;
-  }, [todaysLogs, state.tasks]);
+    return activity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }, [todaysLogs, state.tasks, state.routines]);
 
   useEffect(() => {
     setState(prev => ({
@@ -618,7 +648,20 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
 
   const addTask = useCallback(async (task: Omit<StudyTask, 'id' | 'status' | 'shortId'> & { id?: string }) => {
     const newTask: StudyTask = { ...task, id: task.id || crypto.randomUUID(), shortId: generateShortId('T'), status: 'todo', description: task.description || '' };
-    await taskRepo.add(newTask as any);
+    
+    // Check if task with this ID already exists
+    if (task.id) {
+      const existingTask = await taskRepo.getById(task.id);
+      if (existingTask) {
+        // Update existing task instead of adding new one
+        await taskRepo.update(task.id, newTask as any);
+      } else {
+        await taskRepo.add(newTask as any);
+      }
+    } else {
+      await taskRepo.add(newTask as any);
+    }
+    
     const updatedTasks = await taskRepo.getAll();
     setStateAndDerive(prev => {
       addLog('TASK_ADD', {taskId: newTask.id, title: newTask.title});
@@ -626,7 +669,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
     });
   }, [addLog]);
 
-  const updateTask = useCallback((updatedTask: StudyTask, isManualCompletion: boolean = false) => {
+  const updateTask = useCallback((updatedTask: StudyTask, isManualCompletion: boolean = false, skipCompletionLog: boolean = false) => {
     taskRepo.update(updatedTask.id, updatedTask as any);
     setStateAndDerive(prev => {
       let isCompletion = false;
@@ -637,8 +680,28 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
         }
         return task;
       });
-      if (isCompletion) {
+      if (isCompletion && !skipCompletionLog) {
+        if (isManualCompletion) {
+          // Create a proper session log for manual completion, similar to timer completion
+          const priorityMultipliers: Record<TaskPriority, number> = { low: 1, medium: 2, high: 3 };
+          let pointsEarned = updatedTask.points;
+          if (updatedTask.timerType === 'infinity') {
+            // For infinity tasks, calculate points based on a minimal duration (1 minute)
+            pointsEarned = Math.floor((1 * 60 / 60) * priorityMultipliers[updatedTask.priority]);
+          }
+          addLog('TIMER_SESSION_COMPLETE', {
+            taskId: updatedTask.id,
+            title: updatedTask.title,
+            duration: 0, // Manual completion has no duration
+            pausedDuration: 0,
+            pauseCount: 0,
+            points: pointsEarned,
+            priority: updatedTask.priority,
+            manual: true
+          });
+        } else {
           addLog('TASK_COMPLETE', {taskId: updatedTask.id, title: updatedTask.title, points: updatedTask.points, isManual: isManualCompletion });
+        }
       }
       const sortedTasks = newTasks.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
       return {tasks: sortedTasks};
@@ -792,7 +855,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
         pointsEarned = Math.floor((durationInSeconds / 60) * priorityMultipliers[item.item.priority]);
       }
       
-      updateTask({ ...item.item, status: 'completed' as const }, true);
+      updateTask({ ...item.item, status: 'completed' as const }, true, true);
       addLog('TIMER_SESSION_COMPLETE', {
         taskId: item.item.id,
         title: item.item.title,
@@ -882,7 +945,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
 
   const openRoutineLogDialog = useCallback((action: 'complete' | 'stop') => { setState(prev => ({...prev, routineLogDialog: {isOpen: true, action}})); }, []);
   const closeRoutineLogDialog = useCallback(() => { setState(prev => ({ ...prev, routineLogDialog: {isOpen: false, action: null} })); }, []);
-  const addRoutine = useCallback((input: Omit<Routine, 'id' | 'shortId' | 'status' | 'createdAt'> & Partial<Pick<Routine, 'id'>>) => {
+  const addRoutine = useCallback(async (input: Omit<Routine, 'id' | 'shortId' | 'status' | 'createdAt'> & Partial<Pick<Routine, 'id'>>) => {
     const ensureId = (id?: string) => id ?? (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`);
     const id = ensureId(input.id);
     const shortId = `R-${id.slice(0, 6)}`;
@@ -898,21 +961,52 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
       shortId,
     };
 
-    setState(s => {
-      const next = [...s.routines, newRoutine];
-      // fire-and-forget persistence; do not overwrite state later with stale storage
-      void routineRepo.add(newRoutine);
-      return { ...s, routines: next };
-    });
+    // Check if routine with this ID already exists
+    if (input.id) {
+      const existingRoutine = await routineRepo.getById(input.id);
+      if (existingRoutine) {
+        // Update existing routine instead of adding new one
+        await routineRepo.update(input.id, newRoutine);
+        setStateAndDerive(prev => {
+          const updated = prev.routines.map(r => (r.id === input.id ? newRoutine : r));
+          return { routines: updated };
+        });
+      } else {
+        await routineRepo.add(newRoutine);
+        setStateAndDerive(prev => {
+          const next = [...prev.routines, newRoutine];
+          return { routines: next };
+        });
+      }
+    } else {
+      await routineRepo.add(newRoutine);
+      setStateAndDerive(prev => {
+        const next = [...prev.routines, newRoutine];
+        return { routines: next };
+      });
+    }
 
     return id;
   }, []);
-  const updateRoutine = useCallback((routine: Routine) => {
-    routineRepo.update(routine.id, routine as any);
-    setStateAndDerive(prev => {
-      const updated = prev.routines.map(r => (r.id === routine.id ? routine : r)).sort((a, b) => a.startTime.localeCompare(b.startTime));
-      return {routines: updated};
-    });
+  const updateRoutine = useCallback(async (routine: Routine) => {
+    console.log('updateRoutine called with:', routine);
+    console.log('Routine ID:', routine.id);
+    
+    try {
+      await routineRepo.update(routine.id, routine as any);
+      console.log('Database update successful');
+      
+      setStateAndDerive(prev => {
+        console.log('Previous routines:', prev.routines);
+        const updated = prev.routines.map(r => (r.id === routine.id ? routine : r)).sort((a, b) => a.startTime.localeCompare(b.startTime));
+        console.log('Updated routines:', updated);
+        return {routines: updated};
+      });
+      console.log('State update completed');
+    } catch (error) {
+      console.error('Error updating routine:', error);
+      throw error;
+    }
   }, []);
   const deleteRoutine = useCallback((routineId: string) => {
     routineRepo.delete(routineId);
@@ -954,6 +1048,71 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
   const setSoundSettings = useCallback((newSettings: Partial<SoundSettings>) => { setStateAndDerive(prev => { const updatedSettings = {...prev.soundSettings, ...newSettings}; localStorage.setItem(SOUND_SETTINGS_KEY, JSON.stringify(updatedSettings)); return {soundSettings: updatedSettings}; }); }, []);
   const toggleMute = useCallback(() => setState(prev => ({...prev, isMuted: !prev.isMuted})), []);
 
+  const retryItem = useCallback((item: ActivityFeedItem) => {
+    if (item.type === 'TASK_COMPLETE') {
+      const task = item.data.task;
+      if (!task) {
+        toast.error('Task data not found.');
+        return;
+      }
+      
+      // Check if a task with the same original ID already exists in upcoming
+      const existingTask = state.tasks.find(t => 
+        t.id === task.id && 
+        t.status !== 'completed' && 
+        t.status !== 'archived'
+      );
+      
+      if (existingTask) {
+        toast.info(`"${task.title}" is already available in upcoming tasks.`);
+        return;
+      }
+      
+      // Create a new task instance with the original ID for retry (keep the completed record intact)
+      const retryTask: StudyTask = {
+        ...task,
+        status: 'todo'
+      };
+      addTask(retryTask);
+      addLog('TASK_RETRY', { originalTaskId: task.id, newTaskId: task.id, title: task.title });
+      toast.success(`"${task.title}" is now available to retry.`);
+    } else if (item.type === 'ROUTINE_COMPLETE') {
+      const routine = item.data.routine;
+      if (!routine) {
+        toast.error('Routine data not found.');
+        return;
+      }
+      
+      // Check if the routine is already available for today
+      const today = new Date();
+      const isRoutineAvailableToday = routine.days.includes(today.getDay());
+      
+      if (!isRoutineAvailableToday) {
+        toast.info(`"${routine.title}" is not scheduled for today.`);
+        return;
+      }
+      
+      // Check if routine is already completed today by looking at today's activity
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      const completedToday = state.todaysActivity.some(activity => 
+        activity.type === 'ROUTINE_COMPLETE' && 
+        activity.data?.routine?.id === routine.id &&
+        !activity.data?.isUndone &&
+        activity.timestamp?.startsWith(todayStr)
+      );
+      
+      if (!completedToday) {
+        toast.info(`"${routine.title}" is already available for today.`);
+        return;
+      }
+      
+      // For routines, we don't create a new instance since they're recurring
+      // Just log the retry action - the routine will appear in upcoming automatically
+      addLog('ROUTINE_RETRY', { routineId: routine.id, title: routine.title });
+      toast.success(`"${routine.title}" is now available to retry.`);
+    }
+  }, [addTask, addLog, state.tasks, state.todaysActivity]);
+
   const contextValue = useMemo(
     () => ({
       state,
@@ -981,6 +1140,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
       addLog,
       removeLog,
       updateLog,
+      retryItem,
       openQuickStart,
       closeQuickStart,
     }),
@@ -1010,6 +1170,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
       addLog,
       removeLog,
       updateLog,
+      retryItem,
       openQuickStart,
       closeQuickStart
     ]

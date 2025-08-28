@@ -196,7 +196,7 @@ describe('useGlobalState', () => {
         const { result } = renderHookWithProvider();
         await waitFor(() => expect(result.current.state.isLoaded).toBe(true));
         await act(async () => {
-            result.current.addRoutine({ title: 'New Routine', days: [1], startTime: '09:00', endTime: '10:00', priority: 'medium' });
+            await result.current.addRoutine({ title: 'New Routine', days: [1], startTime: '09:00', endTime: '10:00', priority: 'medium' });
         });
         await waitFor(() => {
             expect(result.current.state.routines.length).toBe(1);
@@ -242,7 +242,7 @@ describe('useGlobalState', () => {
         await act(async () => { result.current.updateTask({ ...(addedTask as StudyTask), status: 'completed' }); });
 
         // Add a routine and log it
-        await act(async () => { result.current.addRoutine(routine); });
+        await act(async () => { await result.current.addRoutine(routine); });
         const addedRoutine = await waitFor(() => result.current.state.routines.find(r => r.id === routine.id));
         if (!addedRoutine) throw new Error('Routine not found');
         await act(async () => {

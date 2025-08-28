@@ -12,6 +12,10 @@ const getIconForLogType = (type: string) => {
       return '📝';
     case 'TASK_COMPLETE':
       return '✅';
+    case 'TASK_RETRY':
+      return '🔄';
+    case 'ROUTINE_RETRY':
+      return '🔄';
     case 'TIMER_START':
       return '▶️';
     case 'TIMER_PAUSE':

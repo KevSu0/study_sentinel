@@ -89,8 +89,11 @@ export function QuickStartSheet() {
 
         const completedIds = new Set(
             todaysActivity.map(activity => {
-                if (activity.type === 'TASK_COMPLETE') return activity.data.task.id;
-                if (activity.type === 'ROUTINE_COMPLETE') return activity.data.payload.routineId;
+                if (activity.type === 'TASK_COMPLETE') return activity.data?.task?.id;
+                if (activity.type === 'ROUTINE_COMPLETE') {
+                    // Handle different possible data structures for routine completion
+                    return activity.data?.payload?.routineId || activity.data?.routineId;
+                }
                 return null;
             }).filter(Boolean)
         );

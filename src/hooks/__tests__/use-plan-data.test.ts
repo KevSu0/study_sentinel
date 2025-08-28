@@ -24,9 +24,9 @@ const mockTasks: StudyTask[] = [
 ];
 
 const mockRoutines: Routine[] = [
-  { id: 'r1', shortId: 'sr1', days: [3], startTime: '08:00', title: 'Wednesday Routine', endTime: '08:30', priority: 'medium' }, // Wednesday is 3
-  { id: 'r2', shortId: 'sr2', days: [3], startTime: '07:00', title: 'Another Wednesday Routine', endTime: '07:30', priority: 'medium' },
-  { id: 'r3', shortId: 'sr3', days: [4], startTime: '09:00', title: 'Thursday Routine', endTime: '09:30', priority: 'medium' },
+  { id: 'r1', shortId: 'sr1', days: [3], startTime: '08:00', title: 'Wednesday Routine', endTime: '08:30', priority: 'medium', status: 'todo', createdAt: Date.now() }, // Wednesday is 3
+  { id: 'r2', shortId: 'sr2', days: [3], startTime: '07:00', title: 'Another Wednesday Routine', endTime: '07:30', priority: 'medium', status: 'todo', createdAt: Date.now() },
+  { id: 'r3', shortId: 'sr3', days: [4], startTime: '09:00', title: 'Thursday Routine', endTime: '09:30', priority: 'medium', status: 'todo', createdAt: Date.now() },
 ];
 
 const mockTodaysActivity: ActivityFeedItem[] = [

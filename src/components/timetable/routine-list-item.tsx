@@ -29,6 +29,8 @@ import {
 import {Badge} from '@/components/ui/badge';
 import {Routine} from '@/lib/types';
 import toast from 'react-hot-toast';
+import {getPriorityCardStyles, getPriorityBadgeStyles} from '@/lib/priority-colors';
+import {cn} from '@/lib/utils';
 import {useGlobalState} from '@/hooks/use-global-state';
 import {
   AlertDialog,
@@ -93,7 +95,7 @@ export const RoutineListItem = memo(function RoutineListItem({
 
   return (
     <>
-      <Card className="flex flex-col">
+      <Card className={cn("flex flex-col", getPriorityCardStyles(routine.priority))}>
         <CardHeader>
           <div className="flex justify-between items-start gap-2">
             <div>
@@ -135,6 +137,12 @@ export const RoutineListItem = memo(function RoutineListItem({
                 {daysMap[dayIndex]}
               </Badge>
             ))}
+            <Badge 
+              variant="outline" 
+              className={getPriorityBadgeStyles(routine.priority)}
+            >
+              {routine.priority}
+            </Badge>
           </div>
         </CardContent>
         <CardFooter className="flex flex-col sm:flex-row gap-2">

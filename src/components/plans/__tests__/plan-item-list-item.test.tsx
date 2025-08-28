@@ -37,6 +37,8 @@ const mockRoutine: Routine = {
   endTime: '09:30',
   days: [1, 2, 3, 4, 5],
   priority: 'medium',
+  status: 'todo',
+  createdAt: Date.now(),
 };
 
 const mockCompletedLog: LogEvent & { title: string } = {

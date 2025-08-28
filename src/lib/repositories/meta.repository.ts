@@ -1,9 +1,13 @@
 import { db, Meta } from '../db';
-import { BaseRepository } from './base.repository';
 
-class MetaRepository extends BaseRepository<Meta, string> {
-  constructor() {
-    super(db.meta);
+class MetaRepository {
+  protected db = db;
+  protected table = db.meta;
+
+  constructor() {}
+
+  async getById(key: string): Promise<Meta | undefined> {
+    return this.table.get(key);
   }
 
   async getLastSyncTimestamp(): Promise<any> {

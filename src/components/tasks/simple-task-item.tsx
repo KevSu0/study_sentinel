@@ -20,6 +20,7 @@ import {
 import {cn} from '@/lib/utils';
 import type {StudyTask} from '@/lib/types';
 import {useConfetti} from '@/components/providers/confetti-provider';
+import {getPriorityCardStyles, getPriorityTextStyles} from '@/lib/priority-colors';
 import toast from 'react-hot-toast';
 import {format, parseISO} from 'date-fns';
 import {useGlobalState} from '@/hooks/use-global-state';
@@ -82,6 +83,7 @@ export const SimpleTaskItem = React.memo(function SimpleTaskItem({
       <div
         className={cn(
           'flex items-center gap-4 p-3 border rounded-lg transition-colors hover:bg-muted/50',
+          getPriorityCardStyles(task.priority),
           isOverdue && 'border-destructive/50 bg-destructive/5',
           isCompleted && 'bg-accent/10',
           isTimerActive && 'ring-2 ring-primary'
@@ -115,8 +117,10 @@ export const SimpleTaskItem = React.memo(function SimpleTaskItem({
               isOverdue && 'text-destructive'
             )}
           >
-            {task.duration} min &bull; {task.points} pts &bull; {task.priority}{' '}
-            priority
+            {task.duration} min &bull; {task.points} pts &bull; 
+            <span className={getPriorityTextStyles(task.priority)}>
+              {task.priority} priority
+            </span>
           </p>
         </div>
         <div className="flex items-center gap-2">

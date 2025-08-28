@@ -2,12 +2,12 @@
 'use client';
 import React, {useMemo, useState, useCallback} from 'react';
 import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Sector,
-} from 'recharts';
+  LazyPieChart as PieChart,
+  LazyPie as Pie,
+  LazyCell as Cell,
+  LazyResponsiveContainer as ResponsiveContainer,
+  LazySector as Sector,
+} from '@/components/lazy/chart-components';
 import {
   Card,
   CardContent,
@@ -103,22 +103,26 @@ const renderActiveShape = (props: any) => {
         Focus: {payload.focusPercentage.toFixed(0)}%
       </text>
       <Sector
-        cx={cx}
-        cy={cy}
-        innerRadius={innerRadius}
-        outerRadius={outerRadius}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill={fill}
+        {...{
+          cx,
+          cy,
+          innerRadius,
+          outerRadius,
+          startAngle,
+          endAngle,
+          fill,
+        } as any}
       />
       <Sector
-        cx={cx}
-        cy={cy}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        innerRadius={outerRadius + 6}
-        outerRadius={outerRadius + 10}
-        fill={fill}
+        {...{
+          cx,
+          cy,
+          startAngle,
+          endAngle,
+          innerRadius: outerRadius + 6,
+          outerRadius: outerRadius + 10,
+          fill,
+        } as any}
       />
     </g>
   );
@@ -181,29 +185,33 @@ export default function ProductivityPieChart({
             )}
           </div>
         )}
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
+        <ResponsiveContainer {...{ width: "100%", height: "100%" } as any}>
+          <PieChart {...{} as any}>
             <Pie
-              activeIndex={activeIndex === null ? -1 : activeIndex}
-              activeShape={renderActiveShape}
-              data={data}
-              cx="50%"
-              cy="50%"
-              dataKey="productiveDuration"
-              nameKey="name"
-              innerRadius="85%"
-              outerRadius="99%"
-              paddingAngle={2}
-              stroke="hsl(var(--background))"
-              strokeWidth={2}
-              onMouseEnter={onPieEnter}
-              onMouseLeave={onPieLeave}
+              {...{
+                activeIndex: activeIndex === null ? -1 : activeIndex,
+                activeShape: renderActiveShape,
+                data,
+                cx: "50%",
+                cy: "50%",
+                dataKey: "productiveDuration",
+                nameKey: "name",
+                innerRadius: "85%",
+                outerRadius: "99%",
+                paddingAngle: 2,
+                stroke: "hsl(var(--background))",
+                strokeWidth: 2,
+                onMouseEnter: onPieEnter,
+                onMouseLeave: onPieLeave,
+              } as any}
             >
               {data.map((entry, index) => (
                 <Cell
-                  key={`cell-${index}`}
-                  fill={COLORS[index % COLORS.length]}
-                  className="outline-none ring-0 focus:outline-none focus:ring-0"
+                  {...{
+                    key: `cell-${index}`,
+                    fill: COLORS[index % COLORS.length],
+                    className: "outline-none ring-0 focus:outline-none focus:ring-0",
+                  } as any}
                 />
               ))}
             </Pie>

@@ -56,6 +56,7 @@ export default function PlansPage() {
     addLog,
     removeLog,
     updateLog,
+    retryItem,
   } = useGlobalState();
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -90,6 +91,12 @@ export default function PlansPage() {
       timestamp: new Date().toISOString(),
     });
     toast.success(`Routine "${routine.title}" marked as complete.`);
+  };
+
+  const handleUpdateTask = (task: StudyTask) => {
+    // Check if this is a manual completion (status changing to 'completed')
+    const isManualCompletion = task.status === 'completed';
+    updateTask(task, isManualCompletion);
   };
 
   return (
@@ -149,7 +156,7 @@ export default function PlansPage() {
                         onEditRoutine={(routine) => openAddItemDialog('routine', routine)}
                         onDeleteRoutine={deleteRoutine}
                         onCompleteRoutine={handleCompleteRoutine}
-                        onUpdateTask={updateTask}
+                        onUpdateTask={handleUpdateTask}
                         onPushTaskToNextDay={pushTaskToNextDay}
                         />
                     );
@@ -178,7 +185,7 @@ export default function PlansPage() {
                           key={`overdue-${task.id}`}
                           item={{ type: 'task', data: task }}
                           onEditTask={(task) => openAddItemDialog('task', task)}
-                          onUpdateTask={updateTask}
+                          onUpdateTask={handleUpdateTask}
                           onPushTaskToNextDay={pushTaskToNextDay}
                         />
                       ))}
@@ -193,8 +200,18 @@ export default function PlansPage() {
             <CompletedTodayWidget
               todaysActivity={completedForDay}
               viewMode={viewMode}
-              onUndoComplete={(item) => item.data.log?.id && updateLog(item.data.log.id, { isUndone: true })}
-              onDeleteComplete={(item) => item.data.log?.id && removeLog(item.data.log.id)}
+              onUndoComplete={(item) => {
+                retryItem(item);
+              }}
+              onDeleteComplete={(item) => {
+                // Delete Log: Only delete the record, item reappears in upcoming
+                if (item.data.log?.id) {
+                  removeLog(item.data.log.id);
+                  if (item.type === 'TASK_COMPLETE') {
+                    handleUpdateTask({ ...item.data.task, status: 'todo' });
+                  }
+                }
+              }}
             />
 
              {upcomingItems.length === 0 && overdueTasks.length === 0 && completedForDay.length === 0 && (

@@ -40,6 +40,8 @@ const profileSchema = z.object({
   showCountdown: z.boolean().optional(),
 });
 
+type ProfileFormData = z.infer<typeof profileSchema>;
+
 export default function ProfilePage() {
   const {state, updateProfile, setSoundSettings} = useGlobalState();
   const {profile, isLoaded, soundSettings} = state;
@@ -50,7 +52,7 @@ export default function ProfilePage() {
     reset,
     control,
     formState: {errors, isDirty},
-  } = useForm<UserProfile>({
+  } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: profile,
   });
@@ -61,8 +63,8 @@ export default function ProfilePage() {
     }
   }, [isLoaded, profile, reset]);
 
-  const onSubmit = (data: UserProfile) => {
-    updateProfile(data);
+  const onSubmit = (data: ProfileFormData) => {
+    updateProfile(data as UserProfile);
     toast.success('Your information has been updated successfully.');
     reset(data);
   };

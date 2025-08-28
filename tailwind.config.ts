@@ -7,6 +7,15 @@ export default {
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  safelist: [
+    // Priority color classes
+    'bg-red-500/10', 'border-red-500/20', 'border-l-red-500/60', 'text-red-600', 'text-red-400',
+    'bg-red-500/15', 'text-red-700', 'text-red-300', 'border-red-500/30',
+    'bg-amber-500/10', 'border-amber-500/20', 'border-l-amber-500/60', 'text-amber-600', 'text-amber-400',
+    'bg-amber-500/15', 'text-amber-700', 'text-amber-300', 'border-amber-500/30',
+    'bg-blue-500/10', 'border-blue-500/20', 'border-l-blue-500/60', 'text-blue-600', 'text-blue-400',
+    'bg-blue-500/15', 'text-blue-700', 'text-blue-300', 'border-blue-500/30'
+  ],
   theme: {
     extend: {
       fontFamily: {

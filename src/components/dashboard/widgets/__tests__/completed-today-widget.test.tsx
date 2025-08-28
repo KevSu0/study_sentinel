@@ -140,7 +140,7 @@ describe('CompletedTodayWidget', () => {
     fireEvent.click(screen.getByText('Delete Log'));
 
     expect(onDeleteComplete).toHaveBeenCalledTimes(1);
-    expect(onHardUndoComplete).toHaveBeenCalledWith(
+    expect(onDeleteComplete).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'completed_routine',
       })
@@ -169,7 +169,7 @@ describe('CompletedTodayWidget', () => {
       <CompletedTodayWidget
         todaysActivity={[unhandledActivity]}
         onUndoComplete={onUndoComplete}
-        onHardUndoComplete={onHardUndoComplete}
+        onDeleteComplete={onHardUndoComplete}
       />
     );
 

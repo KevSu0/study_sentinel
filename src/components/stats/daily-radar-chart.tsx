@@ -8,15 +8,15 @@ import { Button } from '@/components/ui/button'
 import { Expand } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import {
-  ResponsiveContainer,
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Tooltip,
-   Cell,
-} from 'recharts'
+  LazyResponsiveContainer as ResponsiveContainer,
+  LazyRadarChart as RadarChart,
+  LazyRadar as Radar,
+  LazyPolarGrid as PolarGrid,
+  LazyPolarAngleAxis as PolarAngleAxis,
+  LazyPolarRadiusAxis as PolarRadiusAxis,
+  LazyTooltip as Tooltip,
+  LazyCell as Cell,
+} from '@/components/lazy/chart-components'
 import { type PolarActivity, type HourBin } from '@/lib/stats/useDailyPolarData'
 import type { Activity } from '@/components/stats/daily-activity-timeline'
 import { FullscreenChartDialog } from '@/components/stats/fullscreen-chart-dialog'
@@ -89,17 +89,17 @@ export default function DailyRadarChart({
         </CardHeader>
         <CardContent className="pt-2">
           <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={data} outerRadius="80%">
-                <PolarGrid />
-                <PolarAngleAxis dataKey="label" />
-                <Radar name="Today" dataKey="today" stroke={primary} fill={primary} fillOpacity={0.6}>
+            <ResponsiveContainer {...({} as any)} width="100%" height="100%">
+              <RadarChart {...({} as any)} data={data} outerRadius="80%">
+                <PolarGrid {...({} as any)} />
+                <PolarAngleAxis {...({} as any)} dataKey="label" />
+                <Radar {...({} as any)} name="Today" dataKey="today" stroke={primary} fill={primary} fillOpacity={0.6}>
                   {data.map((e, i) => (
-                    <Cell key={`cell-${i}`} fill={getColorForHour(parseInt(e.label, 10))} />
+                    <Cell {...({} as any)} key={`cell-${i}`} fill={getColorForHour(parseInt(e.label, 10))} />
                   ))}
                 </Radar>
-                <Radar name="7-day Avg" dataKey="avg" stroke={avg} fill={avg} fillOpacity={0.5} />
-                <Tooltip content={<CustomTooltip />} />
+                <Radar {...({} as any)} name="7-day Avg" dataKey="avg" stroke={avg} fill={avg} fillOpacity={0.5} />
+                <Tooltip {...({} as any)} content={<CustomTooltip />} />
               </RadarChart>
             </ResponsiveContainer>
           </div>

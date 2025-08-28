@@ -7,13 +7,13 @@ import { Button } from '@/components/ui/button'
 import { Expand } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import {
-  ResponsiveContainer,
-  RadialBarChart,
-  RadialBar,
-  PolarAngleAxis,
-  Tooltip,
-  Cell,
-} from 'recharts'
+  LazyResponsiveContainer as ResponsiveContainer,
+  LazyRadialBarChart as RadialBarChart,
+  LazyRadialBar as RadialBar,
+  LazyPolarAngleAxis as PolarAngleAxis,
+  LazyTooltip as Tooltip,
+  LazyCell as Cell,
+} from '@/components/lazy/chart-components'
 import { FullscreenChartDialog } from '@/components/stats/fullscreen-chart-dialog'
 import type { Activity } from '@/components/stats/daily-activity-timeline'
 import { type PolarActivity, type HourBin } from '@/lib/stats/useDailyPolarData'
@@ -104,8 +104,9 @@ export default function DailyPolarChart({
         </CardHeader>
         <CardContent className="p-0">
           <div className="h-[350px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer {...({} as any)} width="100%" height="100%">
               <RadialBarChart
+                {...({} as any)}
                 data={chartData}
                 innerRadius="10%"
                 outerRadius="105%"
@@ -115,38 +116,39 @@ export default function DailyPolarChart({
                 cy="50%"
                 barCategoryGap="20%"
               >
-                <PolarAngleAxis type="number" dataKey="idx" domain={[0, 23]} tick={false} />
+                <PolarAngleAxis {...({} as any)} type="number" dataKey="idx" domain={[0, 23]} tick={false} />
 
                 {/* Paused time (INNERMOST RING) */}
                 <RadialBar
+                  {...({} as any)}
                   dataKey="paused"
                   background={{ fill: 'transparent' }}
                   className="opacity-80"
                   cornerRadius={2}
                 >
                   {chartData.map((e, i) => (
-                    <Cell key={`paused-${i}`} fill={pausedColor} className="stroke-transparent" />
+                    <Cell {...({} as any)} key={`paused-${i}`} fill={pausedColor} className="stroke-transparent" />
                   ))}
                 </RadialBar>
 
                 {/* Weekly average ghost ring (MIDDLE RING) */}
                 {last7 && last7.length > 0 && (
-                  <RadialBar dataKey="weeklyAvg" background={{ fill: 'transparent' }} cornerRadius={4}>
+                  <RadialBar {...({} as any)} dataKey="weeklyAvg" background={{ fill: 'transparent' }} cornerRadius={4}>
                     {chartData.map((e, i) => (
-                      <Cell key={`avg-${i}`} fill={avgColor} className="stroke-transparent" />
+                      <Cell {...({} as any)} key={`avg-${i}`} fill={avgColor} className="stroke-transparent" />
                     ))}
                   </RadialBar>
                 )}
 
                 {/* Today's productive time (OUTERMOST RING) */}
-                <RadialBar dataKey="productive" background={{ fill: isDark ? 'hsla(var(--muted-foreground), 0.1)' : 'hsla(var(--muted-foreground), 0.15)' }} cornerRadius={4}>
+                <RadialBar {...({} as any)} dataKey="productive" background={{ fill: isDark ? 'hsla(var(--muted-foreground), 0.1)' : 'hsla(var(--muted-foreground), 0.15)' }} cornerRadius={4}>
                   {chartData.map((e, i) => (
-                    <Cell key={`prod-${i}`} fill={getColorForHour(e.idx)} className="stroke-transparent" />
+                    <Cell {...({} as any)} key={`prod-${i}`} fill={getColorForHour(e.idx)} className="stroke-transparent" />
                   ))}
                 </RadialBar>
 
 
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsla(var(--muted-foreground), 0.1)' }} />
+                <Tooltip {...({} as any)} content={<CustomTooltip />} cursor={{ fill: 'hsla(var(--muted-foreground), 0.1)' }} />
               </RadialBarChart>
             </ResponsiveContainer>
           </div>

@@ -25,6 +25,7 @@ import {Button} from '@/components/ui/button';
 import {cn} from '@/lib/utils';
 import toast from 'react-hot-toast';
 import type {StudyTask, TaskStatus, TaskPriority} from '@/lib/types';
+import {getPriorityCardStyles, getPriorityBadgeStyles} from '@/lib/priority-colors';
 import {format, parseISO, parse} from 'date-fns';
 import {
   DropdownMenu,
@@ -53,23 +54,19 @@ const priorityConfig: Record<
   TaskPriority,
   {
     label: string;
-    className: string;
     badgeVariant: 'destructive' | 'secondary' | 'outline';
   }
 > = {
   low: {
     label: 'Low',
-    className: 'border-sky-400',
     badgeVariant: 'outline',
   },
   medium: {
     label: 'Medium',
-    className: 'border-yellow-400',
     badgeVariant: 'secondary',
   },
   high: {
     label: 'High',
-    className: 'border-destructive',
     badgeVariant: 'destructive',
   },
 };
@@ -141,7 +138,7 @@ export const TaskCard = React.memo(function TaskCard({
             ? 'border-destructive/70 bg-destructive/5'
             : task.status === 'completed'
             ? 'bg-card/60 dark:bg-card/80 border-accent'
-            : priorityConfig[task.priority]?.className || 'border-transparent',
+            : getPriorityCardStyles(task.priority),
           isTimerActive && 'ring-2 ring-primary'
         )}
       >
@@ -209,10 +206,11 @@ export const TaskCard = React.memo(function TaskCard({
                 {task.points} pts
               </Badge>
               <Badge
-                variant={
-                  priorityConfig[task.priority]?.badgeVariant || 'secondary'
-                }
-                className="capitalize flex items-center gap-1.5"
+                variant="outline"
+                className={cn(
+                  "capitalize flex items-center gap-1.5",
+                  getPriorityBadgeStyles(task.priority)
+                )}
               >
                 <Flame className="h-3.5 w-3.5" />
                 {task.priority}

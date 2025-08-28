@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import DashboardPage from '@/app/page';
 import StatsPage from '@/app/stats/page';
 import PlansPage from '@/app/plans/page';
-import TestWrapper from './test-wrapper';
+import { AllProviders as TestWrapper } from './test-wrapper';
 
 // ----- MOCK CORE DEPENDENCIES -----
 jest.useRealTimers();
