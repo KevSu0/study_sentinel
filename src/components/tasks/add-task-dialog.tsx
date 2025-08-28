@@ -76,7 +76,7 @@ interface AddItemDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   onAddTask: (task: Omit<StudyTask, 'id' | 'status'>) => void;
   onUpdateTask: (task: StudyTask) => void;
-  onAddRoutine: (routine: Omit<Routine, 'id'>) => void;
+  onAddRoutine: (routine: Omit<Routine, 'id' | 'shortId' | 'status' | 'createdAt'> & Partial<Pick<Routine, 'id'>>) => Promise<string>;
   onUpdateRoutine: (routine: Routine) => void;
   editingItem?: StudyTask | Routine | null;
   itemType?: 'task' | 'routine';
@@ -428,11 +428,15 @@ export function AddItemDialog({ isOpen, onOpenChange, onAddTask, onUpdateTask, o
       await onUpdateRoutine(updatedRoutine);
     } else {
       console.log('Creating new routine');
-      const newRoutine: Omit<Routine, 'id'> = {
-        ...data,
-        createdAt: new Date().toISOString(),
-      };
-      await onAddRoutine(newRoutine);
+      const routineId = await onAddRoutine({
+        title: data.title,
+        description: data.description,
+        days: data.days,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        priority: data.priority,
+      });
+      console.log('Created routine with ID:', routineId);
     }
     setOpen(false);
   };

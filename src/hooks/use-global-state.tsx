@@ -181,7 +181,7 @@ interface GlobalStateContextType {
   completeTimer: (studyLog?: string) => void;
   stopTimer: (reason: string, studyLog?: string) => void;
   manuallyCompleteItem: (item: StudyTask | Routine, data: ManualLogFormData) => void;
-  addRoutine: (routine: Omit<Routine, 'id' | 'shortId' | 'status' | 'createdAt'> & Partial<Pick<Routine, 'id'>>) => string;
+  addRoutine: (routine: Omit<Routine, 'id' | 'shortId' | 'status' | 'createdAt'> & Partial<Pick<Routine, 'id'>>) => Promise<string>;
   updateRoutine: (routine: Routine) => void;
   deleteRoutine: (routineId: string) => void;
   addBadge: (badge: Omit<Badge, 'id'>) => Promise<void>;
@@ -1064,7 +1064,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
       );
       
       if (existingTask) {
-        toast.info(`"${task.title}" is already available in upcoming tasks.`);
+        toast(`"${task.title}" is already available in upcoming tasks.`);
         return;
       }
       
@@ -1088,7 +1088,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
       const isRoutineAvailableToday = routine.days.includes(today.getDay());
       
       if (!isRoutineAvailableToday) {
-        toast.info(`"${routine.title}" is not scheduled for today.`);
+        toast(`"${routine.title}" is not scheduled for today.`);
         return;
       }
       
@@ -1102,7 +1102,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
       );
       
       if (!completedToday) {
-        toast.info(`"${routine.title}" is already available for today.`);
+        toast(`"${routine.title}" is already available for today.`);
         return;
       }
       

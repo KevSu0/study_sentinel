@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { SyncEngine, SyncStatus } from '@/lib/sync';
+import { syncEngine, SyncStatus } from '@/lib/sync';
 import { cn } from '@/lib/utils';
 
 const StatusChip = () => {
-  const [syncEngine] = useState(() => new SyncEngine(() => {}));
   const [status, setStatus] = useState<SyncStatus>(syncEngine.getSyncStatus());
   const [isOnline, setIsOnline] = useState(true);
 
@@ -31,15 +30,22 @@ const StatusChip = () => {
     'fixed bottom-4 right-4 px-3 py-1 text-sm font-medium text-white rounded-full shadow-lg',
     {
       'bg-gray-500': !isOnline,
-      'bg-blue-500': isOnline && status === 'Syncing...',
-      'bg-green-500': isOnline && status === 'Up to date',
-      'bg-yellow-500': isOnline && status === 'Offline',
+      'bg-blue-500': isOnline && status.isSyncing,
+      'bg-green-500': isOnline && !status.isSyncing && status.pendingChanges === 0,
+      'bg-yellow-500': isOnline && status.pendingChanges > 0,
     }
   );
 
+  const getStatusText = () => {
+    if (!isOnline) return 'Offline';
+    if (status.isSyncing) return 'Syncing...';
+    if (status.pendingChanges > 0) return `${status.pendingChanges} pending`;
+    return 'Up to date';
+  };
+
   return (
     <div className={chipClass}>
-      {!isOnline ? 'Offline' : status}
+      {getStatusText()}
     </div>
   );
 };

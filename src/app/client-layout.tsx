@@ -13,9 +13,10 @@ import { useEffect } from 'react';
 import { initDatabase } from '@/lib/db-init';
 import StatusChip from '@/components/shared/status-chip';
 import { Toaster } from 'sonner';
-import { registerServiceWorker } from '@/lib/sw-utils';
+import { registerServiceWorker, requestPersistentStorage } from '@/lib/sw-utils';
 import { Providers } from '@/components/providers';
 import { useStatusBarStyle } from '@/utils/platform-optimization';
+import { UserPreferencesRepository } from '@/lib/repositories/user-preferences.repository';
 
 export default function ClientLayout({
   children,
@@ -25,8 +26,26 @@ export default function ClientLayout({
   useStatusBarStyle('default');
   
   useEffect(() => {
-    registerServiceWorker();
-    initDatabase();
+    const initializeApp = async () => {
+      // Register service worker
+      registerServiceWorker();
+      
+      // Initialize database
+      await initDatabase();
+      
+      // Request persistent storage for better offline experience
+      await requestPersistentStorage();
+      
+      // Migrate localStorage preferences to IndexedDB
+      try {
+        const userPrefsRepo = new UserPreferencesRepository();
+        await userPrefsRepo.migrateFromLocalStorage();
+      } catch (error) {
+        console.error('Failed to migrate preferences:', error);
+      }
+    };
+    
+    initializeApp();
   }, []);
 
   return (

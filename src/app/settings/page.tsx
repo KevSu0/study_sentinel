@@ -2,7 +2,7 @@
 // This is a new file for the settings page
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGlobalState } from '@/hooks/use-global-state';
 import {
   Card,
@@ -20,16 +20,74 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { OfflineStatusIndicator, SyncStatusIndicator } from '@/components/ui/offline-status-indicator';
+import { UserPreferencesRepository } from '@/lib/repositories/user-preferences.repository';
+import { toast } from 'sonner';
 
 export default function SettingsPage() {
   const { state, setSoundSettings } = useGlobalState();
   const { isLoaded, soundSettings } = state;
+  const [preferences, setPreferences] = useState<Record<string, any>>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const userPrefsRepo = new UserPreferencesRepository();
 
-  const handleSoundChange = (type: keyof typeof soundSettings, value: string | number) => {
-    setSoundSettings({ [type]: value });
+  useEffect(() => {
+    loadPreferences();
+  }, []);
+
+  const loadPreferences = async () => {
+    try {
+      const allPrefs = await userPrefsRepo.getAllPreferences();
+      setPreferences(allPrefs);
+    } catch (error) {
+      console.error('Failed to load preferences:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  if (!isLoaded) {
+  const handleSoundChange = async (type: keyof typeof soundSettings, value: string | number) => {
+    setSoundSettings({ [type]: value });
+    // Also save to IndexedDB
+    await userPrefsRepo.setPreference(`sound.${type}`, value);
+  };
+
+  const handlePreferenceChange = async (key: string, value: any) => {
+    try {
+      await userPrefsRepo.setPreference(key, value);
+      setPreferences(prev => ({ ...prev, [key]: value }));
+      toast.success('Preference saved');
+    } catch (error) {
+      console.error('Failed to save preference:', error);
+      toast.error('Failed to save preference');
+    }
+  };
+
+  const migrateFromLocalStorage = async () => {
+    try {
+      await userPrefsRepo.migrateFromLocalStorage();
+      await loadPreferences();
+      toast.success('Successfully migrated preferences from localStorage');
+    } catch (error) {
+      console.error('Migration failed:', error);
+      toast.error('Failed to migrate preferences');
+    }
+  };
+
+  const clearAllPreferences = async () => {
+    try {
+      await userPrefsRepo.clearAllPreferences();
+      setPreferences({});
+      toast.success('All preferences cleared');
+    } catch (error) {
+      console.error('Failed to clear preferences:', error);
+      toast.error('Failed to clear preferences');
+    }
+  };
+
+  if (!isLoaded || isLoading) {
     return (
       <div className="flex flex-col h-full">
         <header className="p-4 border-b">
@@ -46,17 +104,57 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col h-full">
       <header className="p-4 border-b">
-        <h1 className="text-3xl font-bold text-primary">Settings</h1>
-        <p className="text-muted-foreground">Customize your experience.</p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-primary">Settings</h1>
+            <p className="text-muted-foreground">Customize your experience.</p>
+          </div>
+          <div className="flex gap-2">
+            <OfflineStatusIndicator />
+            <SyncStatusIndicator />
+          </div>
+        </div>
       </header>
       <main className="flex-1 p-2 sm:p-4 overflow-y-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle>Sound & Notifications</CardTitle>
-            <CardDescription>
-              Choose the sounds for timer alerts and reminders.
-            </CardDescription>
-          </CardHeader>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Connection & Sync</CardTitle>
+              <CardDescription>
+                Monitor your connection status and sync preferences.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Auto Sync</Label>
+                  <p className="text-sm text-muted-foreground">Automatically sync when online</p>
+                </div>
+                <Switch
+                  checked={preferences['sync.autoSync'] ?? true}
+                  onCheckedChange={(checked) => handlePreferenceChange('sync.autoSync', checked)}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Background Sync</Label>
+                  <p className="text-sm text-muted-foreground">Sync in background when app is closed</p>
+                </div>
+                <Switch
+                  checked={preferences['sync.backgroundSync'] ?? false}
+                  onCheckedChange={(checked) => handlePreferenceChange('sync.backgroundSync', checked)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Sound & Notifications</CardTitle>
+              <CardDescription>
+                Choose the sounds for timer alerts and reminders.
+              </CardDescription>
+            </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="alarmSound">Alarm Sound</Label>
@@ -110,7 +208,35 @@ export default function SettingsPage() {
                 </Select>
             </div>
           </CardContent>
-        </Card>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Data Management</CardTitle>
+              <CardDescription>
+                Manage your stored preferences and data.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Offline Storage</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {Object.keys(preferences).length} preferences stored locally
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={migrateFromLocalStorage}>
+                  Migrate from localStorage
+                </Button>
+                <Button variant="destructive" onClick={clearAllPreferences}>
+                  Clear All Preferences
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </main>
     </div>
   );

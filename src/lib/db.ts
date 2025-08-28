@@ -41,6 +41,45 @@ export interface Outbox {
   timestamp: number;
   retries?: number;
   lastAttempt?: number;
+  maxRetries?: number;
+  errorMessage?: string;
+}
+
+// New interfaces for offline-first functionality
+export interface SyncConflict {
+  id: string;
+  tableName: string;
+  recordId: string;
+  localData: any;
+  remoteData: any;
+  localModifiedAt: string;
+  remoteModifiedAt: string;
+  resolutionStrategy: 'local_wins' | 'remote_wins' | 'manual';
+  createdAt: string;
+  resolveConflict?: (resolution: 'local' | 'remote') => Promise<void>;
+  conflictType?: string;
+  timestamp?: string;
+  entityType?: string;
+  entityId?: string;
+  conflictDetails?: any;
+}
+
+export interface CachedAIResponse {
+  id: string;
+  messageHash: string;
+  message: string;
+  response: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface UserPreference {
+  id?: string;
+  key: string;
+  userId: string;
+  value: any;
+  createdAt: string;
+  updatedAt: string;
 }
 
 class MyDatabase extends Dexie {
@@ -53,19 +92,29 @@ class MyDatabase extends Dexie {
   public routines!: Table<Routine, string>;
   public logs!: Table<LogEvent, string>;
   public badges!: Table<Badge, string>;
+  
+  // New tables for offline-first functionality
+  public syncConflicts!: Table<SyncConflict, string>;
+  public cachedAIResponses!: Table<CachedAIResponse, string>;
+  public userPreferences!: Table<UserPreference, string>;
 
   constructor() {
     super('MyDatabase');
-    this.version(5).stores({
+    this.version(6).stores({
       plans: 'id, date, status', // Added indexes for date and status
       users: 'id',
       sessions: 'id, date',
       stats_daily: 'date',
       meta: 'key',
-      outbox: '++id',
+      outbox: '++id, timestamp, retries',
       routines: 'id',
       logs: 'id, timestamp, type', // Added indexes for timestamp and type
       badges: 'id',
+      
+      // New tables for offline-first functionality
+      syncConflicts: 'id, tableName, recordId, createdAt',
+      cachedAIResponses: 'id, messageHash, createdAt, expiresAt',
+      userPreferences: 'key, userId, updatedAt'
     });
 
     this.on('populate', async (tx) => {
