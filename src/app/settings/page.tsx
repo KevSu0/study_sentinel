@@ -104,15 +104,9 @@ export default function SettingsPage() {
   return (
     <div className="flex flex-col h-full">
       <header className="p-4 border-b">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-primary">Settings</h1>
-            <p className="text-muted-foreground">Customize your experience.</p>
-          </div>
-          <div className="flex gap-2">
-            <OfflineStatusIndicator />
-            <SyncStatusIndicator />
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-primary">Settings</h1>
+          <p className="text-muted-foreground">Customize your experience.</p>
         </div>
       </header>
       <main className="flex-1 p-2 sm:p-4 overflow-y-auto">
@@ -125,25 +119,40 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Auto Sync</Label>
-                  <p className="text-sm text-muted-foreground">Automatically sync when online</p>
+              {/* Sync Status Indicators */}
+              <div className="space-y-3">
+                <Label className="text-base font-medium">Connection Status</Label>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1">
+                    <OfflineStatusIndicator />
+                  </div>
+                  <div className="flex-1">
+                    <SyncStatusIndicator />
+                  </div>
                 </div>
-                <Switch
-                  checked={preferences['sync.autoSync'] ?? true}
-                  onCheckedChange={(checked) => handlePreferenceChange('sync.autoSync', checked)}
-                />
               </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label>Background Sync</Label>
-                  <p className="text-sm text-muted-foreground">Sync in background when app is closed</p>
+              
+              <div className="border-t pt-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Auto Sync</Label>
+                    <p className="text-sm text-muted-foreground">Automatically sync when online</p>
+                  </div>
+                  <Switch
+                    checked={preferences['sync.autoSync'] ?? true}
+                    onCheckedChange={(checked) => handlePreferenceChange('sync.autoSync', checked)}
+                  />
                 </div>
-                <Switch
-                  checked={preferences['sync.backgroundSync'] ?? false}
-                  onCheckedChange={(checked) => handlePreferenceChange('sync.backgroundSync', checked)}
-                />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Background Sync</Label>
+                    <p className="text-sm text-muted-foreground">Sync in background when app is closed</p>
+                  </div>
+                  <Switch
+                    checked={preferences['sync.backgroundSync'] ?? false}
+                    onCheckedChange={(checked) => handlePreferenceChange('sync.backgroundSync', checked)}
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>

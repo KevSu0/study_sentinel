@@ -51,7 +51,15 @@ export const RoutineCard = React.memo(function RoutineCard({
       getPriorityCardStyles(routine.priority)
     )}>
       <CardHeader>
-        <CardTitle>{routine.title}</CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle>{routine.title}</CardTitle>
+          <Badge 
+            variant="outline" 
+            className="text-xs font-mono bg-muted/50 text-muted-foreground border-muted-foreground/30"
+          >
+            {routine.shortId}
+          </Badge>
+        </div>
         <CardDescription className="mt-1 flex items-center gap-2 text-sm">
           <Clock className="h-4 w-4" />
           <span>

@@ -38,7 +38,6 @@ import toast from 'react-hot-toast';
 import { useStats } from '@/hooks/use-stats';
 import { getSessionDate } from '@/lib/utils';
 import { DailyActiveProductivityWidget } from '@/components/dashboard/widgets/daily-active-productivity-widget';
-import { OfflineStatusIndicator, SyncStatusIndicator } from '@/components/ui/offline-status-indicator';
 import type { StudyTask } from '@/lib/types';
 
 const CustomizeDialog = dynamic(
@@ -193,16 +192,7 @@ export default function DashboardPage() {
             <AddItemDialog />
           </div>
         </div>
-        
-        {/* Offline Status Indicators */}
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="flex-1">
-            <OfflineStatusIndicator />
-          </div>
-          <div className="flex-1">
-            <SyncStatusIndicator />
-          </div>
-        </div>
+
       </header>
 
       <main className="flex-1 p-2 sm:p-4 overflow-y-auto">

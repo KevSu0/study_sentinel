@@ -10,9 +10,13 @@ export const viewport: Viewport = {
 };
 
 import { useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { initDatabase } from '@/lib/db-init';
-import StatusChip from '@/components/shared/status-chip';
 import { Toaster } from 'sonner';
+
+const StatusChip = dynamic(() => import('@/components/shared/status-chip'), {
+  ssr: false,
+});
 import { registerServiceWorker, requestPersistentStorage } from '@/lib/sw-utils';
 import { Providers } from '@/components/providers';
 import { useStatusBarStyle } from '@/utils/platform-optimization';

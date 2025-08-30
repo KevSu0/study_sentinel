@@ -90,8 +90,7 @@ function generateSampleSessionData(): { logs: LogEvent[], sessions: Session[] } 
       timestamp: completedTime,
       type: 'TIMER_SESSION_COMPLETE',
       payload: {
-        itemId: task.id,
-        itemType: 'task',
+        taskId: task.id,
         title: task.title,
         duration: task.duration! * 60, // Convert to seconds
         points: task.points,
@@ -125,8 +124,7 @@ function generateSampleSessionData(): { logs: LogEvent[], sessions: Session[] } 
       timestamp: sessionTime,
       type: 'ROUTINE_SESSION_COMPLETE',
       payload: {
-        itemId: routine.id,
-        itemType: 'routine',
+        routineId: routine.id,
         title: routine.title,
         duration: 30 * 60, // 30 minutes in seconds
         points: 5,

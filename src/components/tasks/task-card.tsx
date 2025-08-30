@@ -112,9 +112,17 @@ export const TaskCard = React.memo(function TaskCard({
     return (
       <Card className="flex flex-col sm:flex-row items-center justify-between p-4 bg-card/50 border-dashed">
         <div className="flex-grow">
-          <p className="font-semibold text-muted-foreground line-through">
-            {task.title}
-          </p>
+          <div className="flex items-center gap-2 mb-1">
+            <p className="font-semibold text-muted-foreground line-through">
+              {task.title}
+            </p>
+            <Badge 
+              variant="outline" 
+              className="text-xs font-mono bg-muted/50 text-muted-foreground border-muted-foreground/30"
+            >
+              {task.shortId}
+            </Badge>
+          </div>
           <p className="text-sm text-muted-foreground/80">{formattedDate}</p>
         </div>
         <Button
@@ -157,15 +165,23 @@ export const TaskCard = React.memo(function TaskCard({
             )}
           />
           <div className="flex-1 grid gap-1.5">
-            <label
-              htmlFor={`card-task-${task.id}`}
-              className={cn(
-                'text-lg font-semibold leading-none cursor-pointer',
-                isCompleted && 'line-through text-muted-foreground'
-              )}
-            >
-              {task.title}
-            </label>
+            <div className="flex items-center gap-2">
+              <label
+                htmlFor={`card-task-${task.id}`}
+                className={cn(
+                  'text-lg font-semibold leading-none cursor-pointer',
+                  isCompleted && 'line-through text-muted-foreground'
+                )}
+              >
+                {task.title}
+              </label>
+              <Badge 
+                variant="outline" 
+                className="text-xs font-mono bg-muted/50 text-muted-foreground border-muted-foreground/30"
+              >
+                {task.shortId}
+              </Badge>
+            </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <span
                 className={cn(

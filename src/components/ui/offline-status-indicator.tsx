@@ -107,54 +107,23 @@ export function OfflineStatusIndicator({
     }
   };
 
-  if (compact) {
-    return (
-      <button
-        onClick={handleManualCheck}
-        className={cn(
-          'flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors',
-          'hover:bg-gray-100 dark:hover:bg-gray-800',
-          getStatusColor(),
-          className
-        )}
-        title={`Network Status: ${getStatusText()}`}
-      >
-        {getStatusIcon()}
-        {!networkStatus.isOnline && (
-          <span className="hidden sm:inline">Offline</span>
-        )}
-      </button>
-    );
-  }
-
+  // Always return a small dot indicator
   return (
-    <div className={cn('flex items-center gap-2', className)}>
-      <button
-        onClick={handleManualCheck}
-        className={cn(
-          'flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors',
-          'hover:bg-gray-100 dark:hover:bg-gray-800 border',
-          getStatusColor()
-        )}
-        disabled={isChecking}
-      >
-        {getStatusIcon()}
-        <span>{getStatusText()}</span>
-      </button>
-
-      {showDetails && (
-        <div className="text-xs text-gray-500 space-y-1">
-          <div>Type: {networkStatus.connectionType}</div>
-          {networkStatus.effectiveType && (
-            <div>Speed: {networkStatus.effectiveType}</div>
-          )}
-          {networkStatus.rtt && (
-            <div>Latency: {networkStatus.rtt}ms</div>
-          )}
-          <div>Last checked: {new Date(networkStatus.lastChecked).toLocaleTimeString()}</div>
-        </div>
+    <button
+      onClick={handleManualCheck}
+      className={cn(
+        'flex items-center justify-center w-3 h-3 rounded-full transition-colors',
+        'hover:scale-110 cursor-pointer',
+        networkStatus.isOnline ? 'bg-green-500' : 'bg-red-500',
+        className
       )}
-    </div>
+      title={`Network Status: ${getStatusText()}`}
+      disabled={isChecking}
+    >
+      {isChecking && (
+        <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+      )}
+    </button>
   );
 }
 
@@ -329,56 +298,79 @@ export function SyncStatusIndicator({
   };
 
   const statusInfo = getSyncStatusInfo();
+  
+  // Determine dot color based on sync status
+  const getDotColor = () => {
+    if (syncStatus.isSyncing || isManualSyncing) {
+      return 'bg-blue-500'; // Syncing
+    }
+    
+    if (!syncStatus.isOnline) {
+      return 'bg-gray-500'; // Offline
+    }
+    
+    if (conflictCount > 0 || pendingChanges > 0) {
+      return 'bg-red-500'; // Issues (conflicts or pending changes)
+    }
+    
+    return 'bg-green-500'; // Up to date
+  };
+
+  const getTooltipText = () => {
+    if (syncStatus.isSyncing || isManualSyncing) {
+      return 'Syncing...';
+    }
+    
+    if (!syncStatus.isOnline) {
+      return 'Offline';
+    }
+    
+    if (conflictCount > 0) {
+      return `${conflictCount} conflicts need resolution`;
+    }
+    
+    if (pendingChanges > 0) {
+      return `${pendingChanges} changes pending sync`;
+    }
+    
+    return 'Up to date';
+  };
 
   return (
-    <Card className={cn('w-full', className)}>
-      <CardContent className="p-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Badge variant={statusInfo.variant} className="flex items-center gap-1">
-              {statusInfo.icon}
-              {statusInfo.label}
-            </Badge>
-            {syncStatus.lastSyncTime && (
-              <span className="text-xs text-muted-foreground">
-                Last sync: {formatLastSyncTime(syncStatus.lastSyncTime)}
-              </span>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-1">
-            {conflictCount > 0 && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleShowConflicts}
-                className="h-7 px-2 text-red-600 border-red-200 hover:bg-red-50"
-              >
-                <AlertTriangle className="h-3 w-3 mr-1" />
-                Resolve
-              </Button>
-            )}
-            
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleManualSync}
-              disabled={isManualSyncing || !syncStatus.isOnline}
-              className="h-7 px-2"
-            >
-              <RotateCw className={`h-3 w-3 mr-1 ${isManualSyncing ? 'animate-spin' : ''}`} />
-              {isManualSyncing ? 'Syncing...' : 'Sync'}
-            </Button>
-          </div>
-        </div>
-        
-        <ConflictResolutionDialog
-          open={showConflictDialog}
-          onOpenChange={setShowConflictDialog}
-          conflicts={conflicts}
-          onConflictsResolved={handleConflictsResolved}
-        />
-      </CardContent>
-    </Card>
+    <div className={cn('flex items-center gap-2', className)}>
+      <button
+        onClick={handleManualSync}
+        disabled={isManualSyncing || !syncStatus.isOnline}
+        className={cn(
+          'flex items-center justify-center w-3 h-3 rounded-full transition-colors',
+          'hover:scale-110 cursor-pointer',
+          getDotColor()
+        )}
+        title={getTooltipText()}
+      >
+        {(syncStatus.isSyncing || isManualSyncing) && (
+          <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+        )}
+      </button>
+      
+      {conflictCount > 0 && (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={handleShowConflicts}
+          className="h-6 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50"
+        >
+          <AlertTriangle className="h-3 w-3 mr-1" />
+          Resolve
+        </Button>
+      )}
+      
+      <ConflictResolutionDialog
+        open={showConflictDialog}
+        onOpenChange={setShowConflictDialog}
+        conflicts={conflicts}
+        onConflictsResolved={handleConflictsResolved}
+      />
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { populateSampleData, clearSampleData } from '@/utils/populate-sample-data';
@@ -12,12 +12,14 @@ export default function DevToolsPage() {
   const [isClearing, setIsClearing] = useState(false);
 
   const handlePopulateSampleData = async () => {
+    console.log('📊 Starting to populate sample data...');
     setIsPopulating(true);
     try {
       await populateSampleData();
+      console.log('✅ Sample data populated successfully!');
       toast.success('Sample data populated successfully! Check the dashboard to see the data.');
     } catch (error) {
-      console.error('Error populating sample data:', error);
+      console.error('❌ Error populating sample data:', error);
       toast.error('Failed to populate sample data. Check the console for details.');
     } finally {
       setIsPopulating(false);
@@ -25,17 +27,37 @@ export default function DevToolsPage() {
   };
 
   const handleClearSampleData = async () => {
+    console.log('🗑️ Starting to clear sample data...');
     setIsClearing(true);
     try {
       await clearSampleData();
+      console.log('✅ Sample data cleared successfully!');
       toast.success('Sample data cleared successfully!');
     } catch (error) {
-      console.error('Error clearing sample data:', error);
+      console.error('❌ Error clearing sample data:', error);
       toast.error('Failed to clear sample data. Check the console for details.');
     } finally {
       setIsClearing(false);
     }
   };
+
+  // Expose functions to window for console access
+  useEffect(() => {
+    (window as any).clearData = handleClearSampleData;
+    (window as any).populateData = handlePopulateSampleData;
+    console.log('Dev tools functions exposed to window');
+    
+    // Auto-clear and repopulate data to fix old payload structure
+    const autoFixData = async () => {
+      console.log('Auto-fixing database with corrected sample data...');
+      await handleClearSampleData();
+      await handlePopulateSampleData();
+      console.log('Database auto-fix completed');
+    };
+    
+    // Run auto-fix after a short delay
+    setTimeout(autoFixData, 1000);
+  }, []);
 
   return (
     <div className="container mx-auto py-8 px-4">
