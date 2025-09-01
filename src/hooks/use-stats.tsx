@@ -180,10 +180,16 @@ export function useStats({
   }, [allBadges]);
 
     const dailyPieChartData = useMemo(() => {
+    console.log('dailyPieChartData memo: selectedDate:', selectedDate);
+    console.log('dailyPieChartData memo: filteredWork length:', filteredWork?.length || 0);
     if (!filteredWork) return [];
-    const workForDay = filteredWork.filter(w =>
-      isSameDay(getStudyDateForTimestamp(w.timestamp), selectedDate)
-    );
+    const workForDay = filteredWork.filter(w => {
+      const workDate = getStudyDateForTimestamp(w.timestamp);
+      const isSame = isSameDay(workDate, selectedDate);
+      console.log('dailyPieChartData memo: work item:', w.title, 'timestamp:', w.timestamp, 'workDate:', workDate, 'selectedDate:', selectedDate, 'isSameDay:', isSame);
+      return isSame;
+    });
+    console.log('dailyPieChartData memo: workForDay length:', workForDay.length);
 
     const workByTask = workForDay.reduce(
       (acc, work) => {
@@ -221,6 +227,7 @@ export function useStats({
         focusPercentage,
       };
     });
+    console.log('dailyPieChartData memo: final data:', data);
     return data;
   }, [filteredWork, selectedDate]);
   

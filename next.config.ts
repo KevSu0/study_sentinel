@@ -22,7 +22,17 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   // Performance optimizations
   experimental: {
-    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
+    optimizePackageImports: [
+      'lucide-react', 
+      '@radix-ui/react-icons',
+      'date-fns',
+      'framer-motion',
+      'recharts',
+      '@tanstack/react-query'
+    ],
+    optimizeCss: true,
+    optimizeServerReact: true,
+    serverMinification: true,
   },
   // Turbopack configuration (stable)
   turbopack: {
@@ -124,6 +134,20 @@ const nextConfig: NextConfig = {
             name: 'utils',
             chunks: 'all',
             priority: 15,
+          },
+          // React Query and state management
+          reactQuery: {
+            test: /[\/]node_modules[\/](@tanstack\/react-query)[\/]/,
+            name: 'react-query',
+            chunks: 'all',
+            priority: 22,
+          },
+          // Form libraries
+          forms: {
+            test: /[\/]node_modules[\/](react-hook-form|@hookform)[\/]/,
+            name: 'forms',
+            chunks: 'all',
+            priority: 18,
           },
           // Default vendor chunk for remaining packages
           vendor: {

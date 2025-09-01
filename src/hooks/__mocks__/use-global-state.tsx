@@ -5,7 +5,7 @@ import {
   MOCK_COMPLETED_WORK,
 } from '@/__tests__/mock-data';
 
-const MOCK_STATE = {
+const DEFAULT_RETURN = {
   state: {
     isLoaded: true,
     tasks: [MOCK_STUDY_TASK],
@@ -64,22 +64,13 @@ const MOCK_STATE = {
   addLog: jest.fn(),
   removeLog: jest.fn(),
   updateLog: jest.fn(),
+  retryItem: jest.fn(),
   openQuickStart: jest.fn(),
   closeQuickStart: jest.fn(),
 };
 
-const GlobalStateContext = React.createContext(MOCK_STATE);
+// Export a jest.fn so tests can override via mockReturnValue/mockImplementation
+export const useGlobalState = jest.fn(() => DEFAULT_RETURN);
 
-export const useGlobalState = () => React.useContext(GlobalStateContext);
-
-export const GlobalStateProvider = ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => {
-  return (
-    <GlobalStateContext.Provider value={MOCK_STATE}>
-      {children}
-    </GlobalStateContext.Provider>
-  );
-};
+// Keep Provider as a passthrough to avoid breaking tests that render it
+export const GlobalStateProvider = ({ children }: { children: React.ReactNode }) => <>{children}</>;

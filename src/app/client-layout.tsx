@@ -17,7 +17,8 @@ import { Toaster } from 'sonner';
 const StatusChip = dynamic(() => import('@/components/shared/status-chip'), {
   ssr: false,
 });
-import { registerServiceWorker, requestPersistentStorage } from '@/lib/sw-utils';
+import { registerServiceWorker } from '@/lib/sw-utils';
+// import { requestPersistentStorage } from '@/lib/sw-utils';
 import { Providers } from '@/components/providers';
 import { useStatusBarStyle } from '@/utils/platform-optimization';
 import { UserPreferencesRepository } from '@/lib/repositories/user-preferences.repository';
@@ -38,7 +39,7 @@ export default function ClientLayout({
       await initDatabase();
       
       // Request persistent storage for better offline experience
-      await requestPersistentStorage();
+      // await requestPersistentStorage();
       
       // Migrate localStorage preferences to IndexedDB
       try {

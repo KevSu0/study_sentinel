@@ -9,13 +9,25 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   resetMocks: true,
   resetModules: true,
+  collectCoverage: true,
+  coverageDirectory: '<rootDir>/coverage',
+  collectCoverageFrom: [
+    '<rootDir>/src/**/*.{ts,tsx,js,jsx}',
+    '!<rootDir>/src/**/__tests__/**',
+    '!<rootDir>/src/**/__mocks__/**',
+  ],
+  coverageReporters: ['text', 'lcov', 'json-summary'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
-    'next/router': '<rootDir>/__mocks__/next/router.js',
-    'next/navigation': '<rootDir>/__mocks__/next/navigation.js',
-    'react-markdown': '<rootDir>/__mocks__/react-markdown.js',
-    'remark-gfm': '<rootDir>/__mocks__/remark-gfm.js',
+    '^next/router$': '<rootDir>/__mocks__/next/router.js',
+    '^next/navigation$': '<rootDir>/__mocks__/next/navigation.js',
+    '^react-markdown$': '<rootDir>/__mocks__/react-markdown.js',
+    '^remark-gfm$': '<rootDir>/__mocks__/remark-gfm.js',
+    '^lucide-react$': '<rootDir>/__mocks__/lucide-react.js',
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(lucide-react|nanoid)/)'
+  ],
 }
 
 module.exports = createJestConfig(customJestConfig)

@@ -141,7 +141,11 @@ export const PlanListItem = React.memo(function PlanListItem({
         </p>
         <div className="flex items-center gap-2 sm:gap-3 text-xs text-muted-foreground">
             {item.type === 'task' && <>
-                <Flame className={cn("h-3 w-3", getPriorityTextStyles((item.data as StudyTask).priority))} />
+                {(() => {
+                  const p = (item.data as StudyTask).priority;
+                  const explicit = p === 'high' ? 'text-red-500' : p === 'medium' ? 'text-yellow-500' : 'text-blue-500';
+                  return <Flame className={cn("h-3 w-3", getPriorityTextStyles(p), explicit)} />
+                })()}
                 { (item.data as StudyTask).timerType === 'infinity' ? 
                     <InfinityIcon className="h-3 w-3" /> : 
                     <span>{(item.data as StudyTask).duration} min</span>
@@ -213,11 +217,13 @@ export const PlanListItem = React.memo(function PlanListItem({
         </AlertDialogContent>
     </AlertDialog>
     {isLogDialogOpen && itemToLog && (
-        <ManualLogDialog
-          isOpen={isLogDialogOpen}
-          onOpenChange={setLogDialogOpen}
-          item={itemToLog}
-        />
+        <div data-testid="manual-log-dialog">
+          <ManualLogDialog
+            isOpen={isLogDialogOpen}
+            onOpenChange={setLogDialogOpen}
+            item={itemToLog}
+          />
+        </div>
     )}
     </>
   );

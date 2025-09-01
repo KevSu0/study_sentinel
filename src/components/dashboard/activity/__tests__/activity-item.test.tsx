@@ -57,7 +57,8 @@ describe('ActivityItem', () => {
     it('renders correctly with log data', () => {
       render(<ActivityItem {...defaultProps} item={taskCompleteItem} />);
       expect(screen.getByText(mockTask.title)).toBeInTheDocument();
-      expect(screen.getByText(/Completed \(50m\)/)).toBeInTheDocument();
+      expect(screen.getByText(/Total: 50m/)).toBeInTheDocument();
+      expect(screen.getByText(/Prod: 50m/)).toBeInTheDocument();
       expect(screen.getByText(/150 pts/)).toBeInTheDocument();
       expect(screen.getByText(/high priority/i)).toBeInTheDocument();
       expect(screen.getByTestId('CheckCircleIcon')).toBeInTheDocument();
@@ -66,7 +67,7 @@ describe('ActivityItem', () => {
     it('renders correctly using task data as fallback if log is null', () => {
       const itemWithoutLog = { ...taskCompleteItem, data: { task: mockTask, log: null } };
       render(<ActivityItem {...defaultProps} item={itemWithoutLog} />);
-      expect(screen.getByText(/Completed \(1h\)/)).toBeInTheDocument(); // from task.duration
+      expect(screen.getByText(/Total: 1h/)).toBeInTheDocument(); // from task.duration
       expect(screen.getByText(/100 pts/)).toBeInTheDocument(); // from task.points
     });
 
@@ -74,7 +75,7 @@ describe('ActivityItem', () => {
         const taskWithoutDuration = { ...mockTask, duration: undefined };
         const item = { ...taskCompleteItem, data: { task: taskWithoutDuration, log: null } };
         render(<ActivityItem {...defaultProps} item={item} />);
-        expect(screen.getByText(/Completed \(0s\)/)).toBeInTheDocument();
+        expect(screen.getByText(/Total: 0s/)).toBeInTheDocument();
     });
 
     it('formats duration with hours and minutes correctly', () => {
@@ -86,7 +87,7 @@ describe('ActivityItem', () => {
           },
         };
         render(<ActivityItem {...defaultProps} item={itemWithHoursAndMinutes} />);
-        expect(screen.getByText(/Completed \(1h 30m\)/)).toBeInTheDocument();
+        expect(screen.getByText(/Total: 1h 30m/)).toBeInTheDocument();
       });
     
     it('formats duration with only hours correctly', () => {
@@ -98,7 +99,7 @@ describe('ActivityItem', () => {
             },
         };
         render(<ActivityItem {...defaultProps} item={itemWithHours} />);
-        expect(screen.getByText(/Completed \(1h\)/)).toBeInTheDocument();
+        expect(screen.getByText(/Total: 1h/)).toBeInTheDocument();
     });
 
     it('renders in an "undone" state', async () => {
@@ -118,36 +119,44 @@ describe('ActivityItem', () => {
       ...baseItem,
       type: 'ROUTINE_COMPLETE',
       data: {
-        id: 'l2',
-        payload: {
-          title: 'Morning Routine',
-          duration: 1800,
-          points: 50,
-          studyLog: 'Reviewed flashcards.',
-        },
+        routine: { id: 'r1', title: 'Morning Routine', priority: 'medium' },
+        log: { id: 'l2', payload: { duration: 1800, productiveDuration: 1800, points: 50, studyLog: 'Reviewed flashcards.' } },
       },
     };
 
     it('renders correctly with a study log', () => {
       render(<ActivityItem {...defaultProps} item={routineCompleteItem} />);
       expect(screen.getByText('Morning Routine')).toBeInTheDocument();
-      expect(screen.getByText(/Studied for 30m/)).toBeInTheDocument();
-      expect(screen.getByText(/50 pts earned/)).toBeInTheDocument();
+      expect(screen.getByText(/Total: 30m/)).toBeInTheDocument();
+      expect(screen.getByText(/Prod: 30m/)).toBeInTheDocument();
+      expect(screen.getByText(/50 pts/)).toBeInTheDocument();
       expect(screen.getByText('Reviewed flashcards.')).toBeInTheDocument();
       expect(screen.getByTestId('BookTextIcon')).toBeInTheDocument();
     });
 
     it('renders correctly without a study log', () => {
-      const itemWithoutLog = { ...routineCompleteItem, data: { ...routineCompleteItem.data, payload: { ...routineCompleteItem.data.payload, studyLog: null } } };
+      const itemWithoutLog = {
+        ...routineCompleteItem,
+        data: {
+          routine: routineCompleteItem.data.routine,
+          log: { id: 'l2', payload: { duration: 1800, productiveDuration: 1800, points: 50, studyLog: null } },
+        },
+      } as any;
       render(<ActivityItem {...defaultProps} item={itemWithoutLog} />);
       expect(screen.queryByTestId('BookTextIcon')).not.toBeInTheDocument();
     });
 
     it('handles routine with no duration or points', () => {
-        const itemWithoutData = { ...routineCompleteItem, data: { ...routineCompleteItem.data, payload: { title: 'Basic Routine' } } };
+        const itemWithoutData = {
+          ...routineCompleteItem,
+          data: {
+            routine: { id: 'r1', title: 'Morning Routine', priority: 'medium' },
+            log: { id: 'l2', payload: {} },
+          },
+        } as any;
         render(<ActivityItem {...defaultProps} item={itemWithoutData} />);
-        expect(screen.getByText(/Studied for 0s/)).toBeInTheDocument();
-        expect(screen.getByText(/0 pts earned/)).toBeInTheDocument();
+        expect(screen.getByText(/Total: 0s/)).toBeInTheDocument();
+        expect(screen.getByText(/0 pts/)).toBeInTheDocument();
     });
 
     it('renders in an "undone" state', () => {

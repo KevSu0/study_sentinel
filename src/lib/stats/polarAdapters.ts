@@ -20,12 +20,17 @@ export type AnySession = {
 
 /** Map a list of Activity[] to AnySession[] */
 export function sessionsToPolarActivities(sessions: AnySession[]): PolarActivity[] {
-  return sessions.map((s) => ({
-    time: s.time,
-    durationSec: s.durationSec || s.duration || 0,
-    pausedSec: s.pausedSec || s.pausedDuration || 0,
-    pauseCount: s.pauseCount || 0,
-  }));
+  return (sessions || [])
+    .map((s) => {
+      if (!s || !Array.isArray((s as any).time) || (s as any).time.length < 2) return null;
+      return {
+        time: (s as any).time as [number, number],
+        durationSec: (s as any).durationSec || (s as any).duration || 0,
+        pausedSec: (s as any).pausedSec || (s as any).pausedDuration || 0,
+        pauseCount: (s as any).pauseCount || 0,
+      } as PolarActivity;
+    })
+    .filter((x): x is PolarActivity => x !== null);
 }
 
 

@@ -418,3 +418,5 @@ export function checkBadge(
 
   return true; // All conditions were met
 }
+
+export default checkBadge;

@@ -25,14 +25,18 @@ import {
 import {CSS} from '@dnd-kit/utilities';
 import {Skeleton} from '@/components/ui/skeleton';
 import Link from 'next/link';
-import {AddItemDialog} from '@/components/dashboard/add-item-dialog';
-import {DailyBriefingWidget} from '@/components/dashboard/widgets/daily-briefing-widget';
-import {StatsOverviewWidget} from '@/components/dashboard/widgets/stats-overview-widget';
-import {UnlockedBadgesWidget} from '@/components/dashboard/widgets/unlocked-badges-widget';
-import {CompletedTodayWidget} from '@/components/dashboard/widgets/completed-today-widget';
-import {TodaysRoutinesWidget} from '@/components/dashboard/widgets/todays-routines-widget';
+// Import lazy-loaded components for better performance
+import {
+  LazyStatsOverviewWidget,
+  LazyTodaysRoutinesWidget,
+  LazyCompletedTodayWidget,
+  LazyUnlockedBadgesWidget,
+  LazyDailyBriefingWidget,
+  LazyAchievementCountdownWidget,
+  LazyDailyActiveProductivityWidget,
+  LazyAddItemDialog,
+} from '@/components/lazy/dashboard-components';
 import {TodaysPlanWidget} from '@/components/dashboard/widgets/todays-plan-widget';
-import {AchievementCountdownWidget} from '@/components/dashboard/widgets/achievement-countdown-widget';
 import {EmptyState} from '@/components/tasks/empty-state';
 import toast from 'react-hot-toast';
 import { useStats } from '@/hooks/use-stats';
@@ -40,16 +44,10 @@ import { getSessionDate } from '@/lib/utils';
 import { DailyActiveProductivityWidget } from '@/components/dashboard/widgets/daily-active-productivity-widget';
 import type { StudyTask } from '@/lib/types';
 
-const CustomizeDialog = dynamic(
-  () =>
-    import('@/components/dashboard/customize-dialog').then(
-      m => m.CustomizeDialog
-    ),
-  {
-    ssr: false,
-    loading: () => <Skeleton className="h-[400px] w-[400px]" />,
-  }
-);
+// Use lazy-loaded customize dialog
+import { LazyCustomizeDialog } from '@/components/lazy/dashboard-components';
+
+const CustomizeDialog = LazyCustomizeDialog;
 
 function SortableWidget({
   id,
@@ -124,23 +122,23 @@ export default function DashboardPage() {
 
   const isLoaded = state.isLoaded && layoutLoaded;
 
-  const widgetMap: Record<DashboardWidgetType, React.FC<any>> = {
-    daily_briefing: DailyBriefingWidget,
+  const widgetMap: Record<DashboardWidgetType, React.ComponentType<any>> = {
+    daily_briefing: LazyDailyBriefingWidget,
     stats_overview: () => (
         <div className="space-y-4">
-            <StatsOverviewWidget todaysBadges={state.todaysBadges}  />
-            <DailyActiveProductivityWidget
+            <LazyStatsOverviewWidget todaysBadges={state.todaysBadges}  />
+            <LazyDailyActiveProductivityWidget
                 productivity={activeProductivityData.length > 0 ? activeProductivityData[activeProductivityData.length - 1].productivity : 0}
                 isLoaded={isLoaded}
             />
         </div>
     ),
-    unlocked_badges: UnlockedBadgesWidget,
-    completed_today: CompletedTodayWidget,
-    todays_routines: TodaysRoutinesWidget,
+    unlocked_badges: LazyUnlockedBadgesWidget,
+    completed_today: LazyCompletedTodayWidget,
+    todays_routines: LazyTodaysRoutinesWidget,
     todays_plan: TodaysPlanWidget,
-    achievement_countdown: AchievementCountdownWidget,
-    daily_active_productivity: DailyActiveProductivityWidget
+    achievement_countdown: LazyAchievementCountdownWidget,
+    daily_active_productivity: LazyDailyActiveProductivityWidget
   };
 
   const widgetPropsMap: Record<DashboardWidgetType, any> = {
@@ -189,7 +187,7 @@ export default function DashboardPage() {
               <Settings className="h-4 w-4" />
               <span className="hidden sm:inline ml-2">Customize</span>
             </Button>
-            <AddItemDialog />
+            <LazyAddItemDialog />
           </div>
         </div>
 

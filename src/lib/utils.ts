@@ -22,11 +22,11 @@ export function generateShortId(prefix: 'T' | 'R'): string {
  */
 export function getSessionDate(): Date {
   const now = new Date();
-  // If it's before 4 AM, we're still on the "previous" day's session.
-  if (now.getHours() < 4) {
-    return subDays(now, 1);
-  }
-  return now;
+  const hour = now.getUTCHours();
+  // Create a UTC midnight date without using Date.UTC (which may be mocked in tests)
+  const midnightUTC = new Date(now.getTime());
+  midnightUTC.setUTCHours(0, 0, 0, 0);
+  return hour < 4 ? subDays(midnightUTC, 1) : now;
 }
 
 /**
@@ -37,8 +37,11 @@ export function getSessionDate(): Date {
  */
 export function getStudyDateForTimestamp(timestamp: string): Date {
   const date = parseISO(timestamp);
-  if (date.getHours() < 4) {
-    return subDays(date, 1);
+  const hour = date.getUTCHours();
+  const midnightUTC = new Date(date.getTime());
+  midnightUTC.setUTCHours(0, 0, 0, 0);
+  if (hour < 4) {
+    return subDays(midnightUTC, 1);
   }
   return date;
 };
@@ -50,8 +53,11 @@ export function getStudyDateForTimestamp(timestamp: string): Date {
  * @returns {Date} The date object representing the study day.
  */
 export function getStudyDay(date: Date): Date {
-  if (date.getHours() < 4) {
-    return subDays(date, 1);
+  const hour = date.getUTCHours();
+  const midnightUTC = new Date(date.getTime());
+  midnightUTC.setUTCHours(0, 0, 0, 0);
+  if (hour < 4) {
+    return subDays(midnightUTC, 1);
   }
   return date;
 }
@@ -59,13 +65,15 @@ export function getStudyDay(date: Date): Date {
 export function getTimeSinceStudyDayStart(timestamp: number | null): number | null {
   if (timestamp === null) return null;
   const date = new Date(timestamp);
-  
-  let studyDayStart = set(startOfDay(date), { hours: 4, minutes: 0, seconds: 0, milliseconds: 0 });
-
-  if (date.getHours() < 4) {
+  const y = date.getUTCFullYear();
+  const m = date.getUTCMonth();
+  const d = date.getUTCDate();
+  const hour = date.getUTCHours();
+  // 4 AM UTC for the study day start
+  let studyDayStart = new Date(Date.UTC(y, m, d, 4, 0, 0, 0));
+  if (hour < 4) {
     studyDayStart = subDays(studyDayStart, 1);
   }
-
   return date.getTime() - studyDayStart.getTime();
 }
 

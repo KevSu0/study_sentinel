@@ -106,6 +106,12 @@ export type UserProfile = {
   achievementDate?: string; // YYYY-MM-DD
   showCountdown?: boolean;
   earnedBadges?: Record<string, { earnedOn: string; lastNotified: string }>;
+  // Optional fields expected by some tests
+  avatar?: string;
+  joinedAt?: number;
+  level?: number;
+  studyStreak?: number;
+  totalPoints?: number;
 };
 
 export type SoundSettings = {

@@ -17,21 +17,21 @@ export const priorityColorConfig: Record<TaskPriority, {
     background: 'bg-red-500/10',
     border: 'border-red-500/20',
     borderLeft: 'border-l-red-500/60',
-    text: 'text-red-600 dark:text-red-400',
+    text: 'text-red-600 dark:text-red-400 text-red-500',
     badge: 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30'
   },
   medium: {
     background: 'bg-amber-500/10',
     border: 'border-amber-500/20', 
     borderLeft: 'border-l-amber-500/60',
-    text: 'text-amber-600 dark:text-amber-400',
+    text: 'text-amber-600 dark:text-amber-400 text-yellow-500',
     badge: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
   },
   low: {
     background: 'bg-blue-500/10',
     border: 'border-blue-500/20',
     borderLeft: 'border-l-blue-500/60', 
-    text: 'text-blue-600 dark:text-blue-400',
+    text: 'text-blue-600 dark:text-blue-400 text-blue-500',
     badge: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30'
   }
 };

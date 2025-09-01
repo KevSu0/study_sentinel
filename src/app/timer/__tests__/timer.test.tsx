@@ -6,6 +6,21 @@ import { useGlobalState } from '@/hooks/use-global-state';
 import { useRouter } from 'next/navigation';
 import { MemoryRouterProvider } from 'next-router-mock/MemoryRouterProvider';
 
+// Ensure matchMedia exists for framer-motion (prefers-reduced-motion checks)
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: jest.fn().mockImplementation((query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: jest.fn(), // deprecated
+    removeListener: jest.fn(), // deprecated
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    dispatchEvent: jest.fn(),
+  })),
+});
+
 // Mocking necessary hooks and modules
 jest.mock('@/hooks/use-global-state');
 jest.mock('next/navigation', () => ({
@@ -15,6 +30,12 @@ jest.mock('next/navigation', () => ({
 // Mock child components with named exports
 jest.mock('@/components/shared/motivational-quote', () => ({
   MotivationalQuote: () => <div data-testid="motivational-quote">Motivational Quote</div>,
+}));
+jest.mock('framer-motion', () => ({
+  AnimatePresence: ({ children }: any) => <>{children}</>,
+  motion: {
+    div: ({ children, ...rest }: any) => <div {...rest}>{children}</div>,
+  },
 }));
 jest.mock('@/components/tasks/timer-controls', () => ({
   TimerControls: (props: any) => (
@@ -49,15 +70,17 @@ jest.mock('lucide-react', () => ({
 const mockRequestWakeLock = jest.fn();
 const mockReleaseWakeLock = jest.fn();
 jest.mock('@/hooks/use-wake-lock', () => ({
-    useWakeLock: () => {
-        const { useEffect } = require('react');
-        useEffect(() => {
-            mockRequestWakeLock();
-            return () => {
-                mockReleaseWakeLock();
-            };
-        }, []);
-    },
+  useWakeLock: () => {
+    // Use the React import in this test file to avoid dispatcher issues
+    // and ensure the effect registers during component render
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    React.useEffect(() => {
+      mockRequestWakeLock();
+      return () => {
+        mockReleaseWakeLock();
+      };
+    }, []);
+  },
 }));
 
 

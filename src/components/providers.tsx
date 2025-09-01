@@ -36,7 +36,8 @@ import {
 import {ConfettiProvider} from './providers/confetti-provider';
 import {SplashScreen} from '@/components/splash-screen';
 import {GlobalTimerBar} from './tasks/global-timer-bar';
-import {GlobalStateProvider, useGlobalState} from '@/hooks/use-global-state';
+import { AppStateProvider } from '@/hooks/state/AppStateProvider';
+import { useGlobalState } from '@/hooks/use-global-state';
 import {ViewModeProvider} from '@/hooks/use-view-mode';
 import {DashboardLayoutProvider} from '@/hooks/use-dashboard-layout';
 import {Skeleton} from './ui/skeleton';
@@ -152,13 +153,13 @@ export function Providers({children}: {children: ReactNode}) {
       disableTransitionOnChange
     >
         <ConfettiProvider>
-            <GlobalStateProvider>
+            <AppStateProvider>
                 <ViewModeProvider>
                     <DashboardLayoutProvider>
                         <AppContent>{children}</AppContent>
                     </DashboardLayoutProvider>
                 </ViewModeProvider>
-            </GlobalStateProvider>
+            </AppStateProvider>
         </ConfettiProvider>
     </ThemeProvider>
   );

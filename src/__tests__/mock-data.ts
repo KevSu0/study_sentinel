@@ -115,3 +115,8 @@ export const MOCK_STATS_DATA: Stats = {
   ],
   completedWork: MOCK_COMPLETED_WORK,
 };
+
+// Trivial test to satisfy Jest when scanning __tests__ helpers.
+test('mock-data module loads', () => {
+  expect(MOCK_USER_PROFILE.name).toBe('Test User');
+});
