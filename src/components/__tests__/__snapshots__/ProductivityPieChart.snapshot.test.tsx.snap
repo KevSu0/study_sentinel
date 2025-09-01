@@ -1,0 +1,52 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`ProductivityPieChart snapshot (structure only) matches structure snapshot for typical data 1`] = `
+<DocumentFragment>
+  <div
+    class="rounded-lg border bg-card text-card-foreground shadow-sm h-full min-h-[380px] flex flex-col"
+  >
+    <div
+      class="flex flex-col space-y-1.5 p-6"
+    >
+      <div
+        class="text-lg font-semibold leading-none tracking-tight"
+      >
+        Today's Productivity
+      </div>
+      <div
+        class="text-sm text-muted-foreground"
+      >
+        Hover over a slice to see detailed info.
+      </div>
+    </div>
+    <div
+      class="flex-grow flex items-center justify-center p-0 pb-2 relative"
+    >
+      <div
+        class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center"
+      >
+        <p
+          class="text-4xl font-bold tracking-tighter"
+        >
+          40m
+        </p>
+        <p
+          class="text-sm text-muted-foreground"
+        >
+          Productive Time
+        </p>
+        <p
+          class="text-2xl font-bold text-green-500 mt-2"
+        >
+          90% 
+          <span
+            class="text-sm font-medium text-muted-foreground"
+          >
+            Focus
+          </span>
+        </p>
+      </div>
+    </div>
+  </div>
+</DocumentFragment>
+`;

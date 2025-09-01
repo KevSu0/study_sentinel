@@ -93,6 +93,7 @@ export const ActivityItem = memo(function ActivityItem({
 
   if (item.type === 'TASK_COMPLETE' || item.type === 'ROUTINE_COMPLETE') {
     const { title, totalDuration, productiveDuration, pausedDuration, pauseCount, points, focusPercentage, priority, studyLog } = metrics!;
+    const subject = (item as any)?.data?.log?.payload?.subject || (item as any)?.data?.task?.subject || (item as any)?.data?.routine?.subject;
     const isRoutine = item.type === 'ROUTINE_COMPLETE';
     
     return (
@@ -148,6 +149,7 @@ export const ActivityItem = memo(function ActivityItem({
               <Star className="h-4 w-4 text-yellow-400" />
               {points} pts
             </span>
+            {subject && <Badge variant="secondary" className="capitalize">{subject}</Badge>}
             {priority && <Badge variant="secondary" className="capitalize">{priority} Priority</Badge>}
           </div>
           {studyLog && (

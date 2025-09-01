@@ -1,10 +1,10 @@
 import { BaseRepository } from './base.repository';
-import { SyncConflict, db } from '../db';
+import { SyncConflict, getDB } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 
 export class SyncConflictsRepository extends BaseRepository<SyncConflict, string> {
   constructor() {
-    super(db.syncConflicts);
+    super(() => getDB().syncConflicts);
   }
 
   async createConflict(
@@ -73,7 +73,7 @@ export class SyncConflictsRepository extends BaseRepository<SyncConflict, string
         : (resolvedData || conflict.remoteData);
 
       // Update the main table with resolved data
-      const table = db.table(conflict.tableName);
+      const table = getDB().table(conflict.tableName);
       await table.put(dataToApply);
 
       // Remove the conflict

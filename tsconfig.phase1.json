@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/lib/stats/**/*.ts"
+  ],
+  "exclude": [
+    "src/lib/stats/__tests__/**"
+  ]
+}
+

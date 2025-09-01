@@ -22,6 +22,7 @@ import { registerServiceWorker } from '@/lib/sw-utils';
 import { Providers } from '@/components/providers';
 import { useStatusBarStyle } from '@/utils/platform-optimization';
 import { UserPreferencesRepository } from '@/lib/repositories/user-preferences.repository';
+import { maybeRunDailyBackup, requestPersistentStorage as requestPersistentStorage2 } from '@/lib/backup';
 
 export default function ClientLayout({
   children,
@@ -37,9 +38,18 @@ export default function ClientLayout({
       
       // Initialize database
       await initDatabase();
-      
+
       // Request persistent storage for better offline experience
-      // await requestPersistentStorage();
+      try {
+        await requestPersistentStorage2();
+      } catch {}
+
+      // Silent daily backup to OPFS and optional user folder
+      try {
+        await maybeRunDailyBackup();
+      } catch (e) {
+        console.warn('Daily backup skipped:', e);
+      }
       
       // Migrate localStorage preferences to IndexedDB
       try {

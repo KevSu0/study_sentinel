@@ -85,6 +85,7 @@ export default function PlansPage() {
     addLog('ROUTINE_SESSION_COMPLETE', {
       routineId: routine.id,
       title: routine.title,
+      subject: routine.subject,
       duration: 0,
       points: 10,
       studyLog: 'Completed manually.',
@@ -152,6 +153,7 @@ export default function PlansPage() {
                         <PlanComponent
                         key={`${item.type}-${item.data.id}-${index}`}
                         item={item}
+                        subjectDate={selectedDate}
                         onEditTask={(task) => openAddItemDialog('task', task)}
                         onEditRoutine={(routine) => openAddItemDialog('routine', routine)}
                         onDeleteRoutine={deleteRoutine}

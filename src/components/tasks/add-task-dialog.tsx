@@ -40,6 +40,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 const taskSchema = z.object({
   title: z.string().min(3, 'Task title must be at least 3 characters.'),
   description: z.string().optional(),
+  subject: z.string().optional(),
   date: z.string(),
   time: z.string(),
   duration: z.coerce.number().optional(),
@@ -152,6 +153,7 @@ function TaskForm({ onSubmit, onCancel, editingItem, selectedDate }: { onSubmit:
       priority: 'medium',
       title: '',
       description: '',
+      subject: '',
       timerType: 'countdown'
     },
   });
@@ -167,6 +169,7 @@ function TaskForm({ onSubmit, onCancel, editingItem, selectedDate }: { onSubmit:
       reset({
         title: editingItem.title,
         description: editingItem.description || '',
+        subject: editingItem.subject || '',
         date: editingItem.date,
         time: editingItem.time,
         duration: editingItem.duration || 30,
@@ -181,6 +184,7 @@ function TaskForm({ onSubmit, onCancel, editingItem, selectedDate }: { onSubmit:
         priority: 'medium',
         title: '',
         description: '',
+        subject: '',
         timerType: 'countdown'
       });
     }
@@ -196,6 +200,10 @@ function TaskForm({ onSubmit, onCancel, editingItem, selectedDate }: { onSubmit:
       <div>
         <Label htmlFor="description">Description (Optional)</Label>
         <Textarea id="description" {...register('description')} placeholder="e.g., Focus on ionic bonds" className="mt-1" />
+      </div>
+      <div>
+        <Label htmlFor="subject">Subject (Optional)</Label>
+        <Input id="subject" {...register('subject')} placeholder="e.g., Mathematics" className="mt-1" />
       </div>
        <div>
         <Label>Timer Type</Label>

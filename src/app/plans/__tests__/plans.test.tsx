@@ -310,6 +310,7 @@ describe('PlansPage', () => {
   });
 
   it('should handle completing a routine', async () => {
+    const user = userEvent.setup();
     setup();
     const routineTitle = await screen.findByText('Upcoming Routine');
     const routineCard = routineTitle.closest('[data-testid="plan-item-card"]') as HTMLElement;

@@ -60,6 +60,22 @@ export const LazyDailyActiveProductivityWidget = dynamic(
   }
 );
 
+export const LazyRealProductivityWidget = dynamic(
+  () => import('@/components/dashboard/widgets/real-productivity-widget').then(m => ({ default: m.RealProductivityWidget })),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-64 w-full" />,
+  }
+);
+
+export const LazyDailyRealProductivityWidget = dynamic(
+  () => import('@/components/dashboard/widgets/daily-real-productivity-widget').then(m => ({ default: m.DailyRealProductivityWidget })),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-64 w-full" />,
+  }
+);
+
 export const LazyProductivityPieChart = dynamic(
   () => import('@/components/dashboard/productivity-pie-chart'),
   {

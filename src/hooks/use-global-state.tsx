@@ -160,6 +160,39 @@ const {
   };
 })();
 
+// Helper to normalize a study date string (yyyy-MM-dd) from ISO timestamp
+function toStudyDate(ts: string) {
+  try {
+    const d = getStudyDateForTimestamp(ts);
+    return format(d, 'yyyy-MM-dd');
+  } catch {
+    try { return format(new Date(ts), 'yyyy-MM-dd'); } catch { return format(new Date(), 'yyyy-MM-dd'); }
+  }
+}
+
+async function ensureSessionFromLog(log: LogEvent) {
+  try {
+    if (log.type !== 'TIMER_SESSION_COMPLETE' && log.type !== 'ROUTINE_SESSION_COMPLETE') return;
+    const id = `session-${log.id}`;
+    const date = toStudyDate(log.timestamp);
+    const type = log.type === 'TIMER_SESSION_COMPLETE' ? 'task' : 'routine';
+    const duration = Number((log.payload?.duration ?? (Number(log.payload?.productiveDuration ?? 0) + Number(log.payload?.pausedDuration ?? 0))) ?? 0);
+    const pausedDuration = Number(log.payload?.pausedDuration ?? 0);
+    const points = Number(log.payload?.points ?? 0);
+    const title = String(log.payload?.title ?? '');
+    const sessionObj: any = { id, userId: 'user_profile', timestamp: log.timestamp, duration, pausedDuration, points, date, type, title, isUndone: !!log.isUndone };
+    // Upsert: if exists, update fields; else add
+    const existing = await (sessionRepo as any).getById?.(id);
+    if (existing) {
+      await (sessionRepo as any).update?.(id, sessionObj);
+    } else {
+      await (sessionRepo as any).add?.(sessionObj);
+    }
+  } catch (e) {
+    console.warn('ensureSessionFromLog failed', e);
+  }
+}
+
 
 // --- Constants for localStorage keys ---
 const TIMER_KEY = 'studySentinelActiveTimer_v3';
@@ -525,7 +558,20 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
         .catch((err) => {
           console.error('loadInitialData failed', err);
         })
-        .finally(() => {
+        .finally(async () => {
+          // Backfill sessions from existing completion logs once per app start
+          try {
+            const allLogs = await (logRepo as any).getAll?.();
+            if (Array.isArray(allLogs)) {
+              const completion = allLogs.filter((l: any) => l?.type === 'TIMER_SESSION_COMPLETE' || l?.type === 'ROUTINE_SESSION_COMPLETE');
+              for (const l of completion) {
+                // eslint-disable-next-line no-await-in-loop
+                await ensureSessionFromLog(l);
+              }
+            }
+          } catch (e) {
+            console.warn('Session backfill skipped:', e);
+          }
           setState(prev => ({ ...prev, isLoaded: true }));
         });
     }
@@ -723,10 +769,21 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
 
   const allCompletedWork = useMemo(() => {
     const safeLogs = Array.isArray(state.logs) ? state.logs : [];
+    console.log('🔍 DEBUG - Processing logs for completed work:', {
+      totalLogs: safeLogs.length,
+      logTypes: safeLogs.map(l => l.type),
+      logs: safeLogs.slice(0, 3) // Show first 3 logs
+    });
+    
     const allTimeLogs = [...safeLogs].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     const sessionLogs = allTimeLogs.filter(l => l.type === 'ROUTINE_SESSION_COMPLETE' || l.type === 'TIMER_SESSION_COMPLETE');
+    
+    console.log('🔍 DEBUG - Session logs found:', {
+      sessionLogsCount: sessionLogs.length,
+      sessionLogs: sessionLogs.map(l => ({ type: l.type, id: l.id, payload: l.payload }))
+    });
     const workItems: (CompletedWork & { id: string })[] = sessionLogs.map(l => ({
-        id: l.id, // Use log ID as the unique session ID
+        id: `session-${l.id}`,
         date: format(getStudyDateForTimestamp(l.timestamp), 'yyyy-MM-dd'),
         duration: l.payload.duration,
         pausedDuration: l.payload.pausedDuration,
@@ -735,27 +792,22 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
         points: l.payload.points || 0,
         priority: l.payload.priority,
         subjectId: l.payload.routineId || l.payload.taskId,
+        subject: l.payload.subject,
         timestamp: l.timestamp,
         isUndone: l.isUndone
     }));
-    // Save each session to the repository with proper unique IDs
-    workItems.forEach(async (item) => {
-        try {
-            // Check if session already exists to avoid duplicates
-            const existing = await sessionRepo.getById(item.id).catch(() => null);
-            if (!existing) {
-                await sessionRepo.add(item as any);
-            }
-        } catch (error) {
-            console.error('Failed to save session:', error);
-        }
-    });
     return workItems;
   }, [state.logs]);
 
   const todaysCompletedWork = useMemo(() => {
     const todayStr = format(getSessionDate(), 'yyyy-MM-dd');
     const todaysWork = allCompletedWork.filter(w => w.date === todayStr);
+    console.log('🔍 DEBUG - Today\'s completed work:', {
+      todayStr,
+      allCompletedWorkCount: allCompletedWork.length,
+      todaysWorkCount: todaysWork.length,
+      todaysWork
+    });
     return todaysWork;
   }, [allCompletedWork]);
 
@@ -793,19 +845,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
     const retriedRoutineIds = new Set(retryLogs.filter(log => log.type === 'ROUTINE_RETRY').map(log => log.payload.routineId));
     const retriedTaskIds = new Set(retryLogs.filter(log => log.type === 'TASK_RETRY').map(log => log.payload.originalTaskId));
     
-    console.log('🔍 Processing todaysActivity:');
-    console.log('📋 Today\'s logs total:', todaysLogs.length);
-    console.log('📊 Activity logs (filtered):', activityLogs.length);
-    console.log('📋 Active logs (not undone):', activeLogs.length);
-    console.log('📊 All today\'s logs:', todaysLogs);
-    console.log('📊 Activity logs:', activityLogs);
-    console.log('📊 Active logs:', activeLogs);
-    
-    // Debug: Show the actual log types and content
-    console.log('🔍 Log types breakdown:', todaysLogs.map(log => ({ type: log.type, isUndone: log.isUndone })));
-    console.log('🔄 Retry logs:', retryLogs);
-    console.log('🔄 Retried routine IDs:', Array.from(retriedRoutineIds));
-    console.log('🔄 Retried task IDs:', Array.from(retriedTaskIds));
+    // Debug logs removed for cleaner console output
     
     // Process all logs in a unified way
     for (const log of activeLogs) {
@@ -876,6 +916,32 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
     }));
   }, [todaysLogs, allCompletedWork, todaysCompletedWork, todaysPoints, todaysBadges, derivedTodaysActivity]);
 
+  // One-time backfill of sessions from historic logs (idempotent)
+  useEffect(() => {
+    const FLAG_BACKFILL = 'sessionsBackfill_v1';
+    const FLAG_MIGRATE = 'sessionsIdMigration_v1';
+    if (typeof window === 'undefined') return;
+    (async () => {
+      try {
+        const [{ backfillSessions }, { migrateSessionIds }, { db }] = await Promise.all([
+          import('@/lib/data/backfill-sessions'),
+          import('@/lib/data/migrate-session-ids'),
+          import('@/lib/db'),
+        ]);
+        if (!localStorage.getItem(FLAG_MIGRATE) && typeof migrateSessionIds === 'function') {
+          try { await migrateSessionIds(db.sessions as any); } catch {}
+          try { localStorage.setItem(FLAG_MIGRATE, String(Date.now())); } catch {}
+        }
+        if (!localStorage.getItem(FLAG_BACKFILL) && typeof backfillSessions === 'function') {
+          try { await backfillSessions(); } catch {}
+          try { localStorage.setItem(FLAG_BACKFILL, String(Date.now())); } catch {}
+        }
+      } catch {
+        // ignore
+      }
+    })();
+  }, []);
+
   const setStateAndDerive = useCallback((updater: (prevState: AppState) => Partial<AppState>) => {
     setState(prevState => {
       const changes = updater(prevState);
@@ -886,6 +952,10 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
   const _addLog = useCallback((type: LogEvent['type'], payload: LogEvent['payload']) => {
     const newLog: LogEvent = { id: crypto.randomUUID(), timestamp: formatISO(new Date()), type, payload };
     logRepo.add(newLog);
+    // Create/Update a session entry when a completion log is recorded
+    if (type === 'TIMER_SESSION_COMPLETE' || type === 'ROUTINE_SESSION_COMPLETE') {
+      ensureSessionFromLog(newLog);
+    }
     setStateAndDerive(prevState => {
       const updatedLogs = [...prevState.logs, newLog];
       return {logs: updatedLogs};
@@ -894,6 +964,8 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
 
   const removeLog = useCallback((logId: string) => {
     logRepo.delete(logId);
+    // Remove associated session if present
+    try { (sessionRepo as any).delete?.(`session-${logId}`); } catch {}
     setStateAndDerive(prevState => {
       const updatedLogs = prevState.logs.filter(log => log.id !== logId);
       return {logs: updatedLogs};
@@ -902,6 +974,10 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
 
   const updateLog = useCallback((logId: string, updatedLog: Partial<LogEvent>) => {
     logRepo.update(logId, updatedLog);
+    // Keep session in sync for undone status
+    if (Object.prototype.hasOwnProperty.call(updatedLog, 'isUndone')) {
+      try { (sessionRepo as any).update?.(`session-${logId}`, { isUndone: (updatedLog as any).isUndone }); } catch {}
+    }
     setStateAndDerive(prevState => {
       const updatedLogs = prevState.logs.map(log =>
         log.id === logId ? { ...log, ...updatedLog } : log
@@ -989,6 +1065,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
           _addLog('TIMER_SESSION_COMPLETE', {
             taskId: updatedTask.id,
             title: updatedTask.title,
+            subject: updatedTask.subject,
             duration: 0, // Manual completion has no duration
             pausedDuration: 0,
             pauseCount: 0,
@@ -1071,10 +1148,10 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
         if (task.timerType === 'countdown' && task.duration) {
              timerData.endTime = Date.now() + task.duration * 60 * 1000;
         }
-       _addLog('TIMER_START', {taskId: task.id, title: task.title, startTime: timerData.startTime});
+       _addLog('TIMER_START', {taskId: task.id, title: task.title, subject: task.subject, startTime: timerData.startTime});
        updateTask({...task, status: 'in_progress'});
      } else {
-       _addLog('TIMER_START', { routineId: item.id, title: item.title, startTime: timerData.startTime });
+       _addLog('TIMER_START', { routineId: item.id, title: item.title, subject: (item as any).subject, startTime: timerData.startTime });
      }
      localStorage.setItem(TIMER_KEY, JSON.stringify(timerData));
       showNewQuote();
@@ -1143,7 +1220,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
     } else {
       const priorityMultipliers: Record<TaskPriority, number> = { low: 1, medium: 2, high: 3 };
       const points = Math.floor((durationInSeconds / 60) * priorityMultipliers[item.item.priority]);
-      _addLog('ROUTINE_SESSION_COMPLETE', { routineId: item.item.id, title: item.item.title, duration: durationInSeconds, points, studyLog, stopped: true, priority: item.item.priority, pausedDuration: Math.round(savedTimer.pausedDuration / 1000), pauseCount: savedTimer.pauseCount });
+      _addLog('ROUTINE_SESSION_COMPLETE', { routineId: item.item.id, title: item.item.title, subject: (item.item as any).subject, duration: durationInSeconds, points, studyLog, stopped: true, priority: item.item.priority, pausedDuration: Math.round(savedTimer.pausedDuration / 1000), pauseCount: savedTimer.pauseCount });
     }
     localStorage.removeItem(TIMER_KEY);
     setStateAndDerive(prev => ({ activeItem: null, isPaused: false, isOvertime: false, timeDisplay: '00:00', timerProgress: null, starCount: 0 }));
@@ -1223,6 +1300,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
       _addLog('ROUTINE_SESSION_COMPLETE', {
         routineId: item.item.id,
         title: item.item.title,
+        subject: (item.item as any).subject,
         duration: totalDurationSeconds, // Total time from start to completion
         productiveDuration: productiveDurationSeconds, // Actual study time without pauses
         pausedDuration: pausedDurationSeconds,

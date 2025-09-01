@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 import type { ActivityFeedItem } from '@/hooks/use-global-state';
 import type { StudyTask } from '@/lib/types';
 
@@ -85,6 +86,7 @@ export const CompletedPlanListItem = ({
   if (!metrics) return null;
 
   const { title, productiveDuration, points, pausedDuration, pauseCount, focusPercentage, totalDuration } = metrics;
+  const subject = (item as any)?.data?.log?.payload?.subject || (item as any)?.data?.task?.subject || (item as any)?.data?.routine?.subject;
   const isRoutine = item.type === 'ROUTINE_COMPLETE';
 
   return (
@@ -131,6 +133,7 @@ export const CompletedPlanListItem = ({
               <Star className="h-3 w-3 text-yellow-400" />
               {points || 0} pts
             </span>
+            {subject && <Badge variant="secondary" className="capitalize">{subject}</Badge>}
             <span className="flex items-center gap-1" title="Total Session Time">
                 <Clock className="h-3 w-3" />
                 Total: {formatDuration(totalDuration)}

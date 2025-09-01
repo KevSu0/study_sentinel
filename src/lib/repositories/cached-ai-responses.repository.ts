@@ -1,11 +1,11 @@
 import { BaseRepository } from './base.repository';
-import { CachedAIResponse, db } from '../db';
+import { CachedAIResponse, getDB } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'crypto';
 
 export class CachedAIResponsesRepository extends BaseRepository<CachedAIResponse, string> {
   constructor() {
-    super(db.cachedAIResponses);
+    super(() => getDB().cachedAIResponses);
   }
 
   private createMessageHash(message: string): string {

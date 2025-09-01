@@ -34,6 +34,8 @@ import {
   LazyDailyBriefingWidget,
   LazyAchievementCountdownWidget,
   LazyDailyActiveProductivityWidget,
+  LazyRealProductivityWidget,
+  LazyDailyRealProductivityWidget,
   LazyAddItemDialog,
 } from '@/components/lazy/dashboard-components';
 import {TodaysPlanWidget} from '@/components/dashboard/widgets/todays-plan-widget';
@@ -138,7 +140,9 @@ export default function DashboardPage() {
     todays_routines: LazyTodaysRoutinesWidget,
     todays_plan: TodaysPlanWidget,
     achievement_countdown: LazyAchievementCountdownWidget,
-    daily_active_productivity: LazyDailyActiveProductivityWidget
+    daily_active_productivity: LazyDailyActiveProductivityWidget,
+    real_productivity: LazyRealProductivityWidget,
+    daily_real_productivity: LazyDailyRealProductivityWidget
   };
 
   const widgetPropsMap: Record<DashboardWidgetType, any> = {
@@ -162,6 +166,14 @@ export default function DashboardPage() {
     achievement_countdown: {},
     daily_active_productivity: {
         productivity: activeProductivityData.length > 0 ? activeProductivityData[activeProductivityData.length - 1].productivity : 0,
+        isLoaded: isLoaded,
+    },
+    real_productivity: {
+        data: realProductivityData,
+        isLoaded: isLoaded,
+    },
+    daily_real_productivity: {
+        productivity: realProductivityData.length > 0 ? realProductivityData[realProductivityData.length - 1].productivity : 0,
         isLoaded: isLoaded,
     }
   };

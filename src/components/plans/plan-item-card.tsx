@@ -32,6 +32,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useGlobalState } from '@/hooks/use-global-state';
 import { Checkbox } from '../ui/checkbox';
+import { getRoutineSubject, setRoutineSubject } from '@/lib/subject-tags';
+import { getStudyDateForTimestamp } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,6 +64,7 @@ interface PlanItemCardProps {
   onCompleteRoutine?: (routine: Routine) => void;
   onUndoCompleteRoutine?: (logId: string) => void;
   onDeleteCompleteRoutine?: (logId: string) => void;
+  subjectDate?: Date;
 }
 
 
@@ -104,9 +108,10 @@ export const PlanItemCard = React.memo(function PlanItemCard({
   onDeleteRoutine,
   onCompleteRoutine,
   onUndoCompleteRoutine,
-  onDeleteCompleteRoutine
+  onDeleteCompleteRoutine,
+  subjectDate,
 }: PlanItemCardProps) {
-  const { state, startTimer } = useGlobalState();
+  const { state, startTimer, updateRoutine, updateLog } = useGlobalState() as any;
   const { activeItem } = state;
   const [isAlertOpen, setAlertOpen] = useState(false);
   const [isLogDialogOpen, setLogDialogOpen] = useState(false);
@@ -187,7 +192,7 @@ export const PlanItemCard = React.memo(function PlanItemCard({
 
           {/* Title & Details */}
           <div className="flex-1 grid gap-1">
-            <p className={cn("font-medium text-sm sm:text-base", isCompleted && "line-through text-muted-foreground")}>
+            <p className={cn("font-medium text-sm sm:text-base", isCompleted && "line-through text-muted-foreground")}> 
               {shortId && <span className="text-xs font-mono text-muted-foreground/80 mr-2">{shortId}</span>}
               {title}
             </p>
@@ -202,6 +207,48 @@ export const PlanItemCard = React.memo(function PlanItemCard({
                 </div>
               )}
             </div>
+            {/* Subject tag editor */}
+            {item.type === 'routine' && (
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs text-muted-foreground">Subject:</span>
+                <Input
+                  className="h-7 w-40 text-xs"
+                  placeholder="e.g., Mathematics"
+                  defaultValue={(getRoutineSubject((item.data as Routine).id, format(subjectDate || new Date(), 'yyyy-MM-dd')) || (item.data as Routine).subject || '')}
+                  onBlur={(e) => {
+                    const next = e.currentTarget.value.trim();
+                    const r = item.data as Routine;
+                    const dateStr = format(subjectDate || new Date(), 'yyyy-MM-dd');
+                    setRoutineSubject(r.id, dateStr, next);
+                  }}
+                />
+              </div>
+            )}
+            {item.type === 'completed_routine' && (
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs text-muted-foreground">Subject:</span>
+                <Input
+                  className="h-7 w-40 text-xs"
+                  placeholder="Set subject"
+                  defaultValue={(item.data as any)?.log?.payload?.subject || (item.data as any)?.routine?.subject || ''}
+                  onBlur={(e) => {
+                    const next = e.currentTarget.value.trim();
+                    const logId = ((item.data as any).log?.id || (item.data as any).id);
+                    if (logId) {
+                      updateLog?.(logId, { payload: { ...((item.data as any).log?.payload || {}), subject: next } });
+                    }
+                    try {
+                      const routineId = (item.data as any)?.routine?.id || (item.data as any)?.log?.payload?.routineId;
+                      const ts = (item.data as any)?.log?.timestamp;
+                      if (routineId && ts) {
+                        const d = format(getStudyDateForTimestamp(ts), 'yyyy-MM-dd');
+                        setRoutineSubject(routineId, d, next);
+                      }
+                    } catch {}
+                  }}
+                />
+              </div>
+            )}
           </div>
           
           {/* Actions */}

@@ -173,7 +173,7 @@ export default function ProductivityPieChart({
           Hover over a slice to see detailed info.
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex-grow flex items-center justify-center p-0 pb-2 relative">
+      <CardContent className="flex-grow flex items-center justify-center p-0 pb-2 relative" style={{ height: 360 }}>
         {activeIndex === null && (
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
             <p className="text-4xl font-bold tracking-tighter">
@@ -185,38 +185,61 @@ export default function ProductivityPieChart({
             )}
           </div>
         )}
-        <ResponsiveContainer {...{ width: "100%", height: "100%" } as any}>
-          <PieChart {...{} as any}>
-            <Pie
-              {...{
-                activeIndex: activeIndex === null ? -1 : activeIndex,
-                activeShape: renderActiveShape,
-                data,
-                cx: "50%",
-                cy: "50%",
-                dataKey: "productiveDuration",
-                nameKey: "name",
-                innerRadius: "85%",
-                outerRadius: "99%",
-                paddingAngle: 2,
-                stroke: "hsl(var(--background))",
-                strokeWidth: 2,
-                onMouseEnter: onPieEnter,
-                onMouseLeave: onPieLeave,
-              } as any}
-            >
-              {data.map((entry, index) => (
-                <Cell
+        {/** Cast lazy components to accept any props to satisfy TS */}
+        {(() => {
+          const ResponsiveContainerAny = ResponsiveContainer as unknown as React.ComponentType<any>;
+          const PieChartAny = PieChart as unknown as React.ComponentType<any>;
+          const PieAny = Pie as unknown as React.ComponentType<any>;
+          const CellAny = Cell as unknown as React.ComponentType<any>;
+          return (
+            <ResponsiveContainerAny width="100%" height="100%">
+              <PieChartAny>
+                {/** Subtle background track to make the ring visible in dark mode */}
+                <PieAny
                   {...{
-                    key: `cell-${index}`,
-                    fill: COLORS[index % COLORS.length],
-                    className: "outline-none ring-0 focus:outline-none focus:ring-0",
+                    data: [{ name: 'track', productiveDuration: Math.max(totalProductiveSeconds, 1) }],
+                    cx: '50%',
+                    cy: '50%',
+                    dataKey: 'productiveDuration',
+                    innerRadius: '58%',
+                    outerRadius: '92%',
+                    isAnimationActive: false,
+                    stroke: 'none',
+                    fill: 'hsl(var(--muted))',
+                    fillOpacity: 0.25,
                   } as any}
                 />
-              ))}
-            </Pie>
-          </PieChart>
-        </ResponsiveContainer>
+                <PieAny
+                  {...{
+                    activeIndex: activeIndex === null ? -1 : activeIndex,
+                    activeShape: renderActiveShape,
+                    data,
+                    cx: '50%',
+                    cy: '50%',
+                    dataKey: 'productiveDuration',
+                    nameKey: 'name',
+                    innerRadius: '60%',
+                    outerRadius: '90%',
+                    paddingAngle: 2,
+                    stroke: 'hsl(var(--background) / 0.6)',
+                    strokeWidth: 2,
+                    onMouseEnter: onPieEnter,
+                    onMouseLeave: onPieLeave,
+                  } as any}
+                >
+                {data.map((entry, index) => (
+                  <CellAny
+                    key={`cell-${index}`}
+                    fill={COLORS[index % COLORS.length]}
+                    className="outline-none ring-0 focus:outline-none focus:ring-0"
+                    style={{ filter: 'drop-shadow(0 0 6px rgba(0,0,0,0.25))' }}
+                  />
+                ))}
+                </PieAny>
+              </PieChartAny>
+            </ResponsiveContainerAny>
+          );
+        })()}
       </CardContent>
     </Card>
   );

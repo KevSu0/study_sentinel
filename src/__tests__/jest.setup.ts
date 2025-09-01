@@ -1,6 +1,28 @@
 import '@testing-library/jest-dom';
 import 'fake-indexeddb/auto';
 import 'core-js/actual/structured-clone';
+import { __setTestDB, getDB } from '@/lib/db';
+import { cleanup } from '@testing-library/react';
+// Node polyfills for server-side rendering in tests
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const util = require('util');
+  if (!(global as any).TextEncoder) {
+    (global as any).TextEncoder = util.TextEncoder;
+  }
+  if (!(global as any).TextDecoder) {
+    (global as any).TextDecoder = util.TextDecoder;
+  }
+} catch {}
+// Minimal dynamic() mock to avoid Next.js runtime in tests
+jest.mock('next/dynamic', () => () => {
+  const DynamicComponent = (_props: any) => null;
+  (DynamicComponent as any).displayName = 'DynamicMock';
+  return DynamicComponent;
+});
+
+// Force a consistent timezone for date-fns and study-day logic
+try { (process as any).env.TZ = (process as any).env.TZ || 'UTC'; } catch {}
 
 // Ensure window is available in jsdom environment
 if (typeof window !== 'undefined') {
@@ -131,6 +153,22 @@ if (typeof (global as any).Request === 'undefined') {
   (global as any).Request = MockRequest;
 }
 
+// Minimal Response polyfill to support NextResponse in tests
+if (typeof (global as any).Response === 'undefined') {
+  class MockResponse {
+    status: number;
+    private _body: any;
+    constructor(body?: any, init?: { status?: number }) {
+      this.status = init?.status ?? 200;
+      this._body = body;
+    }
+    async text() { return typeof this._body === 'string' ? this._body : JSON.stringify(this._body ?? ''); }
+    async json() { return typeof this._body === 'string' ? JSON.parse(this._body || '{}') : this._body; }
+  }
+  // @ts-ignore
+  (global as any).Response = MockResponse as any;
+}
+
 // Cache API polyfill for offline tests
 if (typeof (global as any).caches === 'undefined') {
   const mockResponse = (body: string) => ({ text: async () => body } as any);
@@ -174,10 +212,16 @@ test('jest setup runs', () => {
 // Default to real timers at the start of each test
 beforeEach(() => {
   try { jest.useRealTimers(); } catch {}
+  try {
+    const make = (global as any).__makeDBName || ((ns: string) => `${ns}-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    __setTestDB(make('TestDB'));
+  } catch {}
 });
 
 // Global safety: ensure no test leaves fake timers enabled
-afterEach(() => {
+afterEach(async () => {
+  try { cleanup(); } catch {}
+  try { await ((global as any).tick?.() || Promise.resolve()); } catch {}
   try {
     // Reset to real timers to prevent polling/waitFor hangs in later tests
     jest.useRealTimers();
@@ -188,4 +232,70 @@ afterEach(() => {
       window.localStorage.clear();
     }
   } catch {}
+  try {
+    // Clear Dexie DB used in this test
+    if (typeof indexedDB !== 'undefined') {
+      const name = getDB().name;
+      try { getDB().close(); } catch {}
+      indexedDB.deleteDatabase(name);
+    }
+  } catch {}
 });
+
+// Provide deterministic element sizes for charting libraries in JSDOM
+try {
+  Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { configurable: true, value: 800 });
+  Object.defineProperty(HTMLElement.prototype, 'offsetHeight', { configurable: true, value: 600 });
+} catch {}
+
+// Some chart libs query SVG getBBox; provide a stable stub
+try {
+  // @ts-ignore
+  if (!SVGElement.prototype.getBBox) {
+    // @ts-ignore
+    SVGElement.prototype.getBBox = () => ({ x: 0, y: 0, width: 100, height: 50 });
+  }
+} catch {}
+
+// Small async tick helper to flush microtasks/batched updates in tests
+// Usage: await (global as any).tick();
+try {
+  // @ts-ignore
+  global.tick = () => new Promise(resolve => setTimeout(resolve, 0));
+} catch {}
+
+// Helper to generate unique names (e.g., for DBs) if needed
+try {
+  // @ts-ignore
+  global.__makeDBName = (ns = 'AppDB') => `${ns}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+} catch {}
+
+// Surface unexpected console errors as test failures (helps catch act/Dexie issues)
+try {
+  const originalError = console.error;
+  beforeAll(() => {
+    jest.spyOn(console, 'error').mockImplementation((...args: any[]) => {
+      originalError(...args);
+      const msg = args.join(' ');
+      if (/ConstraintError|Failed to add item to sessions|not wrapped in act|Unhandled/i.test(msg)) {
+        throw new Error(`ConsoleError surfaced by test: ${msg}`);
+      }
+    });
+  });
+  afterAll(() => (console.error as any).mockRestore?.());
+} catch {}
+
+// Surface problematic console.warn to catch layout/observer issues early
+try {
+  const originalWarn = console.warn;
+  beforeAll(() => {
+    jest.spyOn(console, 'warn').mockImplementation((...args: any[]) => {
+      originalWarn(...args);
+      const msg = args.join(' ');
+      if (/act\(|deprecated|ResizeObserver loop limit exceeded/i.test(msg)) {
+        throw new Error(`ConsoleWarn surfaced by test: ${msg}`);
+      }
+    });
+  });
+  afterAll(() => (console.warn as any).mockRestore?.());
+} catch {}

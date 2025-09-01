@@ -1,5 +1,6 @@
 
 import type { NextConfig } from 'next';
+import path from 'path';
 
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
   enabled: process.env.ANALYZE === 'true',
@@ -168,7 +169,8 @@ const nextConfig: NextConfig = {
         buildDependencies: {
           config: [__filename],
         },
-        cacheDirectory: '.next/cache/webpack',
+        // Webpack requires an absolute path here
+        cacheDirectory: path.join(process.cwd(), '.next', 'cache', 'webpack'),
         compression: 'gzip',
       };
       

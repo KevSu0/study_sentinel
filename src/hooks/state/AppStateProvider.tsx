@@ -2,6 +2,7 @@
 
 import React, { ReactNode } from 'react';
 import { GlobalStateProvider } from '@/hooks/use-global-state';
+import { ConfettiProvider } from '@/components/providers/confetti-provider';
 import { SettingsProvider } from './domains/settings';
 import { ProfileProvider } from './domains/profile';
 import { BadgeProvider } from './domains/badges';
@@ -33,15 +34,17 @@ interface AppStateProviderProps {
  */
 export function AppStateProvider({ children }: AppStateProviderProps) {
   return (
-    <GlobalStateProvider>
-      <SettingsProvider>
-        <ProfileProvider>
-          <BadgeProvider>
-            {children}
-          </BadgeProvider>
-        </ProfileProvider>
-      </SettingsProvider>
-    </GlobalStateProvider>
+    <ConfettiProvider>
+      <GlobalStateProvider>
+        <SettingsProvider>
+          <ProfileProvider>
+            <BadgeProvider>
+              {children}
+            </BadgeProvider>
+          </ProfileProvider>
+        </SettingsProvider>
+      </GlobalStateProvider>
+    </ConfettiProvider>
   );
 }
 

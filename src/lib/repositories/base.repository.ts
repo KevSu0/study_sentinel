@@ -1,10 +1,13 @@
 import { Table } from 'dexie';
-import { db, Outbox } from '../db';
+import { getDB, Outbox } from '../db';
 import { logger } from '../logger';
 
 export class BaseRepository<T extends { id?: TKey }, TKey extends string | number> {
-  protected db = db;
-  constructor(protected table: Table<T, TKey>) {}
+  constructor(protected getTableFn: () => Table<T, TKey>) {}
+
+  protected get table(): Table<T, TKey> {
+    return this.getTableFn();
+  }
 
   async getAll(): Promise<T[]> {
     return this.table.toArray();
@@ -15,37 +18,41 @@ export class BaseRepository<T extends { id?: TKey }, TKey extends string | numbe
   }
 
   async add(item: T): Promise<TKey | undefined> {
-    if (navigator.onLine) {
-      try {
-        // Check if item already exists to prevent constraint errors
-        if (item.id) {
-          const existing = await this.table.get(item.id);
-          if (existing) {
-            logger.warn(`Item with id ${item.id} already exists in ${this.table.name}, updating instead`);
-            await this.table.put(item);
-            return item.id;
-          }
+    // Local-first and idempotent: if an id exists, upsert to avoid ConstraintError races
+    try {
+      if (item.id) {
+        await this.table.put(item as any);
+        if (!navigator.onLine) {
+          await this.addToOutbox({
+            operation: 'create',
+            table: this.table.name,
+            payload: item,
+            timestamp: Date.now(),
+          });
         }
-        return await this.table.add(item);
-      } catch (error) {
-        logger.error(`Failed to add item to ${this.table.name} in online mode`, error);
-        // Fallback to offline mechanism if online fails
+        return (item.id as unknown) as TKey;
+      }
+
+      const key = await this.table.add(item as any);
+      if (!navigator.onLine) {
         await this.addToOutbox({
           operation: 'create',
           table: this.table.name,
           payload: item,
           timestamp: Date.now(),
         });
-        return undefined;
       }
-    } else {
+      return key as any;
+    } catch (error) {
+      logger.error(`Failed to add item to ${this.table.name}`, error);
+      // Best-effort: queue to outbox for later sync
       await this.addToOutbox({
         operation: 'create',
-        table: this.table.name,
+        table: (this.table as any).name,
         payload: item,
         timestamp: Date.now(),
       });
-      return undefined;
+      return (item.id as unknown) as TKey | undefined;
     }
   }
 
@@ -56,7 +63,7 @@ export class BaseRepository<T extends { id?: TKey }, TKey extends string | numbe
        for (const item of items) {
            await this.addToOutbox({
                 operation: 'create',
-                table: this.table.name,
+                table: (this.table as any).name,
                 payload: item,
                 timestamp: Date.now(),
             });
@@ -66,47 +73,34 @@ export class BaseRepository<T extends { id?: TKey }, TKey extends string | numbe
   }
 
   async update(id: TKey, changes: Partial<T>): Promise<number> {
-    if (navigator.onLine) {
-      try {
-        return await this.table.update(id, changes as any);
-      } catch(error) {
-         logger.error(`Failed to update item in ${this.table.name} in online mode`, error);
-         await this.addToOutbox({
-            operation: 'update',
-            table: this.table.name,
-            payload: { id, changes },
-            timestamp: Date.now(),
-          });
-          return 1;
-      }
-    } else {
+    // Local-first update
+    let result = 0;
+    try {
+      result = await this.table.update(id as any, changes as any);
+    } catch (error) {
+      logger.error(`Failed to update item in ${(this.table as any).name}`, error);
+    }
+    if (!navigator.onLine || result === 0) {
       await this.addToOutbox({
         operation: 'update',
-        table: this.table.name,
+        table: (this.table as any).name,
         payload: { id, changes },
         timestamp: Date.now(),
       });
-      return 1; // Indicate success for offline operation
     }
+    return result || 1;
   }
 
   async delete(id: TKey): Promise<void> {
-    if (navigator.onLine) {
-       try {
-        await this.table.delete(id);
-      } catch(error) {
-        logger.error(`Failed to delete item from ${this.table.name} in online mode`, error);
-        await this.addToOutbox({
-            operation: 'delete',
-            table: this.table.name,
-            payload: { id },
-            timestamp: Date.now(),
-          });
-      }
-    } else {
+    try {
+      await this.table.delete(id as any);
+    } catch (error) {
+      logger.error(`Failed to delete item from ${(this.table as any).name}`, error);
+    }
+    if (!navigator.onLine) {
       await this.addToOutbox({
         operation: 'delete',
-        table: this.table.name,
+        table: (this.table as any).name,
         payload: { id },
         timestamp: Date.now(),
       });
@@ -114,6 +108,6 @@ export class BaseRepository<T extends { id?: TKey }, TKey extends string | numbe
   }
 
   private async addToOutbox(item: Omit<Outbox, 'id'>): Promise<void> {
-    await db.outbox.add(item as Outbox);
+    await getDB().outbox.add(item as Outbox);
   }
 }

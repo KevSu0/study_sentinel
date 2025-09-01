@@ -10,6 +10,7 @@ export type StudyTask = {
   shortId: string;
   title: string;
   description?: string;
+  subject?: string;
   time: string; // e.g., "09:00"
   date: string; // e.g., "2024-07-29"
   duration?: number; // in minutes, optional for infinity timer
@@ -24,6 +25,7 @@ export type Routine = {
   shortId: string;
   title: string;
   description?: string;
+  subject?: string;
   days: number[]; // 0 = Sunday, 1 = Monday, etc.
   startTime: string; // HH:mm
   endTime: string; // HH:mm
@@ -133,6 +135,7 @@ export type CompletedWork = {
   points: number;
   priority?: TaskPriority;
   subjectId?: string;
+  subject?: string;
   timestamp: string;
   isUndone?: boolean;
 };

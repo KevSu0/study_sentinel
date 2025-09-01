@@ -11,6 +11,8 @@ import {
   statsDailyRepository,
   badgeRepository,
 } from '@/lib/repositories';
+import { logRepository } from '@/lib/repositories/log.repository';
+import { buildSessionFromLog } from '@/lib/data/backfill-sessions';
 import type {
   StudyTask,
   CompletedWork,
@@ -21,6 +23,13 @@ import type {
 } from '@/lib/types';
 import { RoutineStat } from '@/components/stats/routine-stats-list';
 import type { Activity } from '@/components/stats/daily-activity-timeline';
+import {
+  selectDailyPieData,
+  selectSubjectTrends,
+  selectBadgeEligibility,
+  selectAiBriefingData,
+  selectAchievementProgress,
+} from '@/lib/stats/selectors';
 
 interface UseStatsProps {
   timeRange: string;
@@ -47,22 +56,54 @@ export function useStats({
   const { timeRange: timeRangeDep, selectedDate: selectedDateDep } = { timeRange, selectedDate };
 
   const dateRange = useMemo(() => {
-    const now = startOfDay(new Date());
+    // Normalize to study-day boundaries to match how sessions are stored
     if (timeRange === 'daily') {
-      const startDate = format(selectedDate, 'yyyy-MM-dd');
-      return { startDate, endDate: startDate };
+      const studyDay = getStudyDay(selectedDate);
+      const d = format(studyDay, 'yyyy-MM-dd');
+      return { startDate: d, endDate: d };
     }
     if (timeRange === 'overall') {
       return { startDate: '1970-01-01', endDate: '9999-12-31' };
     }
+    const base = getStudyDay(new Date());
     const daysToSubtract = timeRange === 'weekly' ? 7 : 30;
-    const startDate = format(subDays(now, daysToSubtract), 'yyyy-MM-dd');
-    const endDate = format(now, 'yyyy-MM-dd');
+    const startDate = format(subDays(base, daysToSubtract), 'yyyy-MM-dd');
+    const endDate = format(base, 'yyyy-MM-dd');
     return { startDate, endDate };
   }, [timeRange, selectedDate]);
 
   const tasks = useLiveQuery(() => taskRepository.getByDateRange(dateRange.startDate, dateRange.endDate), [dateRange]);
-  const allCompletedWork = useLiveQuery(() => sessionRepository.getByDateRange(dateRange.startDate, dateRange.endDate), [dateRange]);
+  const sessionsForRange = useLiveQuery(
+    () => sessionRepository.getByDateRange(dateRange.startDate, dateRange.endDate),
+    [dateRange]
+  );
+  // Fallback: if sessions are not backfilled, derive sessions directly from logs across the selected date range
+  const logsDerivedSessions = useLiveQuery(
+    async () => {
+      try {
+        // Build an inclusive list of YYYY-MM-dd dates between start and end
+        const start = parse(dateRange.startDate, 'yyyy-MM-dd', new Date());
+        const end = parse(dateRange.endDate, 'yyyy-MM-dd', new Date());
+        const days: string[] = [];
+        let cursor = start;
+        while (cursor <= end) {
+          days.push(format(cursor, 'yyyy-MM-dd'));
+          cursor = addDays(cursor, 1);
+        }
+        const logsByDay = await Promise.all(days.map(d => logRepository.getLogsByDate(d)));
+        const combined = logsByDay.flat().filter(Boolean) as any[];
+        const sessions = combined
+          .filter(l => l.type === 'TIMER_SESSION_COMPLETE' || l.type === 'ROUTINE_SESSION_COMPLETE')
+          .map(buildSessionFromLog)
+          .filter(Boolean) as any[];
+        return sessions;
+      } catch {
+        return [] as any[];
+      }
+    },
+    [dateRange]
+  );
+  const allCompletedWork = sessionsForRange && sessionsForRange.length > 0 ? sessionsForRange : logsDerivedSessions;
   const profile = useLiveQuery(() => profileRepository.getById('user-profile'), []);
   const allBadges = useLiveQuery(() => badgeRepository.getAll(), []);
   const earnedBadges = useLiveQuery(() => profileRepository.getById('user-profile').then(p => p?.earnedBadges), []);
@@ -183,12 +224,8 @@ export function useStats({
     console.log('dailyPieChartData memo: selectedDate:', selectedDate);
     console.log('dailyPieChartData memo: filteredWork length:', filteredWork?.length || 0);
     if (!filteredWork) return [];
-    const workForDay = filteredWork.filter(w => {
-      const workDate = getStudyDateForTimestamp(w.timestamp);
-      const isSame = isSameDay(workDate, selectedDate);
-      console.log('dailyPieChartData memo: work item:', w.title, 'timestamp:', w.timestamp, 'workDate:', workDate, 'selectedDate:', selectedDate, 'isSameDay:', isSame);
-      return isSame;
-    });
+    const selectedStudyDay = getStudyDay(selectedDate);
+    const workForDay = filteredWork.filter(w => isSameDay(getStudyDateForTimestamp(w.timestamp), selectedStudyDay));
     console.log('dailyPieChartData memo: workForDay length:', workForDay.length);
 
     const workByTask = workForDay.reduce(
@@ -216,19 +253,9 @@ export function useStats({
       >
     );
 
-    const data = Object.entries(workByTask).map(([name, value]) => {
-      const productiveDuration = (value as { totalDuration: number; pausedDuration: number }).totalDuration - (value as { totalDuration: number; pausedDuration: number }).pausedDuration;
-      const focusPercentage = (value as { totalDuration: number }).totalDuration > 0 ? (productiveDuration / (value as { totalDuration: number }).totalDuration) * 100 : 100;
-      return {
-        name,
-        productiveDuration,
-        pausedDuration: (value as { pausedDuration: number }).pausedDuration,
-        pauseCount: (value as { pauseCount: number }).pauseCount,
-        focusPercentage,
-      };
-    });
+    const data = selectDailyPieData(filteredWork as any, selectedDate, 'task');
     console.log('dailyPieChartData memo: final data:', data);
-    return data;
+    return data as any;
   }, [filteredWork, selectedDate]);
   
   const dailyActivityTimelineData: Activity[] = useMemo(() => {
@@ -352,9 +379,9 @@ export function useStats({
   }, [allCompletedWork, selectedDate]);
 
   const barChartData = useMemo(() => {
-    if (!profile || !filteredWork) return [];
+    if (!filteredWork) return [];
     const now = new Date();
-    const dailyGoal = profile.dailyStudyGoal || 8;
+    const dailyGoal = (profile?.dailyStudyGoal ?? 8);
 
     if (timeRange === 'daily') {
         return dailyPieChartData.map(item => ({
@@ -525,7 +552,7 @@ export function useStats({
   }, [filteredWork]);
 
   const calculateProductivityForDay = useCallback((date: Date) => {
-    if (!filteredWork || !profile) return { real: 0, active: 0 };
+    if (!filteredWork) return { real: 0, active: 0 };
     const workForDay = filteredWork.filter(w => isSameDay(getStudyDateForTimestamp(w.timestamp), date));
     const productiveSeconds = workForDay.reduce((sum, work) => sum + (work.duration - (work.pausedDuration || 0)), 0);
 
@@ -536,7 +563,7 @@ export function useStats({
     const realProductivity = (productiveSeconds / totalSecondsInDay) * 100;
 
     // Active Productivity
-    const dailyGoalSeconds = (profile.dailyStudyGoal || 8) * 3600;
+    const dailyGoalSeconds = ((profile?.dailyStudyGoal ?? 8)) * 3600;
     const activeProductivity = (productiveSeconds / dailyGoalSeconds) * 100;
 
     return { real: realProductivity, active: activeProductivity };
@@ -581,5 +608,21 @@ export function useStats({
     activeProductivityData: productivityTrend.map(p => ({ day: p.day, productivity: p.active })),
     dailyRealProductivity: dailyProductivity.real,
     dailyActiveProductivity: dailyProductivity.active,
+    subjectPerformanceTrends: selectSubjectTrends(filteredWork as any),
+    newlyUnlockedBadges: (() => {
+      try {
+        const logs = [] as any[]; // Optional: provide combined logs if needed
+        // If logsDerivedSessions source exists above, we can reuse its combined logs list if retained
+        return selectBadgeEligibility((allBadges as any) || [], { tasks: (tasks as any) || [], logs: (logs as any) });
+      } catch { return []; }
+    })(),
+    achievementProgress: (() => {
+      const totalStudyMinutes = (timeRangeStats.totalHours ? parseFloat(timeRangeStats.totalHours) * 60 : 0);
+      const totalPoints = timeRangeStats.totalPoints || 0;
+      const tasksCompleted = (filteredTasks?.filter(t => t.status === 'completed').length) || 0;
+      const routinesCompleted = (filteredWork?.filter(w => w.type === 'routine').length) || 0;
+      const dayStreak = studyStreak || 0;
+      return selectAchievementProgress({ totalStudyMinutes, totalPoints, tasksCompleted, routinesCompleted, dayStreak }, (allBadges as any) || []);
+    })(),
   };
 }

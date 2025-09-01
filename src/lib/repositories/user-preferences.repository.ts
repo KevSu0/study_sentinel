@@ -1,10 +1,10 @@
 import { BaseRepository } from './base.repository';
-import { UserPreference, db } from '../db';
+import { UserPreference, getDB } from '../db';
 import { v4 as uuidv4 } from 'uuid';
 
 export class UserPreferencesRepository extends BaseRepository<UserPreference, string> {
   constructor() {
-    super(db.userPreferences);
+    super(() => getDB().userPreferences);
   }
 
   async setPreference(key: string, value: any, userId: string = 'default'): Promise<void> {

@@ -1,0 +1,24 @@
+name: Flake Sweep
+
+on:
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: 'Number of repeats'
+        required: false
+        default: '10'
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    env:
+      TZ: UTC
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: RUNS=${{ github.event.inputs.runs }} npm run test:repeat
+

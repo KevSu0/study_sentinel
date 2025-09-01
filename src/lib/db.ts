@@ -18,14 +18,22 @@ export interface Session {
   date: string;
   type: 'task' | 'routine';
   title: string;
+  subject?: string;
   isUndone?: boolean;
   // Add other session properties here
 }
 
 export interface DailyStat {
   id?: string;
-  date: string;
-  // Add other daily stat properties here
+  date: string; // study-day yyyy-MM-dd
+  // Aggregates
+  totalSeconds?: number;
+  pausedSeconds?: number;
+  points?: number;
+  sessionsCount?: number;
+  focusScore?: number; // (productive/total)*100
+  // Optional per-subject rollups
+  subjects?: Record<string, { totalSeconds: number; points: number; sessionsCount: number }>;
 }
 
 export interface Meta {
@@ -82,7 +90,7 @@ export interface UserPreference {
   updatedAt: string;
 }
 
-class MyDatabase extends Dexie {
+export class MyDatabase extends Dexie {
   public plans!: Table<Plan, string>;
   public users!: Table<User, string>;
   public sessions!: Table<Session, string>;
@@ -98,8 +106,8 @@ class MyDatabase extends Dexie {
   public cachedAIResponses!: Table<CachedAIResponse, string>;
   public userPreferences!: Table<UserPreference, string>;
 
-  constructor() {
-    super('MyDatabase');
+  constructor(name: string = 'MyDatabase') {
+    super(name);
     this.version(6).stores({
       plans: 'id, date, status', // Added indexes for date and status
       users: 'id',
@@ -125,6 +133,16 @@ class MyDatabase extends Dexie {
   }
 }
 
-export const db = new MyDatabase();
+let currentDB = new MyDatabase('MyDatabase');
+export let db = currentDB;
+export const getDB = () => currentDB;
+
+// Test-only: swap DB instance (safe in prod; unused)
+export const __setTestDB = (name: string) => {
+  try { currentDB.close(); } catch {}
+  currentDB = new MyDatabase(name);
+  db = currentDB;
+  return currentDB;
+};
 
     

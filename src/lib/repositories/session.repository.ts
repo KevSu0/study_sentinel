@@ -1,9 +1,9 @@
-import { db, Session } from '../db';
+import { getDB, Session } from '../db';
 import { BaseRepository } from './base.repository';
 
 class SessionRepository extends BaseRepository<Session, string> {
   constructor() {
-    super(db.sessions);
+    super(() => getDB().sessions);
   }
 
   async getByDateRange(startDate: string, endDate: string): Promise<Session[]> {

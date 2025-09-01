@@ -1,14 +1,14 @@
-import { db } from '../db';
+import { getDB } from '../db';
 import { LogEvent } from '../types';
 import { BaseRepository } from './base.repository';
 
 class LogRepository extends BaseRepository<LogEvent, string> {
   constructor() {
-    super(db.logs);
+    super(() => getDB().logs);
   }
 
   async getLogsByDate(date: string): Promise<LogEvent[]> {
-    return this.db.logs.where('timestamp').startsWith(date).toArray();
+    return getDB().logs.where('timestamp').startsWith(date).toArray();
   }
 }
 

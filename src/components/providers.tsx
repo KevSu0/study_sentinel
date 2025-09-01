@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {ReactNode, Suspense, lazy} from 'react';
+import {ReactNode, Suspense, lazy, useEffect} from 'react';
 import dynamic from 'next/dynamic';
 import {ThemeProvider} from 'next-themes';
 import {
@@ -44,6 +44,7 @@ import {Skeleton} from './ui/skeleton';
 import { RoutineLogDialog } from './routines/routine-log-dialog';
 import { AnimatePresence, motion } from 'framer-motion';
 import { QuickStartSheet } from './dashboard/quick-start-sheet';
+import { db } from '@/lib/db';
 
 const UserMenu = dynamic(() => import('./user-menu').then(m => m.UserMenu), {
   ssr: false,
@@ -145,6 +146,15 @@ function AppLayout({children}: {children: ReactNode}) {
 }
 
 export function Providers({children}: {children: ReactNode}) {
+  // Dev helper: expose IndexedDB instance for manual seeding (add-test-data.js)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        (window as any).db = db;
+      } catch {}
+    }
+  }, []);
+
   return (
     <ThemeProvider
       attribute="class"

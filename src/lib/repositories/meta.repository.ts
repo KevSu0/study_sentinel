@@ -1,13 +1,10 @@
-import { db, Meta } from '../db';
+import { getDB, Meta } from '../db';
 
 class MetaRepository {
-  protected db = db;
-  protected table = db.meta;
-
   constructor() {}
 
   async getById(key: string): Promise<Meta | undefined> {
-    return this.table.get(key);
+    return getDB().meta.get(key);
   }
 
   async getLastSyncTimestamp(): Promise<any> {
@@ -16,7 +13,7 @@ class MetaRepository {
   }
 
   async setLastSyncTimestamp(timestamp: any): Promise<string> {
-    return db.meta.put({ key: 'lastSyncTimestamp', value: timestamp });
+    return getDB().meta.put({ key: 'lastSyncTimestamp', value: timestamp });
   }
 
   async getMigrationCompleted(): Promise<boolean> {
@@ -25,7 +22,7 @@ class MetaRepository {
   }
 
   async setMigrationCompleted(value: boolean): Promise<string> {
-    return db.meta.put({ key: 'migrationCompleted_v4', value });
+    return getDB().meta.put({ key: 'migrationCompleted_v4', value });
   }
 }
 
