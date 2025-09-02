@@ -1,12 +1,22 @@
-'use server';
+// 'use server'; // Disabled for static export
 
-import {generateDailySummary} from '@/ai/flows/generate-daily-summary';
-import {generateChatbotResponse} from '@/ai/flows/positive-psychologist-flow';
+// import {generateDailySummary} from '@/ai/flows/generate-daily-summary';
+// import {generateChatbotResponse} from '@/ai/flows/positive-psychologist-flow';
 import {
   type DailySummaryInput,
   type PositivePsychologistInput,
 } from '@/lib/types';
 
+// Server actions disabled for static export
+export async function getDailySummary(input: DailySummaryInput) {
+  return {error: 'AI features are not available in static export mode'};
+}
+
+export async function getChatbotResponse(input: PositivePsychologistInput) {
+  return {error: 'AI features are not available in static export mode'};
+}
+
+/* Original server actions - disabled for static export
 export async function getDailySummary(input: DailySummaryInput) {
   try {
     const result = await generateDailySummary(input);
@@ -37,3 +47,4 @@ export async function getChatbotResponse(input: PositivePsychologistInput) {
     };
   }
 }
+*/

@@ -20,7 +20,20 @@ const withPWA = require('@ducanh2912/next-pwa').default({
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  output: 'standalone',
+  output: 'export',
+  trailingSlash: true,
+  // Next/Image configuration compatible with static export
+  images: {
+    unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'placehold.co',
+        port: '',
+        pathname: '/**',
+      },
+    ],
+  },
   // Performance optimizations
   experimental: {
     optimizePackageImports: [
@@ -51,16 +64,7 @@ const nextConfig: NextConfig = {
     'https://6000-firebase-studio-1752054198332.cluster-sumfw3zmzzhzkx4mpvz3ogth4y.cloudworkstations.dev',
     'https://9000-firebase-studio-1752054198332.cluster-sumfw3zmzzhzkx4mpvz3ogth4y.cloudworkstations.dev',
   ],
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'placehold.co',
-        port: '',
-        pathname: '/**',
-      },
-    ],
-  },
+  // Note: images configuration merged above to avoid duplicate keys
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },
@@ -86,6 +90,16 @@ const nextConfig: NextConfig = {
     ];
   },
   webpack(config, {isServer, dev}) {
+    // Alias server actions to client-safe stubs in offline static builds
+    if (process.env.NEXT_PUBLIC_MOBILE_STATIC === 'true') {
+      config.resolve = {
+        ...(config.resolve || {}),
+        alias: {
+          ...((config.resolve && config.resolve.alias) || {}),
+          '@/lib/actions$': path.join(process.cwd(), 'src/lib/actions.static.ts'),
+        },
+      };
+    }
     // Performance optimizations
     config.optimization = {
       ...config.optimization,
@@ -161,6 +175,16 @@ const nextConfig: NextConfig = {
         },
       },
     };
+
+    if (process.env.NEXT_PUBLIC_MOBILE_STATIC === 'true') {
+      const webpackLib = require('webpack');
+      config.plugins = [
+        ...(config.plugins || []),
+        new webpackLib.IgnorePlugin({
+          resourceRegExp: /(src[/]lib[/]actions\.ts|src[/]ai[/]flows[/])/,
+        }),
+      ];
+    }
 
     if (dev) {
       // Development optimizations

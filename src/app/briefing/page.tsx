@@ -10,6 +10,8 @@ import {getDailySummary} from '@/lib/actions';
 import {useGlobalState} from '@/hooks/use-global-state';
 import { getSessionDate } from '@/lib/utils';
 
+const IS_OFFLINE = process.env.NEXT_PUBLIC_MOBILE_STATIC === 'true';
+
 export default function DailyBriefingPage() {
   const {state} = useGlobalState();
   const {isLoaded, previousDayLogs, profile, tasks, routines} = state;
@@ -73,7 +75,9 @@ export default function DailyBriefingPage() {
       <header className="p-4 border-b">
         <h1 className="text-3xl font-bold text-primary">AI Daily Briefing</h1>
         <p className="text-muted-foreground">
-          Your personalized evaluation and motivation for today.
+          {IS_OFFLINE
+            ? 'Offline build: showing a local placeholder summary.'
+            : 'Your personalized evaluation and motivation for today.'}
         </p>
       </header>
       <main className="flex-1 p-2 sm:p-4 overflow-y-auto">

@@ -86,11 +86,13 @@ function AppLayout({children}: {children: ReactNode}) {
     }
   };
 
+  const isMobileStatic = process.env.NEXT_PUBLIC_MOBILE_STATIC === 'true';
   const menuItems = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/plans', label: 'Plans', icon: ClipboardList },
     { href: '/calendar', label: 'Calendar', icon: Calendar },
-    { href: '/chat', label: 'AI Coach', icon: MessageCircle },
+    // Hide AI chat in offline-static builds
+    ...(!isMobileStatic ? [{ href: '/chat', label: 'AI Coach', icon: MessageCircle as any }] : []),
     { href: '/stats', label: 'Stats', icon: TrendingUp },
     { href: '/badges', label: 'Badges', icon: Award },
     { href: '/profile', label: 'Profile', icon: User },

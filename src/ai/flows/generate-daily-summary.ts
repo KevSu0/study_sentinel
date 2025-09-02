@@ -1,4 +1,4 @@
-'use server';
+// 'use server'; // Disabled for static export
 /**
  * @fileOverview A flow to generate a daily summary for the user.
  */

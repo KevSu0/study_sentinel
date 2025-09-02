@@ -44,6 +44,8 @@ function MessageBubble({message}: {message: ChatMessage}) {
   );
 }
 
+const IS_OFFLINE = process.env.NEXT_PUBLIC_MOBILE_STATIC === 'true';
+
 export default function ChatPage() {
   const {state: globalState} = useGlobalState();
   const {messages, addMessage, clearMessages, isLoaded} = useChatHistory();
@@ -100,7 +102,7 @@ export default function ChatPage() {
         // Removed weeklyStats to improve performance
       });
 
-      if (res && 'response' in res) {
+      if (res && 'response' in res && typeof res.response === 'string') {
         addMessage({role: 'model', content: res.response});
       } else {
         addMessage({
@@ -132,6 +134,25 @@ export default function ChatPage() {
       handleSend();
     }
   };
+
+  if (IS_OFFLINE) {
+    return (
+      <div className="flex flex-col h-full">
+        <header className="p-4 border-b">
+          <h1 className="text-2xl font-bold text-primary">AI Positive Psychologist</h1>
+          <p className="text-sm text-muted-foreground">Offline build: AI chat is unavailable.</p>
+        </header>
+        <main className="flex-1 p-6 flex items-center justify-center text-center text-muted-foreground">
+          <div>
+            <Bot className="mx-auto mb-4" />
+            <p>
+              This APK is built for offline use. Connect to the cloud build to enable AI chat.
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
