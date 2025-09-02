@@ -1,0 +1,75 @@
+name: Build Android APK
+on: 
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Build debug APK
+        run: |
+          cd android
+          ./gradlew assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: study-sentinel-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 30
+
+      - name: Build release APK (optional)
+        run: |
+          cd android
+          ./gradlew assembleRelease
+        continue-on-error: true
+
+      - name: Upload Release APK artifact (if built)
+        uses: actions/upload-artifact@v4
+        with:
+          name: study-sentinel-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
+        if: success()
+        continue-on-error: true
+
+      - name: List APK files (for debugging)
+        run: |
+          echo "Debug APK files:"
+          find android/app/build/outputs/apk/debug -name "*.apk" -type f || echo "No debug APK found"
+          echo "Release APK files:"
+          find android/app/build/outputs/apk/release -name "*.apk" -type f || echo "No release APK found"

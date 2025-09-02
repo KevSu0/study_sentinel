@@ -21,6 +21,7 @@ exports[`ProductivityPieChart snapshot (structure only) matches structure snapsh
     </div>
     <div
       class="flex-grow flex items-center justify-center p-0 pb-2 relative"
+      style="height: 360px;"
     >
       <div
         class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center"
