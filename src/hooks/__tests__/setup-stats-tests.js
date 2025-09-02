@@ -47,4 +47,5 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:',
+  console.error('Uncaught Exception:', error);
+});
