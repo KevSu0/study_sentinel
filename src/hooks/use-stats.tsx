@@ -221,12 +221,9 @@ export function useStats({
   }, [allBadges]);
 
     const dailyPieChartData = useMemo(() => {
-    console.log('dailyPieChartData memo: selectedDate:', selectedDate);
-    console.log('dailyPieChartData memo: filteredWork length:', filteredWork?.length || 0);
     if (!filteredWork) return [];
     const selectedStudyDay = getStudyDay(selectedDate);
     const workForDay = filteredWork.filter(w => isSameDay(getStudyDateForTimestamp(w.timestamp), selectedStudyDay));
-    console.log('dailyPieChartData memo: workForDay length:', workForDay.length);
 
     const workByTask = workForDay.reduce(
       (acc, work) => {
@@ -254,7 +251,6 @@ export function useStats({
     );
 
     const data = selectDailyPieData(filteredWork as any, selectedDate, 'task');
-    console.log('dailyPieChartData memo: final data:', data);
     return data as any;
   }, [filteredWork, selectedDate]);
   
