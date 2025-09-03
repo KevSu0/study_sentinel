@@ -114,11 +114,11 @@ describe('PlanItemRenderer (Task-Card Variant)', () => {
     const menuButton = screen.getByRole('button');
     await user.click(menuButton);
 
-    expect(screen.getByText('Start Timer')).toBeInTheDocument();
-    expect(screen.getByText('Mark Complete')).toBeInTheDocument();
-    expect(screen.getByText('Edit')).toBeInTheDocument();
-    expect(screen.getByText('Push to Next Day')).toBeInTheDocument();
-    expect(screen.getByText('Archive')).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /start timer/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /mark complete/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /edit/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /push to next day/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /archive/i })).toBeInTheDocument();
   });
 
   it('handles task completion with confetti and toast', async () => {
@@ -179,7 +179,7 @@ describe('PlanItemRenderer (Task-Card Variant)', () => {
     await user.click(menuButton);
 
     expect(screen.getByRole('menuitem', { name: /restore/i })).toBeInTheDocument();
-    expect(screen.queryByRole('menuitem', { name: /archive/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /^archive$/i })).not.toBeInTheDocument();
   });
 
   it('handles task restoration with toast', async () => {

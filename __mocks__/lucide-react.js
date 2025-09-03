@@ -65,6 +65,8 @@ const iconNames = [
   'Zap',
   'Memory',
   'Target',
+  'Infinity',
+  'Timer',
   'TrendingUp',
   'BarChart3',
   'PieChart',
