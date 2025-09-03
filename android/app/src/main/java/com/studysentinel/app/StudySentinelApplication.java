@@ -3,7 +3,6 @@ package com.studysentinel.app;
 import android.app.Application;
 import android.os.StrictMode;
 import android.util.Log;
-
 public class StudySentinelApplication extends Application {
     private static final String TAG = "StudySentinel";
 
@@ -11,11 +10,9 @@ public class StudySentinelApplication extends Application {
     public void onCreate() {
         super.onCreate();
         
-        // Enable StrictMode in debug builds to catch threading and performance issues
-        if (BuildConfig.DEBUG) {
-            Log.d(TAG, "Enabling StrictMode for debug build");
-            enableStrictMode();
-        }
+        // Enable StrictMode to catch threading and performance issues
+        Log.d(TAG, "Enabling StrictMode for debug build");
+        enableStrictMode();
     }
 
     private void enableStrictMode() {
@@ -36,4 +33,6 @@ public class StudySentinelApplication extends Application {
 
         Log.d(TAG, "StrictMode enabled - watching for threading and performance issues");
         Log.d(TAG, "Thread violations will flash screen and log to 'StrictMode' tag");
-        Log.d(TAG, "VM violations (leaks, unclosed resources) will log to 'StrictMode' tag
+        Log.d(TAG, "VM violations (leaks, unclosed resources) will log to 'StrictMode' tag");
+    }
+}
