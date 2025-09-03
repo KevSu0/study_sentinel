@@ -1,7 +1,6 @@
 export * from './base.repository';
 export * from './badge.repository';
 export * from './meta.repository';
-export * from './outbox.repository';
 export * from './profile.repository';
 export * from './session.repository';
 export * from './stats_daily.repository';

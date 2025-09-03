@@ -14,9 +14,6 @@ import dynamic from 'next/dynamic';
 import { initDatabase } from '@/lib/db-init';
 import { Toaster } from 'sonner';
 
-const StatusChip = dynamic(() => import('@/components/shared/status-chip'), {
-  ssr: false,
-});
 import { registerServiceWorker } from '@/lib/sw-utils';
 // import { requestPersistentStorage } from '@/lib/sw-utils';
 import { Providers } from '@/components/providers';
@@ -66,7 +63,6 @@ export default function ClientLayout({
   return (
     <>
       <Providers>{children}</Providers>
-      <StatusChip />
       <Toaster />
     </>
   );
