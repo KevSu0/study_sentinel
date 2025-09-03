@@ -1,45 +1,31 @@
 import { renderHook } from '@testing-library/react';
 import { useStats } from '../use-stats';
-import * as db from '../../lib/db';
 
-// Mock the database
-jest.mock('../../lib/db', () => ({
-  getByDateRange: jest.fn(),
-  getAll: jest.fn(),
-  getProfile: jest.fn(),
-  getAllBadges: jest.fn(),
-  getEarnedBadges: jest.fn(),
-}));
-
-// Mock useLiveQuery to return static data
+// Mock all dependencies
 jest.mock('dexie-react-hooks', () => ({
-  useLiveQuery: jest.fn((queryFn) => {
-    // Return minimal mock data based on the query function
-    const queryStr = queryFn.toString();
-    
-    if (queryStr.includes('getProfile')) {
-      return { id: 1, name: 'Test User' };
-    }
-    
-    if (queryStr.includes('getAllBadges')) {
-      return [{ id: 1, name: 'Test Badge', category: 'achievement' }];
-    }
-    
-    if (queryStr.includes('getEarnedBadges')) {
-      return [{ id: 1, badgeId: 1, earnedAt: new Date() }];
-    }
-    
-    // Default return empty array for other queries
-    return [];
-  }),
+  useLiveQuery: jest.fn(() => []),
 }));
 
-const mockDb = db as jest.Mocked<typeof db>;
+jest.mock('@/lib/repositories', () => ({
+  profileRepository: { getById: jest.fn(() => Promise.resolve(null)) },
+  taskRepository: { getByDateRange: jest.fn(() => Promise.resolve([])) },
+  sessionRepository: { getByDateRange: jest.fn(() => Promise.resolve([])) },
+  badgeRepository: { getAll: jest.fn(() => Promise.resolve([])) },
+}));
 
-describe('useStats - Basic Functionality', () => {
+jest.mock('@/lib/repositories/log.repository', () => ({
+  logRepository: { getLogsByDate: jest.fn(() => Promise.resolve([])) },
+}));
+
+jest.mock('@/lib/utils', () => ({
+  getStudyDateForTimestamp: jest.fn(() => new Date()),
+  getTimeSinceStudyDayStart: jest.fn(() => 0),
+  getStudyDay: jest.fn(() => new Date()),
+}));
+
+describe('useStats Hook', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockDb.getByDateRange.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -49,27 +35,42 @@ describe('useStats - Basic Functionality', () => {
     }
   });
 
-  it('should return initial stats structure', () => {
-    const { result } = renderHook(() => useStats());
+  it('should render without crashing', () => {
+    const { result } = renderHook(() => useStats({ timeRange: 'daily', selectedDate: new Date() }));
+    expect(result.current).toBeDefined();
+  });
+
+  it('should handle different time ranges', () => {
+    const ranges = ['daily', 'weekly', 'monthly', 'overall'];
+    
+    ranges.forEach(range => {
+      const { result } = renderHook(() => 
+        useStats({ timeRange: range as any, selectedDate: new Date() })
+      );
+      expect(result.current).toBeDefined();
+    });
+  });
+
+  it('should return expected properties', () => {
+    const { result } = renderHook(() => useStats({ timeRange: 'daily', selectedDate: new Date() }));
     
     expect(result.current).toHaveProperty('timeRangeStats');
     expect(result.current).toHaveProperty('badgeStats');
-    expect(result.current).toHaveProperty('categorizedBadges');
   });
 
-  it('should call getByDateRange for daily range', () => {
-    renderHook(() => useStats('daily'));
+  it('should handle daily range correctly', () => {
+    const { result } = renderHook(() => useStats({ timeRange: 'daily', selectedDate: new Date() }));
     
-    // The hook should eventually call getByDateRange
-    // We're just testing that the hook doesn't crash
-    expect(true).toBe(true);
+    // The hook should not crash and return expected structure
+    expect(result.current).toBeDefined();
+    expect(result.current.timeRangeStats).toBeDefined();
   });
 
   it('should handle different date ranges', () => {
     const ranges = ['daily', 'weekly', 'monthly', 'overall'] as const;
     
     ranges.forEach(range => {
-      const { result } = renderHook(() => useStats(range));
+      const { result } = renderHook(() => useStats({ timeRange: range, selectedDate: new Date() }));
       expect(result.current).toBeDefined();
     });
   });

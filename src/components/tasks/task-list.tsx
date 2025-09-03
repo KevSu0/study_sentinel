@@ -1,6 +1,6 @@
 'use client';
 
-import {TaskCard} from './task-card';
+import { PlanItemRenderer } from '@/components/plans/plan-item-renderer';
 import type {StudyTask} from '@/lib/types';
 
 interface TaskListProps {
@@ -23,14 +23,15 @@ export function TaskList({
   return (
     <div className="space-y-4">
       {tasks.map(task => (
-        <TaskCard
+        <PlanItemRenderer
           key={task.id}
-          task={task}
-          onUpdate={onUpdate}
-          onArchive={onArchive}
-          onUnarchive={onUnarchive}
-          onPushToNextDay={onPushToNextDay}
-          onEdit={onEdit}
+          item={{ type: 'task', data: task }}
+          variant="task-card"
+          onUpdateTask={onUpdate}
+          onArchiveTask={onArchive}
+          onUnarchiveTask={onUnarchive}
+          onPushTaskToNextDay={onPushToNextDay}
+          onEditTask={onEdit}
         />
       ))}
     </div>

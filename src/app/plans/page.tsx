@@ -24,8 +24,7 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
-import { PlanItemCard } from '@/components/plans/plan-item-card';
-import { PlanListItem } from '@/components/plans/plan-item-list-item';
+import { PlanItemRenderer } from '@/components/plans/plan-item-renderer';
 import { EmptyState } from '@/components/tasks/empty-state';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -147,22 +146,20 @@ export default function PlansPage() {
               <h2 className="text-xl font-bold text-primary px-2 mb-3">Upcoming</h2>
               {upcomingItems.length > 0 ? (
                 <div className={cn("space-y-4", viewMode === 'list' && "space-y-1")}>
-                  {upcomingItems.map((item, index) => {
-                    const PlanComponent = viewMode === 'card' ? PlanItemCard : PlanListItem;
-                    return (
-                        <PlanComponent
-                        key={`${item.type}-${item.data.id}-${index}`}
-                        item={item}
-                        subjectDate={selectedDate}
-                        onEditTask={(task) => openAddItemDialog('task', task)}
-                        onEditRoutine={(routine) => openAddItemDialog('routine', routine)}
-                        onDeleteRoutine={deleteRoutine}
-                        onCompleteRoutine={handleCompleteRoutine}
-                        onUpdateTask={handleUpdateTask}
-                        onPushTaskToNextDay={pushTaskToNextDay}
-                        />
-                    );
-                  })}
+                  {upcomingItems.map((item, index) => (
+                    <PlanItemRenderer
+                      key={`${item.type}-${item.data.id}-${index}`}
+                      item={item}
+                      variant={viewMode === 'card' ? 'card' : 'list'}
+                      subjectDate={selectedDate}
+                      onEditTask={(task) => openAddItemDialog('task', task)}
+                      onEditRoutine={(routine) => openAddItemDialog('routine', routine)}
+                      onDeleteRoutine={deleteRoutine}
+                      onCompleteRoutine={handleCompleteRoutine}
+                      onUpdateTask={handleUpdateTask}
+                      onPushTaskToNextDay={pushTaskToNextDay}
+                    />
+                  ))}
                 </div>
               ) : (
                 <div className="text-center text-muted-foreground p-8 bg-background rounded-lg">
@@ -183,9 +180,10 @@ export default function PlansPage() {
                     </AccordionTrigger>
                     <AccordionContent className="pt-3 space-y-4">
                       {overdueTasks.map((task) => (
-                        <PlanItemCard
+                        <PlanItemRenderer
                           key={`overdue-${task.id}`}
                           item={{ type: 'task', data: task }}
+                          variant="card"
                           onEditTask={(task) => openAddItemDialog('task', task)}
                           onUpdateTask={handleUpdateTask}
                           onPushTaskToNextDay={pushTaskToNextDay}

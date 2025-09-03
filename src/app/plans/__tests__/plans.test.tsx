@@ -69,35 +69,9 @@ jest.mock('@/components/dashboard/widgets/completed-today-widget', () => ({
   ),
 }));
 
-// Mock plan item components to deterministic menus
-jest.mock('@/components/plans/plan-item-card', () => ({
-  PlanItemCard: ({ item, onEditTask, onEditRoutine, onCompleteRoutine, onUpdateTask, onPushTaskToNextDay, onDeleteRoutine }: any) => (
-    <div data-testid="plan-item-card">
-      <div>{item.data.title}</div>
-      <button aria-label="open menu">menu</button>
-      <div role="menu">
-        {item.type === 'task' && onEditTask && (
-          <button role="menuitem" aria-label="Edit" onClick={() => onEditTask(item.data)}>Edit</button>
-        )}
-        {item.type === 'routine' && onEditRoutine && (
-          <button role="menuitem" aria-label="Edit" onClick={() => onEditRoutine(item.data)}>Edit</button>
-        )}
-        {item.type === 'routine' && onCompleteRoutine && (
-          <button role="menuitem" aria-label="Complete routine" onClick={() => onCompleteRoutine(item.data)}>Complete routine</button>
-        )}
-        {item.type === 'task' && onPushTaskToNextDay && (
-          <button role="menuitem" aria-label="Push to today" onClick={() => onPushTaskToNextDay(item.data.id)}>Push to today</button>
-        )}
-        {item.type === 'routine' && onDeleteRoutine && (
-          <button role="menuitem" aria-label="Delete" onClick={() => onDeleteRoutine(item.data.id)}>Delete</button>
-        )}
-      </div>
-    </div>
-  ),
-}));
-
-jest.mock('@/components/plans/plan-item-list-item', () => ({
-  PlanListItem: ({ item, onEditTask, onEditRoutine, onCompleteRoutine, onUpdateTask, onPushTaskToNextDay, onDeleteRoutine }: any) => (
+// Mock plan item renderer component to deterministic menus
+jest.mock('@/components/plans/plan-item-renderer', () => ({
+  PlanItemRenderer: ({ item, variant, onEditTask, onEditRoutine, onCompleteRoutine, onUpdateTask, onPushTaskToNextDay, onDeleteRoutine }: any) => (
     <div data-testid="plan-item-card">
       <div>{item.data.title}</div>
       <button aria-label="open menu">menu</button>

@@ -1,7 +1,7 @@
 import React from 'react';
 import {render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {PlanListItem} from '../plan-item-list-item';
+import {PlanItemRenderer} from '../plan-item-renderer';
 import {useGlobalState} from '@/hooks/use-global-state';
 import {StudyTask, Routine, LogEvent} from '@/lib/types';
 
@@ -52,10 +52,10 @@ const mockCompletedLog: LogEvent & { title: string } = {
 }
 
 const renderComponent = (props: any) => {
-  return render(<PlanListItem {...props} />);
+  return render(<PlanItemRenderer variant="list" {...props} />);
 };
 
-describe('PlanListItem', () => {
+describe('PlanItemRenderer (List Variant)', () => {
   beforeEach(() => {
     mockUseGlobalState.mockReturnValue({
       state: {activeItem: null},
