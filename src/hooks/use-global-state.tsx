@@ -31,7 +31,6 @@ import {SYSTEM_BADGES, checkBadge} from '@/lib/badges';
 import { getSessionDate, getStudyDateForTimestamp, getStudyDay, generateShortId } from '@/lib/utils';
 import { motivationalQuotes, getRandomMotivationalMessage } from '@/lib/motivation';
 import * as reposAll from '@/lib/repositories';
-import { SyncEngine } from '@/lib/sync';
 
 // --- SyncEngine and Storage Abstractions for Testing ---
 type SyncEngineLike = { start?: () => void; stop?: () => void };
@@ -467,8 +466,6 @@ const formatTime = (seconds: number) => {
 
 type GlobalStateProviderProps = {
   children: ReactNode;
-  disableSync?: boolean;
-  syncEngineFactory?: SyncEngineFactory;
 };
 
 export function GlobalStateProvider(props: GlobalStateProviderProps) {
@@ -486,7 +483,6 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
   const {fire} = useConfetti();
   const audioRef = useRef<Record<string, HTMLAudioElement>>({});
   const quoteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const syncEngineRef = useRef<SyncEngineLike | null>(null);
 
   // For non-test, ensure we mark loaded even if async init fails
 
@@ -591,39 +587,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
         }
     }
     // Test-only: handled by a layout effect for synchronous visibility
-
-    const handleSyncComplete = () => {
-      console.log('Sync complete, refetching data...');
-      loadInitialData();
-    };
-
-    const createEngine: SyncEngineFactory =
-      props.syncEngineFactory ??
-      ((onComplete) => {
-        try {
-          // This will fail in test env, which is what we want.
-          return new SyncEngine(onComplete) as SyncEngineLike;
-        } catch (e) {
-          console.warn('SyncEngine creation failed. Running in offline mode.', e);
-          // Return a mock/empty object if SyncEngine cannot be instantiated
-          return { start: () => {}, stop: () => {} };
-        }
-      });
-
-    if (!syncEngineRef.current) {
-      syncEngineRef.current = createEngine(handleSyncComplete);
-      if (!props.disableSync) {
-        syncEngineRef.current.start?.();
-      }
-    }
-
-    return () => {
-      if (syncEngineRef.current) {
-        syncEngineRef.current.stop?.();
-        syncEngineRef.current = null;
-      }
-    };
-  }, [loadInitialData, props.disableSync, props.syncEngineFactory]);
+  }, [loadInitialData]);
 
   const playSound = useCallback((soundKey: string, duration?: number) => {
     if (state.isMuted || !soundKey || soundKey === 'none') return;

@@ -1,5 +1,4 @@
 import { Table } from 'dexie';
-import { getDB, Outbox } from '../db';
 import { logger } from '../logger';
 
 export class BaseRepository<T extends { id?: TKey }, TKey extends string | number> {
@@ -18,96 +17,43 @@ export class BaseRepository<T extends { id?: TKey }, TKey extends string | numbe
   }
 
   async add(item: T): Promise<TKey | undefined> {
-    // Local-first and idempotent: if an id exists, upsert to avoid ConstraintError races
     try {
       if (item.id) {
         await this.table.put(item as any);
-        if (!navigator.onLine) {
-          await this.addToOutbox({
-            operation: 'create',
-            table: this.table.name,
-            payload: item,
-            timestamp: Date.now(),
-          });
-        }
-        return (item.id as unknown) as TKey;
+        return item.id as TKey;
       }
-
       const key = await this.table.add(item as any);
-      if (!navigator.onLine) {
-        await this.addToOutbox({
-          operation: 'create',
-          table: this.table.name,
-          payload: item,
-          timestamp: Date.now(),
-        });
-      }
       return key as any;
     } catch (error) {
       logger.error(`Failed to add item to ${this.table.name}`, error);
-      // Best-effort: queue to outbox for later sync
-      await this.addToOutbox({
-        operation: 'create',
-        table: (this.table as any).name,
-        payload: item,
-        timestamp: Date.now(),
-      });
-      return (item.id as unknown) as TKey | undefined;
+      throw error;
     }
   }
 
   async bulkAdd(items: T[]): Promise<TKey[]> {
-    if (navigator.onLine) {
-       return this.table.bulkAdd(items as any, { allKeys: true }) as Promise<TKey[]>;
-    } else {
-       for (const item of items) {
-           await this.addToOutbox({
-                operation: 'create',
-                table: (this.table as any).name,
-                payload: item,
-                timestamp: Date.now(),
-            });
-       }
-       return [];
+    try {
+      return this.table.bulkAdd(items as any, { allKeys: true }) as Promise<TKey[]>;
+    } catch (error) {
+      logger.error(`Failed to bulk add items to ${this.table.name}`, error);
+      throw error;
     }
   }
 
   async update(id: TKey, changes: Partial<T>): Promise<number> {
-    // Local-first update
-    let result = 0;
     try {
-      result = await this.table.update(id as any, changes as any);
+      return await this.table.update(id as any, changes as any);
     } catch (error) {
-      logger.error(`Failed to update item in ${(this.table as any).name}`, error);
+      logger.error(`Failed to update item in ${this.table.name}`, error);
+      throw error;
     }
-    if (!navigator.onLine || result === 0) {
-      await this.addToOutbox({
-        operation: 'update',
-        table: (this.table as any).name,
-        payload: { id, changes },
-        timestamp: Date.now(),
-      });
-    }
-    return result || 1;
   }
 
   async delete(id: TKey): Promise<void> {
     try {
       await this.table.delete(id as any);
     } catch (error) {
-      logger.error(`Failed to delete item from ${(this.table as any).name}`, error);
+      logger.error(`Failed to delete item from ${this.table.name}`, error);
+      throw error;
     }
-    if (!navigator.onLine) {
-      await this.addToOutbox({
-        operation: 'delete',
-        table: (this.table as any).name,
-        payload: { id },
-        timestamp: Date.now(),
-      });
-    }
-  }
-
-  private async addToOutbox(item: Omit<Outbox, 'id'>): Promise<void> {
-    await getDB().outbox.add(item as Outbox);
   }
 }
