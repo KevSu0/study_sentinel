@@ -3,7 +3,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PlanItemRenderer } from '../plan-item-renderer';
 import { useGlobalState } from '@/hooks/use-global-state';
-import { StudyTask } from '../../../types/study-task';
+import { StudyTask } from '@/lib/types';
 import { toast } from 'sonner';
 // Removed canvas-confetti import as it's not needed for tests
 

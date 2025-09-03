@@ -407,7 +407,7 @@ export const PlanItemRenderer: React.FC<PlanItemRendererProps> = ({
         />
       )}
       
-      {variant === 'task-card' && isTask && (
+      {isTask && (item.data as StudyTask).timerType === 'countdown' && (
         <React.Suspense fallback={null}>
           <TimerDialog
             isOpen={isTimerDialogOpen}

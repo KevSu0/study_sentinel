@@ -18,9 +18,11 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   },
 });
 
+const isExport = process.env.NEXT_EXPORT === 'true';
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  output: 'export',
+  ...(isExport ? { output: 'export' } : {}),
   trailingSlash: true,
   // Next/Image configuration compatible with static export
   images: {
@@ -68,27 +70,29 @@ const nextConfig: NextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },
-  async headers() {
-    return [
-      {
-        source: '/:path*',
-        headers: [
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'SAMEORIGIN',
-          },
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block',
-          },
-        ],
-      },
-    ];
-  },
+  ...(isExport ? {} : {
+    async headers() {
+      return [
+        {
+          source: '/:path*',
+          headers: [
+            {
+              key: 'X-Content-Type-Options',
+              value: 'nosniff',
+            },
+            {
+              key: 'X-Frame-Options',
+              value: 'SAMEORIGIN',
+            },
+            {
+              key: 'X-XSS-Protection',
+              value: '1; mode=block',
+            },
+          ],
+        },
+      ];
+    },
+  }),
   webpack(config, {isServer, dev}) {
     // Alias server actions to client-safe stubs in offline static builds
     if (process.env.NEXT_PUBLIC_MOBILE_STATIC === 'true') {

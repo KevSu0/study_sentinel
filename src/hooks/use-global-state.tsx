@@ -120,8 +120,14 @@ const {
       } catch {
         f.__singleton = fallback;
       }
-      // Mutate the mocked module so subsequent calls return the same instance
-      anyRepos[factoryName] = () => f.__singleton;
+      // Try to mutate the mocked module so subsequent calls return the same instance
+      // This may fail with Jest mocks due to read-only properties
+      try {
+        anyRepos[factoryName] = () => f.__singleton;
+      } catch {
+        // Jest mocks are read-only, so we can't mutate them
+        // The singleton will still work for this call
+      }
     }
     return f.__singleton;
   };

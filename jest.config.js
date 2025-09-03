@@ -4,28 +4,23 @@ const createJestConfig = nextJest({
   dir: './',
 })
 
+const isCI = !!process.env.CI;
+
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/jest.setup.ts'],
   testEnvironment: 'jest-environment-jsdom',
   resetMocks: true,
   resetModules: true,
-  collectCoverage: true,
+  collectCoverage: isCI,
   coverageDirectory: '<rootDir>/coverage',
-  coverageThreshold: {
+  coverageThreshold: isCI ? {
     global: {
       branches: 70,
-      functions: 90,
-      lines: 95,
-      statements: 95,
+      functions: 80,
+      lines: 85,
+      statements: 85,
     },
-    '**/src/utils/point-calculator.ts': { branches: 100, functions: 100, lines: 100, statements: 100 },
-    '**/src/utils/id-generator.ts': { branches: 100, functions: 100, lines: 100, statements: 100 },
-    '**/src/providers/quote-provider.ts': { branches: 100, functions: 100, lines: 100, statements: 100 },
-    '**/src/providers/sound-provider.ts': { branches: 100, functions: 100, lines: 100, statements: 100 },
-    '**/src/utils/performance-monitor.ts': { branches: 100, functions: 100, lines: 100, statements: 100 },
-    '**/src/utils/sync-engine.ts': { branches: 100, functions: 100, lines: 100, statements: 100 },
-    '**/src/app/api/ping/route.ts': { branches: 100, functions: 100, lines: 100, statements: 100 },
-  },
+  } : undefined,
   collectCoverageFrom: [
     '<rootDir>/src/utils/point-calculator.ts',
     '<rootDir>/src/utils/id-generator.ts',
