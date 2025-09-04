@@ -105,16 +105,16 @@ describe('Sync Queue Management Test Suite', () => {
       // Here we just verify they're all in the queue
       expect(syncQueue).toHaveLength(3);
       
-      const highPriorityItem = syncQueue.find(item => item.priority === 'high');
-      const mediumPriorityItem = syncQueue.find(item => item.priority === 'medium');
-      const lowPriorityItem = syncQueue.find(item => item.priority === 'low');
+      const highPriorityItem = (syncQueue as SyncQueueItem[]).find(item => item.priority === 'high');
+      const mediumPriorityItem = (syncQueue as SyncQueueItem[]).find(item => item.priority === 'medium');
+      const lowPriorityItem = (syncQueue as SyncQueueItem[]).find(item => item.priority === 'low');
       
       expect(highPriorityItem).toBeDefined();
       expect(mediumPriorityItem).toBeDefined();
       expect(lowPriorityItem).toBeDefined();
     });
     
-    it('should remove items from queue after successful sync', () => {
+    it('should remove items from queue after successful sync', async () => {
       const mockPlan = createMockPlan();
       
       offlineTestHelpers.addToSyncQueue({
@@ -127,7 +127,7 @@ describe('Sync Queue Management Test Suite', () => {
       expect(offlineTestHelpers.getSyncQueue()).toHaveLength(1);
       
       // Simulate successful sync
-      const processedItems = offlineTestHelpers.processSyncQueue();
+      const processedItems = await offlineTestHelpers.processSyncQueue();
       
       expect(processedItems).toHaveLength(1);
       expect(offlineTestHelpers.getSyncQueue()).toHaveLength(0);
@@ -158,7 +158,7 @@ describe('Sync Queue Management Test Suite', () => {
       
       expect(syncQueue).toHaveLength(2);
       
-      const childItem = syncQueue.find(item => item.id === 'child-sync');
+      const childItem = (syncQueue as SyncQueueItem[]).find(item => item.id === 'child-sync');
       expect(childItem?.dependencies).toContain('parent-sync');
     });
   });
@@ -183,7 +183,7 @@ describe('Sync Queue Management Test Suite', () => {
       };
       
       // Cache original data
-      offlineTestHelpers.setCachedData('plans', originalPlan.id, originalPlan);
+      offlineTestHelpers.setCachedData(`plans.${originalPlan.id}`, originalPlan);
       
       // Add local modification to sync queue
       offlineTestHelpers.addToSyncQueue({
@@ -249,7 +249,7 @@ describe('Sync Queue Management Test Suite', () => {
       });
       
       // Cache the plan
-      offlineTestHelpers.setCachedData('plans', planToDelete.id, planToDelete);
+      offlineTestHelpers.setCachedData(`plans.${planToDelete.id}`, planToDelete);
       
       // Add delete operation to queue
       offlineTestHelpers.addToSyncQueue({
@@ -267,7 +267,7 @@ describe('Sync Queue Management Test Suite', () => {
       };
       
       const syncQueue = offlineTestHelpers.getSyncQueue();
-      const deleteItem = syncQueue.find(item => item.type === 'delete');
+      const deleteItem = (syncQueue as SyncQueueItem[]).find(item => item.type === 'delete');
       
       expect(deleteItem).toBeDefined();
       expect(deleteItem?.data.id).toBe(planToDelete.id);
@@ -295,7 +295,7 @@ describe('Sync Queue Management Test Suite', () => {
       offlineTestHelpers.setUnstableNetwork();
       
       let syncQueue = offlineTestHelpers.getSyncQueue();
-      let retryItem = syncQueue[0];
+      let retryItem = syncQueue[0] as SyncQueueItem;
       
       // Simulate retry attempts with increasing delays
       const retryDelays = [];
@@ -306,7 +306,7 @@ describe('Sync Queue Management Test Suite', () => {
         
         // Update retry count
         retryItem.retryCount = attempt;
-        offlineTestHelpers.updateSyncQueue([retryItem]);
+        offlineTestHelpers.updateSyncQueue(retryItem);
         
         syncQueue = offlineTestHelpers.getSyncQueue();
         expect(syncQueue[0].retryCount).toBe(attempt);
@@ -333,7 +333,7 @@ describe('Sync Queue Management Test Suite', () => {
       });
       
       const syncQueue = offlineTestHelpers.getSyncQueue();
-      const failedItem = syncQueue[0];
+      const failedItem = syncQueue[0] as SyncQueueItem;
       
       expect(failedItem.retryCount).toBeGreaterThan(failedItem.maxRetries!);
       
@@ -378,9 +378,9 @@ describe('Sync Queue Management Test Suite', () => {
       
       expect(syncQueue).toHaveLength(3);
       
-      const networkItem = syncQueue.find(item => item.id === 'network-failure');
-      const serverItem = syncQueue.find(item => item.id === 'server-error');
-      const validationItem = syncQueue.find(item => item.id === 'validation-error');
+      const networkItem = (syncQueue as SyncQueueItem[]).find(item => item.id === 'network-failure');
+      const serverItem = (syncQueue as SyncQueueItem[]).find(item => item.id === 'server-error');
+      const validationItem = (syncQueue as SyncQueueItem[]).find(item => item.id === 'validation-error');
       
       expect(networkItem?.maxRetries).toBe(5);
       expect(serverItem?.maxRetries).toBe(3);
@@ -389,7 +389,7 @@ describe('Sync Queue Management Test Suite', () => {
   });
   
   describe('Background Sync', () => {
-    it('should register background sync when going offline', () => {
+    it('should register background sync when going offline', async () => {
       const mockPlan = createMockPlan();
       
       // Go online first
@@ -407,9 +407,9 @@ describe('Sync Queue Management Test Suite', () => {
       offlineTestHelpers.goOffline();
       
       // Simulate background sync registration
-      serviceWorkerTestHelpers.simulateBackgroundSync('study-plans-sync');
+      await serviceWorkerTestHelpers.simulateBackgroundSync('study-plans-sync');
       
-      const registeredSyncs = serviceWorkerTestHelpers.getBackgroundSyncs();
+      const registeredSyncs = await serviceWorkerTestHelpers.getBackgroundSyncs();
       expect(registeredSyncs).toContain('study-plans-sync');
     });
     
@@ -431,19 +431,19 @@ describe('Sync Queue Management Test Suite', () => {
       expect(offlineTestHelpers.getSyncQueue()).toHaveLength(3);
       
       // Simulate background sync event
-      serviceWorkerTestHelpers.simulateBackgroundSync('study-plans-sync');
+      await serviceWorkerTestHelpers.simulateBackgroundSync('study-plans-sync');
       
       // Come back online (background sync would detect this)
       offlineTestHelpers.goOnline();
       
       // Process the queue
-      const processedItems = offlineTestHelpers.processSyncQueue();
+      const processedItems = await offlineTestHelpers.processSyncQueue();
       
       expect(processedItems).toHaveLength(3);
       expect(offlineTestHelpers.getSyncQueue()).toHaveLength(0);
     });
     
-    it('should handle background sync failures gracefully', () => {
+    it('should handle background sync failures gracefully', async () => {
       const mockPlan = createMockPlan();
       
       offlineTestHelpers.addToSyncQueue({
@@ -455,14 +455,14 @@ describe('Sync Queue Management Test Suite', () => {
       
       // Simulate background sync failure
       offlineTestHelpers.setUnstableNetwork();
-      serviceWorkerTestHelpers.simulateBackgroundSync('study-plans-sync');
+      await serviceWorkerTestHelpers.simulateBackgroundSync('study-plans-sync');
       
       // Items should remain in queue for next attempt
       const syncQueue = offlineTestHelpers.getSyncQueue();
       expect(syncQueue).toHaveLength(1);
       
       // Background sync should be re-registered
-      const registeredSyncs = serviceWorkerTestHelpers.getBackgroundSyncs();
+      const registeredSyncs = await serviceWorkerTestHelpers.getBackgroundSyncs();
       expect(registeredSyncs).toContain('study-plans-sync');
     });
   });

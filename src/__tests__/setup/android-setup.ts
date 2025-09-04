@@ -127,5 +127,19 @@ const IDBKeyRange = require('fake-indexeddb/lib/FDBKeyRange');
 global.indexedDB = indexedDB;
 global.IDBKeyRange = IDBKeyRange;
 
+// Mock document.elementFromPoint for touch event simulation
+if (typeof document.elementFromPoint === 'undefined') {
+  document.elementFromPoint = jest.fn().mockReturnValue(document.body);
+}
+
+// Mock performance.memory for performance testing
+if (typeof performance.memory === 'undefined') {
+  (performance as any).memory = {
+    usedJSHeapSize: 1000000,
+    totalJSHeapSize: 2000000,
+    jsHeapSizeLimit: 5000000,
+  };
+}
+
 // Set up console message for Android test environment
 console.info('Android WebView testing environment initialized successfully');

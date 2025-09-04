@@ -42,4 +42,6 @@ module.exports = async () => {
     
     console.log('✅ Android test environment setup complete');
   } catch (error) {
-    console.error('❌ Failed to initialize Android test environment:', error
+    console.error('❌ Failed to initialize Android test environment:', error);
+  }
+};

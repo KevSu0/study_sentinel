@@ -33,7 +33,7 @@ class OfflineStateManager {
   };
   
   private listeners: Array<(state: OfflineState) => void> = [];
-  private syncQueue: Array<{ id: string; data: any; timestamp: number }> = [];
+  private syncQueue: Array<{ id: string; data: any; timestamp: number; type?: string; retryCount?: number; maxRetries?: number; dependencies?: string[] }> = [];
   
   // Network state management
   setOnline(online: boolean = true): void {
@@ -74,14 +74,13 @@ class OfflineStateManager {
   }
   
   // Sync queue management
-  addToSyncQueue(id: string, data: any): void {
-    const existingIndex = this.syncQueue.findIndex(item => item.id === id);
-    const syncItem = { id, data, timestamp: Date.now() };
+  addToSyncQueue(item: { id: string; data: any; timestamp: number; type?: string; retryCount?: number; maxRetries?: number; dependencies?: string[] }): void {
+    const existingIndex = this.syncQueue.findIndex(i => i.id === item.id);
     
     if (existingIndex >= 0) {
-      this.syncQueue[existingIndex] = syncItem;
+      this.syncQueue[existingIndex] = item;
     } else {
-      this.syncQueue.push(syncItem);
+      this.syncQueue.push(item);
     }
     
     this.state.pendingSyncs = this.syncQueue.map(item => item.id);
@@ -94,8 +93,8 @@ class OfflineStateManager {
     this.notifyListeners();
   }
   
-  getSyncQueue(): Array<{ id: string; data: any; timestamp: number }> {
-    return [...this.syncQueue];
+  getSyncQueue(): Array<{ id: string; data: any; timestamp: number; type?: string; retryCount?: number; maxRetries?: number; dependencies?: string[] }> {
+    return JSON.parse(JSON.stringify(this.syncQueue));
   }
   
   clearSyncQueue(): void {
@@ -146,12 +145,13 @@ class OfflineStateManager {
   }
   
   // Sync processing
-  private async processPendingSyncs(): Promise<void> {
+  private async processPendingSyncs(): Promise<any[]> {
     if (!this.state.isOnline || this.syncQueue.length === 0) {
-      return;
+      return [];
     }
     
     const syncsToProcess = [...this.syncQueue];
+    const processedItems: any[] = [];
     
     for (const syncItem of syncsToProcess) {
       try {
@@ -160,6 +160,7 @@ class OfflineStateManager {
         
         // Remove successful sync from queue
         this.removeFromSyncQueue(syncItem.id);
+        processedItems.push(syncItem);
         
         // Simulate background sync event
         await serviceWorkerTestHelpers.simulateBackgroundSync(syncItem.id);
@@ -171,6 +172,7 @@ class OfflineStateManager {
     
     this.state.lastSyncTime = Date.now();
     this.notifyListeners();
+    return processedItems;
   }
   
   // Network simulation
@@ -257,16 +259,24 @@ export const offlineTestHelpers = {
   }),
   
   // Sync testing
-  addPendingSync: (id: string, data: any) => offlineStateManager.addToSyncQueue(id, data),
+  addToSyncQueue: (item: any) => offlineStateManager.addToSyncQueue(item),
   
-  getPendingSyncs: () => offlineStateManager.getSyncQueue(),
+  getSyncQueue: () => offlineStateManager.getSyncQueue(),
+
+  updateSyncQueue: (item: any) => offlineStateManager.addToSyncQueue(item),
   
+  processSyncQueue: () => (offlineStateManager as any).processPendingSyncs(),
+
   clearPendingSyncs: () => offlineStateManager.clearSyncQueue(),
+
+  getBackgroundSyncs: () => serviceWorkerTestHelpers.getBackgroundSyncs(),
   
   // Cache testing
+  setCachedData: (key: string, data: any) => offlineStateManager.setCachedData(key, data),
   setCacheData: (key: string, data: any) => offlineStateManager.setCachedData(key, data),
   
   getCacheData: (key: string) => offlineStateManager.getCachedData(key),
+  getAllCachedData: () => (offlineStateManager as any).state.cachedData,
   
   clearCache: (key?: string) => offlineStateManager.clearCachedData(key),
   

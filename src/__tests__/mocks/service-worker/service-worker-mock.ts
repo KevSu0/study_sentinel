@@ -5,6 +5,12 @@
  * functionality, caching, and background sync capabilities.
  */
 
+// Define SyncManager interface for service worker
+export interface SyncManager {
+  register(tag: string): Promise<void>;
+  getTags(): Promise<string[]>;
+}
+
 // Mock Service Worker registration
 export class ServiceWorkerRegistrationMock implements Partial<ServiceWorkerRegistration> {
   active: ServiceWorker | null = {
@@ -15,6 +21,7 @@ export class ServiceWorkerRegistrationMock implements Partial<ServiceWorkerRegis
     dispatchEvent: jest.fn().mockReturnValue(true),
     onerror: null,
     onstatechange: null,
+    postMessage: jest.fn(),
   };
   
   installing: ServiceWorker | null = null;
@@ -35,10 +42,19 @@ export class ServiceWorkerRegistrationMock implements Partial<ServiceWorkerRegis
   // Event handlers
   onupdatefound: ((this: ServiceWorkerRegistration, ev: Event) => any) | null = null;
   
+  registeredSyncs: string[] = [];
+
   // Background Sync API
   sync: SyncManager = {
-    register: jest.fn().mockResolvedValue(undefined),
-    getTags: jest.fn().mockResolvedValue([]),
+    register: jest.fn().mockImplementation((tag: string) => {
+      if (!this.registeredSyncs.includes(tag)) {
+        this.registeredSyncs.push(tag);
+      }
+      return Promise.resolve(undefined);
+    }),
+    getTags: jest.fn().mockImplementation(() => {
+      return Promise.resolve(this.registeredSyncs);
+    }),
   } as SyncManager;
   
   // Periodic Sync API (partial implementation)
@@ -65,17 +81,22 @@ export class ServiceWorkerRegistrationMock implements Partial<ServiceWorkerRegis
   addEventListener = jest.fn();
   removeEventListener = jest.fn();
   dispatchEvent = jest.fn().mockReturnValue(true);
+
+  // Notifications API
+  getNotifications = jest.fn().mockResolvedValue([]);
+  showNotification = jest.fn().mockResolvedValue(undefined);
 }
 
 // Mock Service Worker container
 export class ServiceWorkerContainerMock implements Partial<ServiceWorkerContainer> {
+  private registration: ServiceWorkerRegistrationMock = new ServiceWorkerRegistrationMock();
   controller: ServiceWorker | null = null;
-  ready: Promise<ServiceWorkerRegistration> = Promise.resolve(new ServiceWorkerRegistrationMock());
+  ready: Promise<ServiceWorkerRegistration> = Promise.resolve(this.registration);
   
   // Methods
-  register = jest.fn().mockResolvedValue(new ServiceWorkerRegistrationMock());
-  getRegistration = jest.fn().mockResolvedValue(new ServiceWorkerRegistrationMock());
-  getRegistrations = jest.fn().mockResolvedValue([new ServiceWorkerRegistrationMock()]);
+  register = jest.fn().mockResolvedValue(this.registration);
+  getRegistration = jest.fn().mockResolvedValue(this.registration);
+  getRegistrations = jest.fn().mockResolvedValue([this.registration]);
   startMessages = jest.fn();
   
   // Event handlers
@@ -214,6 +235,9 @@ export const serviceWorkerTestHelpers = {
   // Simulate background sync
   async simulateBackgroundSync(tag: string = 'sync-plans'): Promise<void> {
     const registration = await (navigator.serviceWorker as ServiceWorkerContainerMock).getRegistration();
+    if (registration) {
+        await registration.sync.register(tag);
+    }
     const syncEvent = new Event('sync');
     (syncEvent as any).tag = tag;
     registration.active?.dispatchEvent(syncEvent);
@@ -223,4 +247,13 @@ export const serviceWorkerTestHelpers = {
   resetMocks(): void {
     setupServiceWorkerMock();
   },
+
+  // Get background syncs
+  async getBackgroundSyncs(): Promise<string[]> {
+    const registration = await (navigator.serviceWorker as ServiceWorkerContainerMock).getRegistration();
+    if (registration) {
+        return (registration as any).registeredSyncs;
+    }
+    return [];
+  }
 };
