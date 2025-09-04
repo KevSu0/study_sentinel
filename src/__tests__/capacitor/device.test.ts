@@ -2,13 +2,10 @@ import { Device } from '@capacitor/device';
 import { jest } from '@jest/globals';
 import {
   createMockDevice,
-  offlinePerformanceHelpers
-} from '@tests/utils/mobile-test-factories';
-import {
+  offlinePerformanceHelpers,
   setDeviceProfile,
-  measurePerformance,
-  resetTestEnvironment
-} from '@tests/utils/android-test-utils';
+  cleanupMobileTest,
+} from '@tests/utils';
 
 // Mock Capacitor Device plugin
 jest.mock('@capacitor/device', () => ({
@@ -26,7 +23,7 @@ const mockDevice = Device as jest.Mocked<typeof Device>;
 describe('Capacitor Device Plugin Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    resetTestEnvironment();
+    cleanupMobileTest();
   });
 
   describe('Device Identification', () => {

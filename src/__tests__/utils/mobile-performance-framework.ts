@@ -46,6 +46,10 @@ export class MobilePerformanceMonitor {
     return this.calculateMetrics();
   }
 
+  cleanup(): void {
+    this.stopMonitoring();
+  }
+
   private scheduleFrame(): void {
     if (!this.isMonitoring) return;
     

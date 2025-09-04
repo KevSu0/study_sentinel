@@ -1,11 +1,11 @@
-import type { TestCapacitor } from '@tests/types/capacitor-globals'; // path via tsconfig paths
-import { resolved } from './jest-helpers';
+import type { TestCapacitor } from '@tests/types/capacitor-globals';
+import { resolved } from '@tests/setup/jest-helpers';
 
 const midRange: TestCapacitor = {
   platform: 'android',
   isNativePlatform: () => true,
   getPlatform: () => 'android',
-  convertFileSrc: (p) => p,
+  convertFileSrc: p => p,
   Plugins: {
     Device: {
       getInfo: resolved({
@@ -19,21 +19,10 @@ const midRange: TestCapacitor = {
       }),
       getId: resolved({ uuid: 'mock-uuid-mid', identifier: 'mock-uuid-mid' })
     },
-    App: {
-      getInfo: resolved({
-        name: 'Study Sentinel',
-        id: 'app.studysentinel',
-        version: '1.0.0',
-        build: '100'
-      })
-    },
-    Network: {
-      getStatus: resolved({ connected: true, connectionType: 'wifi' })
-    }
+    App:     { getInfo: resolved({ name: 'Study Sentinel', id: 'app.studysentinel', version: '1.0.0', build: '100' }) },
+    Network: { getStatus: resolved({ connected: true, connectionType: 'wifi' }) }
   }
 };
-
 (globalThis as any).Capacitor = midRange;
-// Attach only at runtime; keep out of the typed literal
 (globalThis as any).Capacitor.isPluginAvailable = (n: string) =>
   !!(globalThis as any).Capacitor?.Plugins?.[n];
