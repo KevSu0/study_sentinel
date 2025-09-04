@@ -1,5 +1,5 @@
 import { getDB } from '../db';
-import { StudyTask } from '../types';
+import { type StudyTask } from '../types';
 import { BaseRepository } from './base.repository';
 
 export interface Task extends StudyTask {}

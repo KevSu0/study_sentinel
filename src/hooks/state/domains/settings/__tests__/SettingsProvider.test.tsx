@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { SettingsProvider, useSettings, useSoundSettings, useMuteSettings } from '../SettingsProvider';
-import { SoundSettings } from '@/lib/types';
+import { type SoundSettings } from '@/lib/types';
 import { defaultSoundSettings } from '../settings-state-types';
 
 // Mock localStorage

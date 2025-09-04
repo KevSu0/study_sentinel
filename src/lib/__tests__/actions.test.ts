@@ -1,7 +1,7 @@
 import { getDailySummary, getChatbotResponse } from '../actions';
 import { generateDailySummary } from '@/ai/flows/generate-daily-summary';
 import { generateChatbotResponse } from '@/ai/flows/positive-psychologist-flow';
-import { DailySummaryInput, PositivePsychologistInput } from '@/lib/types';
+import { type DailySummaryInput, type PositivePsychologistInput } from '@/lib/types';
 
 // Mock the AI flow modules
 jest.mock('@/ai/flows/generate-daily-summary');

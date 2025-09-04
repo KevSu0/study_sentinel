@@ -1,5 +1,5 @@
 import { getDB } from '../db';
-import { Routine } from '../types';
+import { type Routine } from '../types';
 import { BaseRepository } from './base.repository';
 
 class RoutineRepository extends BaseRepository<Routine, string> {

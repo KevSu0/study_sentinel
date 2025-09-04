@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { EventDialog } from "@/components/calendar/event-dialog";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
-import { CalendarEvent } from "@/lib/types";
+import { type CalendarEvent } from "@/lib/types";
 
 export default function CalendarPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);

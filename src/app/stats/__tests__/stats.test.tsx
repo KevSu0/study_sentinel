@@ -1,4 +1,5 @@
-import React, { Suspense } from 'react';
+import type React from 'react';
+import { Suspense } from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import StatsPage from '../page';

@@ -2,7 +2,7 @@
  * Badge awarding and criteria utilities
  */
 
-import { Badge, LogEvent, StudyTask, Routine } from '@/lib/types';
+import { type Badge, type LogEvent, type StudyTask, type Routine } from '@/lib/types';
 
 /**
  * Get badge awarding criteria based on logs and current state

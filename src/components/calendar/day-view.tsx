@@ -5,7 +5,7 @@ import { useCalendarEvents } from '@/hooks/use-calendar-events';
 import { EventItem } from './event-item';
 import { format } from 'date-fns';
 import { TodoList } from './todo-list';
-import { CalendarEvent } from '@/lib/types';
+import { type CalendarEvent } from '@/lib/types';
 
 interface DayViewProps {
     day: Date;

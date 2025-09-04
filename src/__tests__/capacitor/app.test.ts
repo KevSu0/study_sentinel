@@ -1,4 +1,4 @@
-import { App, AppInfo, AppState, URLOpenListenerEvent } from '@capacitor/app';
+import { App, type AppInfo, type AppState, type URLOpenListenerEvent } from '@capacitor/app';
 import { createMockCapacitorDevice } from '../mocks/capacitor';
 import { renderMobile, offlineScenarios } from '@tests/utils/mobile-test-factories';
 

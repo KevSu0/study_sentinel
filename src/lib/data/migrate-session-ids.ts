@@ -1,4 +1,5 @@
-import Dexie, { Table } from 'dexie';
+import {type Table} from 'dexie';
+import type Dexie from 'dexie';
 import type { Session } from '../db';
 
 export async function migrateSessionIds(

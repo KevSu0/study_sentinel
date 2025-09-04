@@ -6,7 +6,7 @@
  */
 
 import 'fake-indexeddb/auto';
-import { IDBFactory, IDBKeyRange, IDBDatabase, IDBRequest, IDBOpenDBRequest } from 'fake-indexeddb';
+import { IDBFactory, IDBKeyRange, type IDBDatabase, IDBRequest, type IDBOpenDBRequest } from 'fake-indexeddb';
 
 // Initialize fake IndexedDB globally
 const fakeIndexedDB = new IDBFactory();

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { ProfileContextType, ProfileState, defaultProfileState } from './profile-state-types';
+import { type ProfileContextType, type ProfileState, defaultProfileState } from './profile-state-types';
 import { useProfileState } from './use-profile-state';
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);

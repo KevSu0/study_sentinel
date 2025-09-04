@@ -1,4 +1,4 @@
-import { DailySummaryInput, DailySummaryOutput } from '@/lib/types';
+import { type DailySummaryInput, type DailySummaryOutput } from '@/lib/types';
 
 /**
  * Mock implementation of daily summary generation

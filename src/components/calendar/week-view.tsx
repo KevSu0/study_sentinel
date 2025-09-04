@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { eachDayOfInterval, startOfWeek, endOfWeek, format } from 'date-fns';
-import { DndContext, useDroppable, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, useDroppable, type DragEndEvent } from '@dnd-kit/core';
 import { useCalendarEvents } from '@/hooks/use-calendar-events';
 import { EventItem } from './event-item';
-import { CalendarEvent } from '@/lib/types';
+import { type CalendarEvent } from '@/lib/types';
 import { EventDialog } from './event-dialog';
 
 const GRID_CELL_HEIGHT = 64; // Corresponds to h-16 tailwind class (16 * 4px)

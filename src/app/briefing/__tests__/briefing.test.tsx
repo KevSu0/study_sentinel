@@ -6,7 +6,7 @@ import { useGlobalState } from '@/hooks/use-global-state';
 import * as actions from '@/lib/actions';
 import * as utils from '@/lib/utils';
 import { MemoryRouterProvider } from 'next-router-mock/MemoryRouterProvider';
-import { UserProfile } from '@/lib/types';
+import { type UserProfile } from '@/lib/types';
 
 // Define the shape of the global state for the mock, as ReturnType<typeof useGlobalState>
 // is causing type inference issues in this test file.

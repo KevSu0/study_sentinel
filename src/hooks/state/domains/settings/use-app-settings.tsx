@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback } from 'react';
-import { SoundSettings } from '@/lib/types';
-import { SettingsState, SettingsActions } from './settings-state-types';
+import { type SoundSettings } from '@/lib/types';
+import { type SettingsState, type SettingsActions } from './settings-state-types';
 
 // localStorage keys for settings
 const SOUND_SETTINGS_KEY = 'studySentinelSoundSettings_v1';

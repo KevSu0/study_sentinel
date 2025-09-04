@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
 import {PlayCircle, Timer, Clock, Flame} from 'lucide-react';
-import {Routine} from '@/lib/types';
+import {type Routine} from '@/lib/types';
 import toast from 'react-hot-toast';
 import {useGlobalState} from '@/hooks/use-global-state';
 import {getPriorityCardStyles, getPriorityBadgeStyles} from '@/lib/priority-colors';

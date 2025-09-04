@@ -1,7 +1,7 @@
 
 'use client';
 
-import {useState, useEffect, useCallback, createContext, useContext, ReactNode} from 'react';
+import {useState, useEffect, useCallback, createContext, useContext, type ReactNode} from 'react';
 
 export type TaskViewMode = 'card' | 'list';
 

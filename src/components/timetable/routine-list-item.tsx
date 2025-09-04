@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {Badge} from '@/components/ui/badge';
-import {Routine} from '@/lib/types';
+import {type Routine} from '@/lib/types';
 import toast from 'react-hot-toast';
 import {getPriorityCardStyles, getPriorityBadgeStyles} from '@/lib/priority-colors';
 import {cn} from '@/lib/utils';

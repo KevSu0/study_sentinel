@@ -2,7 +2,7 @@ import React from 'react';
 import {render, screen, fireEvent} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {CompletedPlanListItem} from '../completed-plan-list-item';
-import {ActivityFeedItem} from '@/hooks/use-global-state';
+import {type ActivityFeedItem} from '@/hooks/use-global-state';
 
 const mockTaskItem: ActivityFeedItem = {
   type: 'TASK_COMPLETE',

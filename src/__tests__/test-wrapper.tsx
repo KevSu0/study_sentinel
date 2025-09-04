@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import React from 'react';
 // Keep providers minimal to avoid environment-specific crashes in tests
 

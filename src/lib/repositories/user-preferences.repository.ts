@@ -1,5 +1,5 @@
 import { BaseRepository } from './base.repository';
-import { UserPreference, getDB } from '../db';
+import { type UserPreference, getDB } from '../db';
 
 export class UserPreferencesRepository extends BaseRepository<UserPreference, string> {
   constructor() {

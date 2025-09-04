@@ -104,12 +104,13 @@ describe('Low-End Device Memory Constraints', () => {
 
     it('should handle slow network conditions gracefully', async () => {
       // Simulate slow 3G network
-      const mockFetch = jest.fn().mockImplementation(() => 
-        new Promise(resolve => 
-          setTimeout(() => resolve({ ok: true, json: () => ({}) }), 500)
+      type Fetch = typeof globalThis.fetch;
+      const mockFetch = jest.fn().mockImplementation(() =>
+        new Promise(resolve =>
+          setTimeout(() => resolve({ ok: true, json: () => Promise.resolve({}) }), 500)
         )
-      );
-      
+      ) as jest.MockedFunction<Fetch>;
+
       global.fetch = mockFetch;
 
       const startTime = performance.now();

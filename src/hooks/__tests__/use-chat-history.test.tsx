@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { useChatHistory, ChatMessage } from '../use-chat-history';
+import { useChatHistory, type ChatMessage } from '../use-chat-history';
 
 const CHAT_HISTORY_KEY = 'studySentinelChatHistory_v1';
 const MAX_HISTORY_LENGTH = 50;

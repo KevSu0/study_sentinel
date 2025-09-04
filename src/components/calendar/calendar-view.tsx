@@ -10,7 +10,7 @@ import { useCalendarEvents } from "@/hooks/use-calendar-events";
 
 type View = "month" | "week" | "day";
 
-import { CalendarEvent } from "@/lib/types";
+import { type CalendarEvent } from "@/lib/types";
 
 interface CalendarViewProps {
   currentDate: Date | undefined;

@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import '@testing-library/jest-dom';
 import ManageBadgesPage from '../page';
 import { useGlobalState } from '@/hooks/use-global-state';
-import { Badge } from '@/lib/types';
+import { type Badge } from '@/lib/types';
 import { MemoryRouterProvider } from 'next-router-mock/MemoryRouterProvider';
 
 jest.mock('@/hooks/use-global-state');

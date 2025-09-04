@@ -1,5 +1,5 @@
 import { checkBadge } from '../badges';
-import { Badge, StudyTask, LogEvent } from '@/lib/types';
+import { type Badge, type StudyTask, type LogEvent } from '@/lib/types';
 import { format, subDays, subWeeks, subMonths } from 'date-fns';
 
 // --- Mock Data & Helpers ---

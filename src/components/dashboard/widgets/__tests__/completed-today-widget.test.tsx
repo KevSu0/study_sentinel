@@ -1,8 +1,8 @@
 import React from 'react';
 import {render, screen, fireEvent} from '@testing-library/react';
 import {CompletedTodayWidget} from '../completed-today-widget';
-import {ActivityFeedItem} from '@/hooks/use-global-state';
-import {TaskViewMode} from '@/hooks/use-view-mode';
+import {type ActivityFeedItem} from '@/hooks/use-global-state';
+import type {TaskViewMode} from '@/hooks/use-view-mode';
 import { CompletedPlanListItem } from '@/components/plans/completed-plan-list-item';
 import { ActivityItem } from '@/components/dashboard/activity/activity-item';
 

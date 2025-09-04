@@ -2,7 +2,7 @@
 'use client';
 import React from 'react';
 import { CompletedPlanListItem } from '@/components/plans/completed-plan-list-item';
-import { TaskViewMode } from '@/hooks/use-view-mode';
+import { type TaskViewMode } from '@/hooks/use-view-mode';
 import { cn } from '@/lib/utils';
 import type {ActivityFeedItem} from '@/hooks/use-global-state.tsx';
 import {CheckCircle2} from 'lucide-react';

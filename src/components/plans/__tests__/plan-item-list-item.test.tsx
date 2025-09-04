@@ -3,7 +3,7 @@ import {render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {PlanItemRenderer} from '../plan-item-renderer';
 import {useGlobalState} from '@/hooks/use-global-state';
-import {StudyTask, Routine, LogEvent} from '@/lib/types';
+import {type StudyTask, type Routine, type LogEvent} from '@/lib/types';
 
 // Mock dependencies
 jest.mock('@/hooks/use-global-state');

@@ -7,7 +7,7 @@ import React, {
   useMemo,
   createContext,
   useContext,
-  ReactNode,
+  type ReactNode,
 } from 'react';
 
 export type DashboardWidgetType =

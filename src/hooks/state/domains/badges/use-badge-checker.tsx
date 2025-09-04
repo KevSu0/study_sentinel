@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react';
-import { Badge, LogEvent, StudyTask, Routine } from '@/lib/types';
-import { BadgeAwardingCriteria } from './badge-state-types';
+import { type Badge, type LogEvent, type StudyTask, type Routine } from '@/lib/types';
+import { type BadgeAwardingCriteria } from './badge-state-types';
 import { checkBadge } from '@/lib/badges';
 import { getBadgeAwardingCriteria, shouldAwardBadge } from '@/utils/badge-utils';
 

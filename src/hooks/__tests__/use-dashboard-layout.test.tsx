@@ -3,8 +3,8 @@ import { renderHook, act, render, screen } from '@testing-library/react';
 import {
   useDashboardLayout,
   DashboardLayoutProvider,
-  DashboardWidget,
-  DashboardWidgetType,
+  type DashboardWidget,
+  type DashboardWidgetType,
   WIDGET_NAMES,
 } from '../use-dashboard-layout';
 

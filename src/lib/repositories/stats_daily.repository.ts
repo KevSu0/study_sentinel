@@ -1,4 +1,4 @@
-import { getDB, DailyStat } from '../db';
+import { getDB, type DailyStat } from '../db';
 import { BaseRepository } from './base.repository';
 
 class StatsDailyRepository extends BaseRepository<DailyStat, string> {

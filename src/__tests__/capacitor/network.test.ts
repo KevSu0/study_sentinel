@@ -1,4 +1,4 @@
-import { Network, ConnectionStatus, ConnectionType } from '@capacitor/network';
+import { Network, type ConnectionStatus, type ConnectionType } from '@capacitor/network';
 import { createMockCapacitorDevice } from '../mocks/capacitor';
 import { renderMobile, NETWORK_CONDITIONS, offlineScenarios } from '@tests/utils/mobile-test-factories';
 import { MobilePerformanceMonitor } from '../utils/mobile-performance-framework';

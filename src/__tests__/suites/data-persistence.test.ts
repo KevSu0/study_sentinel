@@ -6,7 +6,7 @@
  */
 
 import { indexedDBTestHelpers, IndexedDBMock } from '../mocks/indexeddb/indexeddb-mock';
-import { offlineTestHelpers, OfflineState } from '../mocks/offline/offline-state-manager';
+import { offlineTestHelpers, type OfflineState } from '../mocks/offline/offline-state-manager';
 import { serviceWorkerTestHelpers } from '../mocks/service-worker/service-worker-mock';
 import { createMockPlan, createMockUser, createMockPlans } from '../utils/mobile-test-factories';
 import { measureMobilePerformance } from '../utils/mobile-test-factories';

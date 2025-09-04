@@ -1,4 +1,4 @@
-import { TaskPriority } from './types';
+import { type TaskPriority } from './types';
 
 /**
  * Priority-based transparent glass color configuration

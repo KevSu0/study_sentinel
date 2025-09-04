@@ -17,7 +17,7 @@ import {
   Wrench,
   CalendarCheck2,
 } from 'lucide-react';
-import {Badge} from '@/lib/types';
+import {type Badge} from '@/lib/types';
 import * as Icons from 'lucide-react';
 import {cn} from '@/lib/utils';
 import {format, parseISO} from 'date-fns';

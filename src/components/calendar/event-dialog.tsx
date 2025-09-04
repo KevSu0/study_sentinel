@@ -10,8 +10,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { CalendarEvent } from "@/lib/types";
-import { EventForm, EventFormData } from "./event-form";
+import { type CalendarEvent } from "@/lib/types";
+import { EventForm, type EventFormData } from "./event-form";
 
 interface EventDialogProps {
   isOpen: boolean;

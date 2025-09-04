@@ -4,7 +4,7 @@ import React, {
   useContext,
   useState,
   useCallback,
-  ReactNode,
+  type ReactNode,
   useEffect,
 } from 'react';
 import ReactConfetti from 'react-confetti';

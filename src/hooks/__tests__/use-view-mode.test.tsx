@@ -1,6 +1,6 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { ViewModeProvider, useViewMode, TaskViewMode } from '../use-view-mode';
-import React, { ReactNode } from 'react';
+import { ViewModeProvider, useViewMode, type TaskViewMode } from '../use-view-mode';
+import React, { type ReactNode } from 'react';
 
 /**
  * @constant {string} VIEW_MODE_KEY - The key used to store the view mode in localStorage.

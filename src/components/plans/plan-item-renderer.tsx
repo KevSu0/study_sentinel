@@ -42,7 +42,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ManualLogDialog } from '@/components/tasks/manual-log-dialog';
 import { useGlobalState } from '@/hooks/use-global-state';
-import { StudyTask, Routine, LogEvent } from '@/lib/types';
+import { type StudyTask, type Routine, type LogEvent } from '@/lib/types';
 import { toast } from 'sonner';
 
 

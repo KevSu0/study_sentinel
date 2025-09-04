@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { SettingsContextType, SettingsState, defaultSettingsState } from './settings-state-types';
+import { type SettingsContextType, type SettingsState, defaultSettingsState } from './settings-state-types';
 import { useAppSettings, loadSoundSettingsFromStorage } from './use-app-settings';
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

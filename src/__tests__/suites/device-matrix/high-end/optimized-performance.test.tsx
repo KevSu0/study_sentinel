@@ -201,18 +201,19 @@ describe('High-End Device Optimized Performance', () => {
 
   describe('Advanced Network Capabilities', () => {
     it('should leverage 5G speeds for rapid data sync', async () => {
-      const mockFetch = jest.fn().mockImplementation(() => 
-        new Promise(resolve => 
-          setTimeout(() => resolve({ 
-            ok: true, 
-            json: () => ({ 
+      type Fetch = typeof globalThis.fetch;
+      const mockFetch = jest.fn().mockImplementation(() =>
+        new Promise(resolve =>
+          setTimeout(() => resolve({
+            ok: true,
+            json: () => Promise.resolve({
               tasks: Array.from({ length: 500 }, (_, i) => ({ id: i, title: `Task ${i}` })),
-              lastSync: new Date().toISOString() 
+              lastSync: new Date().toISOString()
             })
           }), 50) // 5G ultra-fast response
         )
-      );
-      
+      ) as jest.MockedFunction<Fetch>;
+
       global.fetch = mockFetch;
 
       const startTime = performance.now();
@@ -225,18 +226,19 @@ describe('High-End Device Optimized Performance', () => {
     });
 
     it('should handle multiple concurrent high-bandwidth operations', async () => {
-      const mockFetch = jest.fn().mockImplementation((url) => 
-        new Promise(resolve => 
-          setTimeout(() => resolve({ 
-            ok: true, 
-            json: () => ({ 
-              endpoint: url, 
+      type Fetch = typeof globalThis.fetch;
+      const mockFetch = jest.fn().mockImplementation((url) =>
+        new Promise(resolve =>
+          setTimeout(() => resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              endpoint: url,
               data: Array.from({ length: 100 }, (_, i) => ({ id: i, value: `data-${i}` }))
             })
           }), 30)
         )
-      );
-      
+      ) as jest.MockedFunction<Fetch>;
+
       global.fetch = mockFetch;
 
       const requests = [

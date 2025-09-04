@@ -21,7 +21,7 @@ import type {
   UserProfile,
   LogEvent,
 } from '@/lib/types';
-import { RoutineStat } from '@/components/stats/routine-stats-list';
+import { type RoutineStat } from '@/components/stats/routine-stats-list';
 import type { Activity } from '@/components/stats/daily-activity-timeline';
 import {
   selectDailyPieData,

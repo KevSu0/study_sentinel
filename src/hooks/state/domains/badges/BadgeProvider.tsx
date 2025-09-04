@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useCallback, useEffect, ReactNode } from 'react';
-import { Badge } from '@/lib/types';
-import { LogEvent, StudyTask, Routine } from '@/lib/types';
-import { BadgeContextType, BadgeState, BadgeActions } from './badge-state-types';
+import React, { createContext, useContext, useCallback, useEffect, type ReactNode } from 'react';
+import { type Badge } from '@/lib/types';
+import { type LogEvent, type StudyTask, type Routine } from '@/lib/types';
+import { type BadgeContextType, type BadgeState, type BadgeActions } from './badge-state-types';
 import { useBadgeState } from './use-badge-state';
 import { useBadgeChecker, useBadgeValidation } from './use-badge-checker';
 

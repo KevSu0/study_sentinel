@@ -2,7 +2,7 @@ import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { ProfileProvider, useProfile, useProfileData, useProfileActions } from '../ProfileProvider';
 import { defaultProfileState } from '../profile-state-types';
-import { UserProfile } from '@/lib/types';
+import { type UserProfile } from '@/lib/types';
 
 // Mock localStorage
 const mockLocalStorage = {

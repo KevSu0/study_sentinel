@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { ComponentType } from 'react';
+import type { ComponentType } from 'react';
 
 // Lazy load framer-motion components
 export const LazyMotionDiv = dynamic(
