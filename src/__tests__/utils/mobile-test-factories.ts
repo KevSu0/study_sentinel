@@ -7,7 +7,9 @@
 
 import { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
-import { offlineTestHelpers } from '../mocks/offline/offline-state-manager';
+import { offlineTestHelpers } from './offline-test-helpers';
+import { createMockCapacitorDevice } from '../mocks/capacitor';
+import { MobilePerformanceMonitor } from './mobile-performance-framework';
 
 // Mobile viewport configurations
 export const MOBILE_VIEWPORTS = {
@@ -65,8 +67,11 @@ export const NETWORK_CONDITIONS = {
   offline: { type: 'offline' as const },
   slow3g: { type: 'slow' as const, speed: 50, latency: 2000, reliability: 0.8 },
   fast3g: { type: 'slow' as const, speed: 200, latency: 500, reliability: 0.9 },
+  '4g': { type: 'online' as const, speed: 400, latency: 100, reliability: 0.95 },
+  '5g': { type: 'online' as const, speed: 2000, latency: 20, reliability: 0.98 },
   wifi: { type: 'online' as const, speed: 1000, latency: 50, reliability: 1 },
   unstable: { type: 'unstable' as const, latency: 1000, reliability: 0.6 },
+  intermittent: { type: 'intermittent' as const, uptime: 0.7, latency: 800, reliability: 0.5 },
 } as const;
 
 // Device configuration factory
@@ -351,4 +356,316 @@ export const cleanupMobileTest = () => {
   // Reset Capacitor mocks
   const { resetCapacitorMocks } = require('../mocks/capacitor');
   resetCapacitorMocks();
+};
+
+// Offline scenario utilities
+export interface OfflineScenario {
+  name: string;
+  description: string;
+  setup: () => Promise<void>;
+  teardown: () => Promise<void>;
+  networkCondition: keyof typeof NETWORK_CONDITIONS;
+  expectedBehavior: string[];
+}
+
+export const offlineScenarios = {
+  completeOffline: {
+    name: 'Complete Offline',
+    description: 'Device has no network connectivity',
+    setup: async () => {
+      offlineTestHelpers.goOffline();
+      // Simulate airplane mode
+      Object.defineProperty(navigator, 'onLine', {
+        writable: true,
+        value: false
+      });
+    },
+    teardown: async () => {
+      offlineTestHelpers.goOnline();
+      Object.defineProperty(navigator, 'onLine', {
+        writable: true,
+        value: true
+      });
+    },
+    networkCondition: 'offline' as const,
+    expectedBehavior: [
+      'Data should be cached locally',
+      'Sync queue should accumulate changes',
+      'UI should show offline indicators',
+      'Critical features should remain functional'
+    ]
+  },
+  
+  intermittentConnection: {
+    name: 'Intermittent Connection',
+    description: 'Network connection drops in and out',
+    setup: async () => {
+      let isOnline = true;
+      const toggleConnection = () => {
+        isOnline = !isOnline;
+        if (isOnline) {
+          offlineTestHelpers.goOnline();
+        } else {
+          offlineTestHelpers.goOffline();
+        }
+        Object.defineProperty(navigator, 'onLine', {
+          writable: true,
+          value: isOnline
+        });
+      };
+      
+      // Toggle every 2 seconds
+      (global as any).__connectionToggleInterval = setInterval(toggleConnection, 2000);
+    },
+    teardown: async () => {
+      if ((global as any).__connectionToggleInterval) {
+        clearInterval((global as any).__connectionToggleInterval);
+        delete (global as any).__connectionToggleInterval;
+      }
+      offlineTestHelpers.goOnline();
+    },
+    networkCondition: 'intermittent' as const,
+    expectedBehavior: [
+      'Should handle connection state changes gracefully',
+      'Sync should resume when connection is restored',
+      'Should not lose data during connection drops',
+      'UI should reflect current connection state'
+    ]
+  },
+  
+  slowConnection: {
+    name: 'Slow Connection',
+    description: 'Very slow network with high latency',
+    setup: async () => {
+      offlineTestHelpers.setSlowNetwork();
+      // Mock slow fetch responses
+      const originalFetch = global.fetch;
+      global.fetch = jest.fn().mockImplementation((...args) => {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve(originalFetch(...args));
+          }, 3000); // 3 second delay
+        });
+      });
+    },
+    teardown: async () => {
+      offlineTestHelpers.setFastNetwork();
+      jest.restoreAllMocks();
+    },
+    networkCondition: 'slow3g' as const,
+    expectedBehavior: [
+      'Should show loading indicators',
+      'Should implement request timeouts',
+      'Should prioritize critical requests',
+      'Should cache responses aggressively'
+    ]
+  }
+};
+
+// Conflict resolution utilities
+export interface ConflictScenario {
+  name: string;
+  description: string;
+  localData: any;
+  serverData: any;
+  expectedResolution: any;
+  resolutionStrategy: 'client-wins' | 'server-wins' | 'merge' | 'manual';
+}
+
+export const conflictScenarios = {
+  planTitleConflict: {
+    name: 'Plan Title Conflict',
+    description: 'Same plan edited offline and online simultaneously',
+    localData: {
+      id: 'plan-123',
+      title: 'Advanced Mathematics - Local Edit',
+      lastModified: Date.now() - 60000, // 1 minute ago
+      version: 1
+    },
+    serverData: {
+      id: 'plan-123',
+      title: 'Advanced Mathematics - Server Edit',
+      lastModified: Date.now() - 30000, // 30 seconds ago
+      version: 2
+    },
+    expectedResolution: {
+      id: 'plan-123',
+      title: 'Advanced Mathematics - Server Edit', // Server wins (newer)
+      lastModified: Date.now() - 30000,
+      version: 3,
+      conflictResolved: true
+    },
+    resolutionStrategy: 'server-wins'
+  },
+  
+  planContentMerge: {
+    name: 'Plan Content Merge',
+    description: 'Different sections of plan edited simultaneously',
+    localData: {
+      id: 'plan-456',
+      title: 'Study Plan',
+      sections: {
+        introduction: 'Updated intro - local',
+        chapter1: 'Original chapter 1',
+        chapter2: 'Original chapter 2'
+      },
+      lastModified: Date.now() - 120000,
+      version: 1
+    },
+    serverData: {
+      id: 'plan-456',
+      title: 'Study Plan',
+      sections: {
+        introduction: 'Original intro',
+        chapter1: 'Updated chapter 1 - server',
+        chapter2: 'Updated chapter 2 - server'
+      },
+      lastModified: Date.now() - 60000,
+      version: 2
+    },
+    expectedResolution: {
+      id: 'plan-456',
+      title: 'Study Plan',
+      sections: {
+        introduction: 'Updated intro - local', // Keep local change
+        chapter1: 'Updated chapter 1 - server', // Keep server change
+        chapter2: 'Updated chapter 2 - server' // Keep server change
+      },
+      lastModified: Date.now(),
+      version: 3,
+      conflictResolved: true,
+      mergeStrategy: 'field-level'
+    },
+    resolutionStrategy: 'merge'
+  },
+  
+  deletionConflict: {
+    name: 'Deletion Conflict',
+    description: 'Item deleted locally but modified on server',
+    localData: {
+      id: 'plan-789',
+      deleted: true,
+      deletedAt: Date.now() - 60000,
+      version: 1
+    },
+    serverData: {
+      id: 'plan-789',
+      title: 'Updated Plan Title',
+      content: 'Updated content',
+      lastModified: Date.now() - 30000,
+      version: 2
+    },
+    expectedResolution: {
+      id: 'plan-789',
+      title: 'Updated Plan Title',
+      content: 'Updated content',
+      lastModified: Date.now() - 30000,
+      version: 3,
+      conflictResolved: true,
+      restoredFromDeletion: true
+    },
+    resolutionStrategy: 'server-wins' // Server modification wins over local deletion
+  }
+};
+
+// Conflict resolution test helpers
+export const conflictResolutionHelpers = {
+  simulateConflict: async (scenario: ConflictScenario) => {
+    // Store local data
+    const localStore = await indexedDB.open('test-conflicts', 1);
+    const transaction = localStore.transaction(['conflicts'], 'readwrite');
+    const store = transaction.objectStore('conflicts');
+    await store.put(scenario.localData);
+    
+    // Mock server response with conflicting data
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(scenario.serverData)
+    });
+    
+    return {
+      localData: scenario.localData,
+      serverData: scenario.serverData,
+      expectedResolution: scenario.expectedResolution
+    };
+  },
+  
+  resolveConflict: (local: any, server: any, strategy: ConflictScenario['resolutionStrategy']) => {
+    switch (strategy) {
+      case 'client-wins':
+        return { ...local, version: (server.version || 0) + 1, conflictResolved: true };
+      
+      case 'server-wins':
+        return { ...server, version: (server.version || 0) + 1, conflictResolved: true };
+      
+      case 'merge':
+        const merged = { ...server };
+        // Simple merge strategy - prefer local for specific fields
+        if (local.sections && server.sections) {
+          merged.sections = { ...server.sections, ...local.sections };
+        }
+        return { ...merged, version: (server.version || 0) + 1, conflictResolved: true, mergeStrategy: 'field-level' };
+      
+      case 'manual':
+        return {
+          ...local,
+          ...server,
+          conflictResolved: false,
+          requiresManualResolution: true,
+          conflictData: { local, server }
+        };
+      
+      default:
+        return server;
+    }
+  },
+  
+  validateResolution: (resolved: any, expected: any) => {
+    expect(resolved.conflictResolved).toBe(expected.conflictResolved);
+    expect(resolved.version).toBeGreaterThan(Math.max(expected.version - 1, 0));
+    
+    if (expected.mergeStrategy) {
+      expect(resolved.mergeStrategy).toBe(expected.mergeStrategy);
+    }
+    
+    if (expected.restoredFromDeletion) {
+      expect(resolved.restoredFromDeletion).toBe(true);
+    }
+  }
+};
+
+// Enhanced performance monitoring with offline scenarios
+export const offlinePerformanceHelpers = {
+  measureOfflinePerformance: async (testFunction: () => Promise<void>) => {
+    const monitor = new MobilePerformanceMonitor();
+    monitor.startMonitoring();
+    
+    const startTime = performance.now();
+    await testFunction();
+    const endTime = performance.now();
+    
+    const metrics = monitor.stopMonitoring();
+    
+    return {
+      ...metrics,
+      totalDuration: endTime - startTime,
+      offlineOptimized: metrics.frameRate > 30 && metrics.touchLatency < 200
+    };
+  },
+  
+  measureSyncPerformance: async (syncFunction: () => Promise<void>) => {
+    const startTime = performance.now();
+    const startMemory = (performance as any).memory?.usedJSHeapSize || 0;
+    
+    await syncFunction();
+    
+    const endTime = performance.now();
+    const endMemory = (performance as any).memory?.usedJSHeapSize || 0;
+    
+    return {
+      syncDuration: endTime - startTime,
+      memoryUsed: endMemory - startMemory,
+      efficient: (endTime - startTime) < 5000 && (endMemory - startMemory) < 10000000
+    };
+  }
 };

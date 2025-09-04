@@ -73,6 +73,7 @@ const androidJestConfig = {
   
   // Test matching patterns for Android-specific tests
   testMatch: [
+    '<rootDir>/src/__tests__/suites/**/*.test.{ts,tsx}',
     '<rootDir>/src/**/__tests__/**/*.android.test.{ts,tsx}',
     '<rootDir>/src/**/__tests__/**/*.mobile.test.{ts,tsx}',
     '<rootDir>/src/**/__tests__/**/*.offline.test.{ts,tsx}',

@@ -16,6 +16,7 @@ export const setNetworkConditions = async (conditions: {
   latency?: number;
   downloadThroughput?: number;
   uploadThroughput?: number;
+  connectionType?: string;
 }) => {
   if (global.__NETWORK_CONDITIONS) {
     Object.assign(global.__NETWORK_CONDITIONS, conditions);

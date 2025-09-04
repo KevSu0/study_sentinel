@@ -81,12 +81,17 @@ jest.mock('@/lib/repositories', () => ({
   })),
 }));
 
-jest.mock('@/lib/sync', () => ({
+jest.mock('@/utils/sync-engine', () => ({
   SyncEngine: jest.fn().mockImplementation(() => ({
-    start: jest.fn(),
-    stop: jest.fn(),
-    sync: jest.fn(() => Promise.resolve()),
+    addListener: jest.fn(() => jest.fn()),
+    sync: jest.fn(),
+    clear: jest.fn(),
   })),
+  syncEngine: {
+    addListener: jest.fn(() => jest.fn()),
+    sync: jest.fn(),
+    clear: jest.fn(),
+  },
 }));
 
 jest.mock('date-fns', () => ({
