@@ -8,6 +8,7 @@
 
 import { act } from '@testing-library/react';
 import { fireEvent } from '@testing-library/dom';
+import { IDBFactory } from 'fake-indexeddb';
 
 // Network condition simulation
 export const setNetworkConditions = async (conditions: {
@@ -50,10 +51,7 @@ export const createTouchEvent = (type: string, x: number, y: number) => {
     force: 1,
   };
   
-  const touchList = Object.assign([touch], {
-    length: 1,
-    item: (index: number) => touchList[index] || null,
-  }) as unknown as TouchList;
+  const touchList: Touch[] = [touch as unknown as Touch];
   
   return new TouchEvent(type, {
     bubbles: true,
@@ -110,12 +108,8 @@ export const simulateBackButton = async () => {
 
 // Mock IndexedDB operations
 export const mockIndexedDB = {
-  clear: async (dbName: string) => {
-    const request = indexedDB.deleteDatabase(dbName);
-    await new Promise((resolve, reject) => {
-      request.onsuccess = resolve;
-      request.onerror = reject;
-    });
+  clear: async () => {
+    (global as any).indexedDB = new IDBFactory();
   },
   
   simulateQuotaExceeded: () => {
