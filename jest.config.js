@@ -11,7 +11,9 @@ const customJestConfig = {
   // if using ts-jest:
   // globals: { 'ts-jest': { tsconfig: 'tsconfig.tests.json' } },
   setupFilesAfterEnv: [
+    '<rootDir>/src/__tests__/setup/structured-clone-polyfill.js',
     '<rootDir>/src/__tests__/setup/fetch-polyfill.js',
+    '<rootDir>/src/__tests__/jest.setup.ts',
     '<rootDir>/src/__tests__/setup/android-high-end-setup.ts'
   ],
   resetMocks: true,
@@ -44,9 +46,12 @@ const customJestConfig = {
     '^react-markdown$': '<rootDir>/__mocks__/react-markdown.js',
     '^remark-gfm$': '<rootDir>/__mocks__/remark-gfm.js',
     '^lucide-react$': '<rootDir>/__mocks__/lucide-react.js',
+    // Map Capacitor packages to local mocks for all test runs
+    '^@capacitor/(.*)$': '<rootDir>/src/__tests__/mocks/capacitor/$1.js',
+    '^@capacitor-community/(.*)$': '<rootDir>/src/__tests__/mocks/capacitor-community/$1.js',
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(lucide-react|nanoid)/)'
+    'node_modules/(?!(lucide-react|nanoid|@capacitor|@capacitor-community)/)'
   ],
 }
 

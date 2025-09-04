@@ -195,6 +195,23 @@ if (typeof (global as any).navigator === 'undefined') {
 // @ts-ignore
 (navigator as any).serviceWorker = (navigator as any).serviceWorker || { register: jest.fn().mockResolvedValue({}) };
 
+// Mock navigator.getBattery for device matrix tests
+// @ts-ignore
+(global as any).navigator.getBattery = jest.fn().mockResolvedValue({
+  level: 0.8, // 80% battery
+  charging: false,
+  chargingTime: Infinity,
+  dischargingTime: 36000, // 10 hours
+  addEventListener: jest.fn(),
+  removeEventListener: jest.fn(),
+});
+
+// Also ensure window.navigator has the same mock if window exists
+if (typeof window !== 'undefined' && window.navigator) {
+  // @ts-ignore
+  window.navigator.getBattery = (global as any).navigator.getBattery;
+}
+
 // Ensure react-hot-toast named export compatibility in tests
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires

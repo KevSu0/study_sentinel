@@ -169,6 +169,21 @@ describe('Low-End Device Memory Constraints', () => {
   });
 
   describe('Battery Optimization', () => {
+    beforeEach(() => {
+      // Mock navigator.getBattery for this test suite
+      Object.defineProperty(navigator, 'getBattery', {
+        writable: true,
+        value: jest.fn().mockResolvedValue({
+          level: 0.3, // 30% battery
+          charging: false,
+          chargingTime: Infinity,
+          dischargingTime: 14400, // 4 hours
+          addEventListener: jest.fn(),
+          removeEventListener: jest.fn(),
+        })
+      });
+    });
+
     it('should reduce background activity on low battery', async () => {
       const battery = await navigator.getBattery();
       

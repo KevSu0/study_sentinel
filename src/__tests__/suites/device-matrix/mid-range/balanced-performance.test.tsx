@@ -308,6 +308,21 @@ describe('Mid-Range Device Balanced Performance', () => {
   });
 
   describe('Battery Efficiency', () => {
+    beforeEach(() => {
+      // Mock navigator.getBattery for this test suite
+      Object.defineProperty(navigator, 'getBattery', {
+        writable: true,
+        value: jest.fn().mockResolvedValue({
+          level: 0.6, // 60% battery
+          charging: false,
+          chargingTime: Infinity,
+          dischargingTime: 21600, // 6 hours
+          addEventListener: jest.fn(),
+          removeEventListener: jest.fn(),
+        })
+      });
+    });
+
     it('should optimize for moderate battery usage', async () => {
       const battery = await navigator.getBattery();
       

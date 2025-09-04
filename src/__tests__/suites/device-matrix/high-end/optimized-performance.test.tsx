@@ -429,6 +429,21 @@ describe('High-End Device Optimized Performance', () => {
   });
 
   describe('Battery Optimization', () => {
+    beforeEach(() => {
+      // Mock navigator.getBattery for this test suite
+      Object.defineProperty(navigator, 'getBattery', {
+        writable: true,
+        value: jest.fn().mockResolvedValue({
+          level: 0.8, // 80% battery
+          charging: false,
+          chargingTime: Infinity,
+          dischargingTime: 36000, // 10 hours
+          addEventListener: jest.fn(),
+          removeEventListener: jest.fn(),
+        })
+      });
+    });
+
     it('should maintain optimal performance with good battery', async () => {
       const battery = await navigator.getBattery();
       
