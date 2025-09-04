@@ -1,4 +1,4 @@
-import { StudyTask, UserProfile, CompletedWork } from '../lib/types';
+import type { StudyTask, UserProfile, CompletedWork } from '../lib/types';
 
 export interface Stats {
   today: DailyStat;
