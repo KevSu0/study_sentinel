@@ -4,6 +4,21 @@
   "plugins": ["@typescript-eslint"],
   "overrides": [
     {
+      "files": ["src/**/*.{ts,tsx}"],
+      "excludedFiles": ["**/__tests__/**", "**/*.test.*", "**/*.spec.*"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              "**/__tests__/**",
+              "@tests/*"
+            ]
+          }
+        ]
+      }
+    },
+    {
       "files": ["**/*.ts", "**/*.tsx"],
       "rules": {
         "@typescript-eslint/consistent-type-imports": [

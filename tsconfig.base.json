@@ -14,8 +14,7 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@tests/*": ["src/__tests__/*"]
+      "@/*": ["src/*"]
     }
   }
 }

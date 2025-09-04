@@ -302,7 +302,9 @@ export class MemoryUtils {
         // Clear cache if it's too large
         if (imageCache.size >= maxCacheSize) {
           const firstKey = imageCache.keys().next().value;
-          imageCache.delete(firstKey);
+          if (firstKey) {
+            imageCache.delete(firstKey);
+          }
         }
 
         // Load new image

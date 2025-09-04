@@ -27,11 +27,19 @@ export function selectTimeRangeStats(
   };
 }
 
+export type DailyPieDataItem = {
+  name: string;
+  productiveDuration: number;
+  pausedDuration: number;
+  pauseCount: number;
+  focusPercentage: number;
+};
+
 export function selectDailyPieData(
   work: CompletedWork[] | undefined,
   selectedDate: Date,
   grouping: PieGrouping = 'task'
-) {
+): DailyPieDataItem[] {
   const filteredWork = (work ?? []).filter(w => !w.isUndone);
   const day = getStudyDay(selectedDate);
   const workForDay = filteredWork.filter(w => isSameDay(getStudyDateForTimestamp(w.timestamp), day));

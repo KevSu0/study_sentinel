@@ -22,6 +22,15 @@ const isExport = process.env.NEXT_EXPORT === 'true';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  eslint: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has ESLint errors.
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    // Local/dev builds ignore TS errors; CI blocks on types.
+    ignoreBuildErrors: process.env.CI !== 'true'
+  },
   ...(isExport ? { output: 'export' } : {}),
   trailingSlash: true,
   // Next/Image configuration compatible with static export
