@@ -274,7 +274,7 @@ export function OptimizedGlobalStateProvider({ children }: { children: ReactNode
     }, []),
 
     // Add other actions with similar memoization patterns...
-    addRoutine: useCallback(async (routine) => {
+    addRoutine: useCallback(async (routine: Omit<Routine, 'id' | 'shortId' | 'status' | 'createdAt'> & Partial<Pick<Routine, 'id'>>) => {
       console.log('Adding routine:', routine);
       return 'new-routine-id';
     }, []),

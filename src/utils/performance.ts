@@ -265,13 +265,16 @@ export function usePerformanceMonitor(options: PerformanceMonitorOptions = {}) {
     try {
       const fidObserver = new PerformanceObserver((list) => {
         list.getEntries().forEach((entry) => {
-          reportMetric({
-            name: 'vitals.fid',
-            value: entry.processingStart - entry.startTime,
-            timestamp: Date.now(),
-            type: 'timing',
-            unit: 'ms'
-          });
+          if (entry.entryType === 'first-input') {
+            const fidEntry = entry as PerformanceEventTiming;
+            reportMetric({
+              name: 'vitals.fid',
+              value: fidEntry.processingStart - fidEntry.startTime,
+              timestamp: Date.now(),
+              type: 'timing',
+              unit: 'ms'
+            });
+          }
         });
       });
       

@@ -269,12 +269,12 @@ export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) 
         
         dispatch({
           type: 'AWARD_BADGE',
-          payload: { badgeId, reason },
+          payload: { badgeId, reason: reason || '' },
         });
         
         addLog({
           type: 'BADGE_EARNED',
-          payload: { badgeId, badgeName: badge.name, reason },
+          payload: { badgeId, badgeName: badge.name, reason: reason || '' },
         });
       }
     },

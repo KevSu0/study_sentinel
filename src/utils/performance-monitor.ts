@@ -29,7 +29,7 @@ export function createPerformanceMonitor(caps?: PerfCaps) {
   };
 
   function sampleNow() {
-    const mem = hasMem ? caps.memory?.usedJSHeapSize : undefined;
+    const mem = hasMem && caps ? caps.memory?.usedJSHeapSize : undefined;
     state.samples.push({ ts: Date.now(), mem });
     if (state.samples.length > 100) state.samples.shift();
   }

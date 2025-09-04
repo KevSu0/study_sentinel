@@ -26,6 +26,7 @@ import type { Activity } from '@/components/stats/daily-activity-timeline';
 import {
   selectDailyPieData,
   selectSubjectTrends,
+  type DailyPieDataItem,
   selectBadgeEligibility,
   selectAiBriefingData,
   selectAchievementProgress,
@@ -250,8 +251,8 @@ export function useStats({
       >
     );
 
-    const data = selectDailyPieData(filteredWork as any, selectedDate, 'task');
-    return data as any;
+    const data = selectDailyPieData(filteredWork, selectedDate, 'task');
+    return data;
   }, [filteredWork, selectedDate]);
   
   const dailyActivityTimelineData: Activity[] = useMemo(() => {

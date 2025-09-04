@@ -25,37 +25,44 @@ export function TaskStateProvider({ children }: { children: ReactNode }) {
   const addTask = (t: Omit<StudyTask, 'id' | 'status'> & Partial<Pick<StudyTask, 'status'>>) => {
     const id = `${Date.now()}-${Math.random()}`;
     const task: StudyTask = { id, status: t.status ?? 'todo', ...t } as StudyTask;
-    setState(prev => {
-      const next = { tasks: [...prev.tasks, task] };
+    setState((prev: TaskState) => {
+      const next: TaskState = { ...prev, tasks: [...prev.tasks, task] };
       persist(next);
       return next;
     });
     return id;
   };
   const updateTask = (u: StudyTask) => {
-    setState(prev => {
-      const next = { tasks: prev.tasks.map(x => (x.id === u.id ? u : x)) };
+    setState((prev: TaskState) => {
+      const next: TaskState = { ...prev, tasks: prev.tasks.map(x => (x.id === u.id ? u : x)) };
       persist(next);
       return next;
     });
   };
   const archiveTask = (id: string) => {
-    setState(prev => {
-      const next = { tasks: prev.tasks.map(x => (x.id === id ? { ...x, status: 'archived' } : x)) };
+    setState((prev: TaskState) => {
+      const next: TaskState = {
+        ...prev,
+        tasks: prev.tasks.map(x => (x.id === id ? { ...x, status: 'archived' } : x)),
+      };
       persist(next);
       return next;
     });
   };
   const unarchiveTask = (id: string) => {
-    setState(prev => {
-      const next = { tasks: prev.tasks.map(x => (x.id === id ? { ...x, status: 'todo' } : x)) };
+    setState((prev: TaskState) => {
+      const next: TaskState = {
+        ...prev,
+        tasks: prev.tasks.map(x => (x.id === id ? { ...x, status: 'todo' } : x)),
+      };
       persist(next);
       return next;
     });
   };
   const pushTaskToNextDay = (id: string) => {
-    setState(prev => {
-      const next = {
+    setState((prev: TaskState) => {
+      const next: TaskState = {
+        ...prev,
         tasks: prev.tasks.map(x =>
           x.id === id ? { ...x, date: new Date(new Date(x.date).getTime() + 86400000).toISOString().slice(0, 10) } : x
         ),

@@ -11,6 +11,7 @@ const customJestConfig = {
   // if using ts-jest:
   // globals: { 'ts-jest': { tsconfig: 'tsconfig.tests.json' } },
   setupFilesAfterEnv: [
+    '<rootDir>/src/__tests__/setup/fetch-polyfill.js',
     '<rootDir>/src/__tests__/setup/android-high-end-setup.ts'
   ],
   resetMocks: true,
