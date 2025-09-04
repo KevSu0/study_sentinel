@@ -1,4 +1,5 @@
-import Dexie, { Table } from 'dexie';
+import {type Table} from 'dexie';
+import type Dexie from 'dexie';
 import { db, type Session } from '../db';
 import type { LogEvent } from '../types';
 import { format } from 'date-fns';

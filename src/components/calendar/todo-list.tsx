@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
 import {useCalendarEvents} from '@/hooks/use-calendar-events';
-import {CalendarEvent, StudyBlock, PersonalEvent} from '@/lib/types';
+import {type CalendarEvent, type StudyBlock, type PersonalEvent} from '@/lib/types';
 import {Checkbox} from '@/components/ui/checkbox';
 import {Input} from '@/components/ui/input';
 import {Button} from '@/components/ui/button';

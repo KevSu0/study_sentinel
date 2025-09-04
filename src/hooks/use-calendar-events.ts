@@ -1,5 +1,5 @@
 import {useState, useEffect} from 'react';
-import {CalendarEvent} from '../lib/types';
+import {type CalendarEvent} from '../lib/types';
 
 const STORAGE_KEY = 'calendar_events';
 

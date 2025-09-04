@@ -5,8 +5,8 @@
  * specifically for mobile and Android testing scenarios.
  */
 
-import { ReactElement } from 'react';
-import { render, RenderOptions } from '@testing-library/react';
+import { type ReactElement } from 'react';
+import { render, type RenderOptions } from '@testing-library/react';
 import { offlineTestHelpers } from './offline-test-helpers';
 import { createMockCapacitorDevice } from '../mocks/capacitor';
 import { MobilePerformanceMonitor } from './mobile-performance-framework';

@@ -1,4 +1,4 @@
-import { PositivePsychologistInput, PositivePsychologistOutput } from '@/lib/types';
+import { type PositivePsychologistInput, type PositivePsychologistOutput } from '@/lib/types';
 
 /**
  * Mock implementation of positive psychologist chatbot response generation

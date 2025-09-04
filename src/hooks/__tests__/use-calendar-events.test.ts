@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { useCalendarEvents } from '../use-calendar-events';
-import { CalendarEvent } from '../../lib/types';
+import { type CalendarEvent } from '../../lib/types';
 
 // Mock crypto.randomUUID with incrementing IDs
 let mockIdCounter = 0;

@@ -1,5 +1,5 @@
 import { getDB } from '../db';
-import { LogEvent } from '../types';
+import { type LogEvent } from '../types';
 import { BaseRepository } from './base.repository';
 
 class LogRepository extends BaseRepository<LogEvent, string> {

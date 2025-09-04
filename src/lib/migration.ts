@@ -1,5 +1,5 @@
 
-import { Dexie, Transaction } from 'dexie';
+import { Dexie, type Transaction } from 'dexie';
 import { taskRepository } from './repositories/task.repository';
 import { profileRepository } from './repositories/profile.repository';
 import { sessionRepository } from './repositories/session.repository';

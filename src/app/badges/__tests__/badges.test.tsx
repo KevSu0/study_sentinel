@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import BadgesPage from '../page';
 import { useGlobalState } from '@/hooks/use-global-state';
-import { Badge } from '@/lib/types';
+import { type Badge } from '@/lib/types';
 import { MemoryRouterProvider } from 'next-router-mock/MemoryRouterProvider';
 import router from 'next-router-mock';
 

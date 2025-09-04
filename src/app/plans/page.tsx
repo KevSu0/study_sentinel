@@ -32,7 +32,7 @@ import type { StudyTask, Routine, LogEvent } from '@/lib/types';
 import toast from 'react-hot-toast';
 import { CompletedTodayWidget } from '@/components/dashboard/widgets/completed-today-widget';
 import { cn } from '@/lib/utils';
-import { ActivityFeedItem } from '@/hooks/use-global-state';
+import type { ActivityFeedItem } from '@/hooks/use-global-state';
 
 const AddItemDialog = dynamic(
   () => import('@/components/tasks/add-task-dialog').then((m) => m.AddItemDialog),

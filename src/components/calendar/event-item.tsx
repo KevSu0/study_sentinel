@@ -1,6 +1,6 @@
-import React, { useState, PointerEvent } from 'react';
+import React, { useState, type PointerEvent } from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { CalendarEvent, StudyBlock, PersonalEvent } from '@/lib/types';
+import { type CalendarEvent, type StudyBlock, type PersonalEvent } from '@/lib/types';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 

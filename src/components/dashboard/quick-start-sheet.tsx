@@ -8,7 +8,7 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet';
 import { useGlobalState } from '@/hooks/use-global-state';
-import { StudyTask, Routine } from '@/lib/types';
+import { type StudyTask, type Routine } from '@/lib/types';
 import { format } from 'date-fns';
 import { Button } from '../ui/button';
 import { PlayCircle, Timer, Repeat, RotateCw, CheckCircle } from 'lucide-react';

@@ -1,4 +1,4 @@
-import { Table } from 'dexie';
+import { type Table } from 'dexie';
 import { logger } from '../logger';
 
 export class BaseRepository<T extends { id?: TKey }, TKey extends string | number> {

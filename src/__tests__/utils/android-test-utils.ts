@@ -8,7 +8,6 @@
 
 import { act } from '@testing-library/react';
 import { fireEvent } from '@testing-library/dom';
-import { IDBFactory } from 'fake-indexeddb';
 
 // Network condition simulation
 export const setNetworkConditions = async (conditions: {
@@ -110,6 +109,7 @@ export const simulateBackButton = async () => {
 // Mock IndexedDB operations
 export const mockIndexedDB = {
   clear: async () => {
+    const { IDBFactory } = await import('fake-indexeddb');
     (global as any).indexedDB = new IDBFactory();
   },
   

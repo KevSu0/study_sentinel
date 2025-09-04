@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { CalendarEvent } from "@/lib/types";
+import { type CalendarEvent } from "@/lib/types";
 import { useEffect } from "react";
 
 const formSchema = z.object({

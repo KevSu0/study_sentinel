@@ -13,7 +13,7 @@ import {
   useTodaysBadges
 } from '../BadgeProvider';
 import { defaultBadgeState } from '../badge-state-types';
-import { Badge } from '@/lib/types';
+import { type Badge } from '@/lib/types';
 
 // Mock localStorage
 const mockLocalStorage = {

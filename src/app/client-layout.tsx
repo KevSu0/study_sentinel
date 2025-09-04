@@ -1,6 +1,6 @@
 "use client";
 
-import { Viewport } from 'next';
+import { type Viewport } from 'next';
 
 export const viewport: Viewport = {
   themeColor: 'black',

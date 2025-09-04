@@ -1,6 +1,6 @@
 
-import Dexie, { Table } from 'dexie';
-import { Badge, StudyTask, Routine, LogEvent, UserProfile } from './types';
+import Dexie, { type Table } from 'dexie';
+import { type Badge, type StudyTask, type Routine, type LogEvent, type UserProfile } from './types';
 import { runMigration } from './migration';
 
 // Define your interfaces based on the application's needs

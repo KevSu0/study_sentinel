@@ -1,4 +1,4 @@
-import { BehaviorSubject, interval, Subscription } from 'rxjs';
+import { BehaviorSubject, interval, type Subscription } from 'rxjs';
 
 export interface NetworkStatus {
   isOnline: boolean;

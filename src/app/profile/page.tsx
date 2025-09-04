@@ -20,7 +20,7 @@ import {
 import {useGlobalState} from '@/hooks/use-global-state';
 import toast from 'react-hot-toast';
 import {Skeleton} from '@/components/ui/skeleton';
-import {UserProfile} from '@/lib/types';
+import {type UserProfile} from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;

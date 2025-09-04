@@ -1,6 +1,6 @@
 "use client";
 
-import React, { ReactNode, useEffect, useState, useCallback } from 'react';
+import React, { type ReactNode, useEffect, useState, useCallback } from 'react';
 import { usePlatformDetection, useMobileOptimizations, useThemeColor, useStatusBarStyle } from '@/utils/platform-optimization';
 import { useMemoryPressure } from '@/utils/memory-optimization';
 import { usePerformanceMonitor } from '@/utils/performance';

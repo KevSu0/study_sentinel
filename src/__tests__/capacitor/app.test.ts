@@ -1,6 +1,6 @@
-import { App, AppInfo, AppState, URLOpenListenerEvent } from '@capacitor/app';
+import { App, type AppInfo, type AppState, type URLOpenListenerEvent } from '@capacitor/app';
 import { createMockCapacitorDevice } from '../mocks/capacitor';
-import { renderMobile } from '../utils/mobile-test-factories';
+import { renderMobile, offlineScenarios } from '@tests/utils/mobile-test-factories';
 
 // Mock Capacitor App plugin
 jest.mock('@capacitor/app', () => ({

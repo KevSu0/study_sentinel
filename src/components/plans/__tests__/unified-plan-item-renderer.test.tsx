@@ -14,7 +14,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { PlanItemRenderer } from '../plan-item-renderer';
 import { useGlobalState } from '@/hooks/use-global-state';
-import { StudyTask, Routine, LogEvent } from '@/lib/types';
+import { type StudyTask, type Routine, type LogEvent } from '@/lib/types';
 import { toast } from 'sonner';
 
 // Import mobile testing utilities
@@ -24,16 +24,14 @@ import {
   performanceTestUtils,
   devicePerformanceExpectations,
   performanceAssertions
-} from '../../../__tests__/utils/mobile-performance-framework';
+} from '@tests/utils/mobile-performance-framework';
 import {
   createMockDevice,
   createMockPlan,
   createMockUser,
   renderMobile,
-  simulateOfflineScenario,
-  simulateConflictResolution,
   offlinePerformanceHelpers
-} from '../../../__tests__/utils/mobile-test-factories';
+} from '@tests/utils/mobile-test-factories';
 import {
   simulateTouch,
   simulateSwipe,
@@ -41,7 +39,7 @@ import {
   measurePerformance,
   resetTestEnvironment,
   setDeviceProfile
-} from '../../../__tests__/utils/android-test-utils';
+} from '@tests/utils/android-test-utils';
 
 // Mock dependencies
 jest.mock('@/hooks/use-global-state');

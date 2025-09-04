@@ -4,7 +4,7 @@ import '@testing-library/jest-dom';
 import LogPage from '../page';
 import { useGlobalState } from '@/hooks/use-global-state';
 import { MemoryRouterProvider } from 'next-router-mock/MemoryRouterProvider';
-import { LogEvent } from '@/lib/types';
+import { type LogEvent } from '@/lib/types';
 
 jest.mock('@/hooks/use-global-state');
 

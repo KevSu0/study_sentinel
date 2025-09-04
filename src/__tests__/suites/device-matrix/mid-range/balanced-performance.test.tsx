@@ -1,6 +1,7 @@
+import React from 'react';
 import { jest } from '@jest/globals';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { renderMobile } from '../../../mobile-test-factories';
+import { renderMobile } from '../../../utils/mobile-test-factories';
 
 // Mock components for mid-range testing
 const MockStudyPlan = () => {
@@ -79,7 +80,7 @@ describe('Mid-Range Device Balanced Performance', () => {
   describe('UI Responsiveness', () => {
     it('should maintain 45fps during interactions', async () => {
       const { container } = renderMobile(<MockStudyPlan />, {
-        viewport: 'mobile',
+      viewport: 'android_phone',
         networkCondition: '4g'
       });
 
@@ -138,15 +139,16 @@ describe('Mid-Range Device Balanced Performance', () => {
 
   describe('Network Performance', () => {
     it('should handle 4G network speeds effectively', async () => {
-      const mockFetch = jest.fn().mockImplementation(() => 
-        new Promise(resolve => 
-          setTimeout(() => resolve({ 
-            ok: true, 
-            json: () => ({ tasks: [], lastSync: new Date().toISOString() })
+      type Fetch = typeof globalThis.fetch;
+      const mockFetch = jest.fn().mockImplementation(() =>
+        new Promise(resolve =>
+          setTimeout(() => resolve({
+            ok: true,
+            json: () => Promise.resolve({ tasks: [], lastSync: new Date().toISOString() })
           }), 150) // 4G typical response time
         )
-      );
-      
+      ) as jest.MockedFunction<Fetch>;
+
       global.fetch = mockFetch;
 
       renderMobile(<MockSyncComponent />);
@@ -165,15 +167,16 @@ describe('Mid-Range Device Balanced Performance', () => {
     });
 
     it('should handle concurrent network requests', async () => {
-      const mockFetch = jest.fn().mockImplementation((url) => 
-        new Promise(resolve => 
-          setTimeout(() => resolve({ 
-            ok: true, 
-            json: () => ({ endpoint: url, data: 'response' })
+      type Fetch = typeof globalThis.fetch;
+      const mockFetch = jest.fn().mockImplementation((url) =>
+        new Promise(resolve =>
+          setTimeout(() => resolve({
+            ok: true,
+            json: () => Promise.resolve({ endpoint: url, data: 'response' })
           }), 100)
         )
-      );
-      
+      ) as jest.MockedFunction<Fetch>;
+
       global.fetch = mockFetch;
 
       const requests = [

@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {ReactNode, Suspense, lazy, useEffect} from 'react';
+import {type ReactNode, Suspense, lazy, useEffect} from 'react';
 import dynamic from 'next/dynamic';
 import {ThemeProvider} from 'next-themes';
 import {

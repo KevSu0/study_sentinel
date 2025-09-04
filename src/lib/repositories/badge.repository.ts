@@ -1,5 +1,5 @@
 import { getDB } from '../db';
-import { Badge } from '../types';
+import { type Badge } from '../types';
 import { BaseRepository } from './base.repository';
 
 class BadgeRepository extends BaseRepository<Badge, string> {

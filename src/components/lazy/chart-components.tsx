@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { ComponentType } from 'react';
+import type { ComponentType } from 'react';
 
 // Lazy load chart components with loading fallbacks
 export const LazyPieChart = dynamic(

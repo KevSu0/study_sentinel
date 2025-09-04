@@ -1,6 +1,7 @@
+import React from 'react';
 import { jest } from '@jest/globals';
 import { render, screen, waitFor } from '@testing-library/react';
-import { renderMobile } from '../../../mobile-test-factories';
+import { renderMobile } from '../../../utils/mobile-test-factories';
 
 // Mock components for testing
 const MockTaskList = () => {
@@ -46,7 +47,7 @@ describe('Low-End Device Memory Constraints', () => {
   describe('Memory Usage Optimization', () => {
     it('should handle large task lists without memory overflow', async () => {
       const { container } = renderMobile(<MockTaskList />, {
-        viewport: 'mobile',
+      viewport: 'android_phone',
         networkCondition: 'slow3g'
       });
 
@@ -103,12 +104,13 @@ describe('Low-End Device Memory Constraints', () => {
 
     it('should handle slow network conditions gracefully', async () => {
       // Simulate slow 3G network
-      const mockFetch = jest.fn().mockImplementation(() => 
-        new Promise(resolve => 
-          setTimeout(() => resolve({ ok: true, json: () => ({}) }), 500)
+      type Fetch = typeof globalThis.fetch;
+      const mockFetch = jest.fn().mockImplementation(() =>
+        new Promise(resolve =>
+          setTimeout(() => resolve({ ok: true, json: () => Promise.resolve({}) }), 500)
         )
-      );
-      
+      ) as jest.MockedFunction<Fetch>;
+
       global.fetch = mockFetch;
 
       const startTime = performance.now();

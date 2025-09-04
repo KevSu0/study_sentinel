@@ -1,8 +1,8 @@
 import { renderHook } from '@testing-library/react';
 import { usePlanData } from '../use-plan-data';
-import { useGlobalState, ActivityFeedItem } from '@/hooks/use-global-state';
+import { useGlobalState, type ActivityFeedItem } from '@/hooks/use-global-state';
 import { format } from 'date-fns';
-import { StudyTask, Routine, UserProfile, SoundSettings, LogEvent } from '@/lib/types';
+import { type StudyTask, type Routine, type UserProfile, type SoundSettings, type LogEvent } from '@/lib/types';
 
 jest.mock('@/hooks/use-global-state', () => ({
   ...jest.requireActual('@/hooks/use-global-state'),

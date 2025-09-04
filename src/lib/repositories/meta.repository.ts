@@ -1,4 +1,4 @@
-import { getDB, Meta } from '../db';
+import { getDB, type Meta } from '../db';
 
 class MetaRepository {
   constructor() {}

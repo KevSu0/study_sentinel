@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ArchivePage from '../page';
 import { useGlobalState } from '@/hooks/use-global-state';
-import { StudyTask } from '@/lib/types';
+import { type StudyTask } from '@/lib/types';
 import { ConfettiProvider } from '@/components/providers/confetti-provider';
 import { MemoryRouterProvider } from 'next-router-mock/MemoryRouterProvider';
 

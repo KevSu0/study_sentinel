@@ -2,7 +2,7 @@
  * Point calculation utilities for tasks and routines
  */
 
-import { StudyTask, Routine, TaskPriority } from '../state/types/state-types';
+import { type StudyTask, type Routine, type TaskPriority } from '../state/types/state-types';
 
 /**
  * Calculate points earned for completing a task

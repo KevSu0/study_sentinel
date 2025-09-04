@@ -5,7 +5,7 @@ import {Skeleton} from '@/components/ui/skeleton';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Lightbulb, Sparkles} from 'lucide-react';
 import {getDailySummary} from '@/lib/actions';
-import {LogEvent, UserProfile, StudyTask, Routine} from '@/lib/types';
+import {type LogEvent, type UserProfile, type StudyTask, type Routine} from '@/lib/types';
 import {MotivationalQuote} from '@/components/shared/motivational-quote';
 
 interface DailyBriefingWidgetProps {

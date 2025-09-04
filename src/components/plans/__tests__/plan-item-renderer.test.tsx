@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { PlanItemRenderer } from '../plan-item-renderer';
 import { useGlobalState } from '@/hooks/use-global-state';
-import { StudyTask, Routine, LogEvent } from '@/lib/types';
+import { type StudyTask, type Routine, type LogEvent } from '@/lib/types';
 import { toast } from 'sonner';
 // Removed canvas-confetti import as it's not needed for tests
 

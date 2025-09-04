@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, lazy, ComponentType, ReactNode } from 'react';
+import React, { Suspense, lazy, type ComponentType, type ReactNode } from 'react';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 // Loading fallback component

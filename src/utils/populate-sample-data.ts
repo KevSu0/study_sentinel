@@ -2,8 +2,8 @@ import { taskRepository } from '@/lib/repositories/task.repository';
 import { routineRepository } from '@/lib/repositories/routine.repository';
 import { logRepository } from '@/lib/repositories/log.repository';
 import { sessionRepository } from '@/lib/repositories/session.repository';
-import { StudyTask, Routine, LogEvent } from '@/lib/types';
-import { Session } from '@/lib/db';
+import { type StudyTask, type Routine, type LogEvent } from '@/lib/types';
+import { type Session } from '@/lib/db';
 
   const today = new Date().toISOString().split('T')[0];
   const sampleTasks: StudyTask[] = [

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import { GlobalStateProvider } from '@/hooks/use-global-state';
 import { ConfettiProvider } from '@/components/providers/confetti-provider';
 import { SettingsProvider } from './domains/settings';

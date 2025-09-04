@@ -1,4 +1,4 @@
-import { getDB, Session } from '../db';
+import { getDB, type Session } from '../db';
 import { BaseRepository } from './base.repository';
 
 class SessionRepository extends BaseRepository<Session, string> {

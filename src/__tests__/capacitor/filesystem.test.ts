@@ -1,6 +1,6 @@
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { createMockCapacitorDevice } from '../mocks/capacitor';
-import { renderMobile } from '../utils/mobile-test-factories';
+import { renderMobile, offlineScenarios } from '@tests/utils/mobile-test-factories';
 
 // Mock Capacitor Filesystem plugin
 jest.mock('@capacitor/filesystem', () => ({

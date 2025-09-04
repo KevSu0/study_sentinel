@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import DashboardPage from '../page';
 import { useGlobalState } from '@/hooks/use-global-state';
 import { useDashboardLayout } from '@/hooks/use-dashboard-layout';
-import { DragEndEvent } from '@dnd-kit/core';
+import { type DragEndEvent } from '@dnd-kit/core';
 
 // --- Mocks ---
 let capturedOnDragEnd: (event: DragEndEvent) => void = () => {};

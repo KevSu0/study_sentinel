@@ -5,7 +5,7 @@ import CalendarPage from '../page';
 import { useCalendarEvents } from '@/hooks/use-calendar-events';
 import { useGlobalState } from '@/hooks/use-global-state';
 import { MemoryRouterProvider } from 'next-router-mock/MemoryRouterProvider';
-import { CalendarEvent } from '@/lib/types';
+import { type CalendarEvent } from '@/lib/types';
 
 jest.mock('@/hooks/use-calendar-events');
 jest.mock('@/hooks/use-global-state');

@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["jest", "node"],
+    "lib": ["ES2021", "DOM", "DOM.Iterable"]
+  },
+  "include": [
+    "src/__tests__/**/*",
+    "src/__tests__/types/**/*.d.ts",
+    "src/__tests__/setup/**/*.d.ts",
+    "src/__tests__/setup/**/*.ts",
+    "src/__tests__/utils/**/*.ts",
+    "src/__tests__/utils/**/*.tsx"
+  ]
+}

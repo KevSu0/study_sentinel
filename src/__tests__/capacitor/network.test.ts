@@ -1,6 +1,6 @@
-import { Network, ConnectionStatus, ConnectionType } from '@capacitor/network';
+import { Network, type ConnectionStatus, type ConnectionType } from '@capacitor/network';
 import { createMockCapacitorDevice } from '../mocks/capacitor';
-import { renderMobile, NETWORK_CONDITIONS } from '../utils/mobile-test-factories';
+import { renderMobile, NETWORK_CONDITIONS, offlineScenarios } from '@tests/utils/mobile-test-factories';
 import { MobilePerformanceMonitor } from '../utils/mobile-performance-framework';
 
 // Mock Capacitor Network plugin
@@ -11,6 +11,14 @@ jest.mock('@capacitor/network', () => ({
     removeAllListeners: jest.fn()
   }
 }));
+
+// Helper to map legacy labels to current ConnectionType
+const normalize = (v: string): ConnectionType => {
+  // Legacy 2g/3g/4g/5g collapse to 'cellular'
+  if (/^\d?g$/i.test(v)) return 'cellular' as ConnectionType;
+  // pass-through for known values; compiler enforces correctness
+  return v as ConnectionType;
+};
 
 describe('Capacitor Network Plugin Tests', () => {
   let mockDevice: any;
@@ -27,8 +35,8 @@ describe('Capacitor Network Plugin Tests', () => {
     const deviceProfile = mockDevice.profile;
     const defaultStatus: ConnectionStatus = {
       connected: true,
-      connectionType: deviceProfile === 'high-end' ? '5g' : 
-                     deviceProfile === 'mid-range' ? '4g' : '3g'
+      connectionType: normalize(deviceProfile === 'high-end' ? 'cellular' :
+                     deviceProfile === 'mid-range' ? 'cellular' : 'cellular')
     };
     
     (Network.getStatus as jest.Mock).mockResolvedValue(defaultStatus);
@@ -55,7 +63,7 @@ describe('Capacitor Network Plugin Tests', () => {
   });
   
   afterEach(() => {
-    performanceMonitor.stop();
+    performanceMonitor.stopMonitoring();
     networkListeners = [];
   });
   
@@ -69,46 +77,46 @@ describe('Capacitor Network Plugin Tests', () => {
       expect(typeof status.connected).toBe('boolean');
     });
     
-    test('should detect 5G connection on high-end devices', async () => {
+    test('should detect cellular connection on high-end devices', async () => {
       mockDevice = createMockCapacitorDevice('high-end');
       
       (Network.getStatus as jest.Mock).mockResolvedValue({
         connected: true,
-        connectionType: '5g'
+        connectionType: 'cellular'
       });
       
       const status = await Network.getStatus();
       
       expect(status.connected).toBe(true);
-      expect(status.connectionType).toBe('5g');
+      expect(status.connectionType).toBe('cellular');
     });
     
-    test('should detect 4G connection on mid-range devices', async () => {
+    test('should detect cellular connection on mid-range devices', async () => {
       mockDevice = createMockCapacitorDevice('mid-range');
       
       (Network.getStatus as jest.Mock).mockResolvedValue({
         connected: true,
-        connectionType: '4g'
+        connectionType: 'cellular'
       });
       
       const status = await Network.getStatus();
       
       expect(status.connected).toBe(true);
-      expect(status.connectionType).toBe('4g');
+      expect(status.connectionType).toBe('cellular');
     });
     
-    test('should detect 3G connection on low-end devices', async () => {
+    test('should detect cellular connection on low-end devices', async () => {
       mockDevice = createMockCapacitorDevice('low-end');
       
       (Network.getStatus as jest.Mock).mockResolvedValue({
         connected: true,
-        connectionType: '3g'
+        connectionType: 'cellular'
       });
       
       const status = await Network.getStatus();
       
       expect(status.connected).toBe(true);
-      expect(status.connectionType).toBe('3g');
+      expect(status.connectionType).toBe('cellular');
     });
     
     test('should detect WiFi connection', async () => {
@@ -232,7 +240,7 @@ describe('Capacitor Network Plugin Tests', () => {
   
   describe('Network Conditions Testing', () => {
     test('should handle different network conditions', async () => {
-      const conditions = ['wifi', '5g', '4g', '3g', '2g', 'none'];
+      const conditions: ConnectionType[] = ['wifi', 'cellular', 'none', 'unknown'];
       
       for (const condition of conditions) {
         (Network.getStatus as jest.Mock).mockResolvedValue({
@@ -249,28 +257,26 @@ describe('Capacitor Network Plugin Tests', () => {
     
     test('should adapt behavior based on connection type', async () => {
       const testCases = [
-        { type: '5g', shouldEnableHD: true, shouldPreload: true, maxConcurrent: 10 },
-        { type: '4g', shouldEnableHD: true, shouldPreload: true, maxConcurrent: 5 },
-        { type: '3g', shouldEnableHD: false, shouldPreload: false, maxConcurrent: 2 },
-        { type: '2g', shouldEnableHD: false, shouldPreload: false, maxConcurrent: 1 },
+        { type: 'wifi', shouldEnableHD: true, shouldPreload: true, maxConcurrent: 10 },
+        { type: 'cellular', shouldEnableHD: true, shouldPreload: true, maxConcurrent: 5 },
         { type: 'none', shouldEnableHD: false, shouldPreload: false, maxConcurrent: 0 }
       ];
       
       for (const testCase of testCases) {
-        (Network.getStatus as jest.Mock).mockResolvedValue({
+        const status: ConnectionStatus = {
           connected: testCase.type !== 'none',
-          connectionType: testCase.type
-        });
+          connectionType: testCase.type as ConnectionType
+        };
+        (Network.getStatus as jest.Mock).mockResolvedValue(status);
         
-        const status = await Network.getStatus();
+        const fetchedStatus = await Network.getStatus();
         
         // Simulate app logic that adapts to network conditions
-        const shouldEnableHDContent = status.connected && ['5g', '4g', 'wifi'].includes(status.connectionType);
-        const shouldPreloadContent = status.connected && ['5g', '4g', 'wifi'].includes(status.connectionType);
-        const maxConcurrentRequests = status.connected ? 
-          (status.connectionType === '5g' || status.connectionType === 'wifi' ? 10 :
-           status.connectionType === '4g' ? 5 :
-           status.connectionType === '3g' ? 2 : 1) : 0;
+        const shouldEnableHDContent = fetchedStatus.connected && ['cellular', 'wifi'].includes(fetchedStatus.connectionType);
+        const shouldPreloadContent = fetchedStatus.connected && ['cellular', 'wifi'].includes(fetchedStatus.connectionType);
+        const maxConcurrentRequests = fetchedStatus.connected ?
+          (fetchedStatus.connectionType === 'wifi' ? 10 :
+           fetchedStatus.connectionType === 'cellular' ? 5 : 1) : 0;
         
         expect(shouldEnableHDContent).toBe(testCase.shouldEnableHD);
         expect(shouldPreloadContent).toBe(testCase.shouldPreload);
@@ -347,7 +353,7 @@ describe('Capacitor Network Plugin Tests', () => {
   
   describe('Performance Tests', () => {
     test('should get network status quickly', async () => {
-      performanceMonitor.start();
+      performanceMonitor.startMonitoring();
       
       const startTime = performance.now();
       await Network.getStatus();
@@ -356,14 +362,14 @@ describe('Capacitor Network Plugin Tests', () => {
       const duration = endTime - startTime;
       expect(duration).toBeLessThan(50); // Should be very fast
       
-      performanceMonitor.stop();
+      performanceMonitor.stopMonitoring();
     });
     
     test('should handle rapid network status changes', async () => {
       const mockCallback = jest.fn();
       await Network.addListener('networkStatusChange', mockCallback);
       
-      performanceMonitor.start();
+      performanceMonitor.startMonitoring();
       
       // Simulate rapid network changes
       const changes = [
@@ -387,7 +393,7 @@ describe('Capacitor Network Plugin Tests', () => {
       expect(mockCallback).toHaveBeenCalledTimes(changes.length);
       expect(duration).toBeLessThan(100); // Should handle rapid changes efficiently
       
-      performanceMonitor.stop();
+      performanceMonitor.stopMonitoring();
     });
     
     test('should not leak memory with many listeners', async () => {
@@ -432,7 +438,7 @@ describe('Capacitor Network Plugin Tests', () => {
   
   describe('Network-Aware Features', () => {
     test('should implement smart sync based on network type', async () => {
-      const networkTypes = ['5g', '4g', '3g', '2g', 'wifi', 'none'];
+      const networkTypes: ConnectionType[] = ['wifi', 'cellular', 'none'];
       
       for (const networkType of networkTypes) {
         (Network.getStatus as jest.Mock).mockResolvedValue({
@@ -448,30 +454,21 @@ describe('Capacitor Network Plugin Tests', () => {
         
         if (status.connected) {
           switch (status.connectionType) {
-            case '5g':
             case 'wifi':
               syncStrategy = 'realtime';
               syncInterval = 1000; // 1 second
               break;
-            case '4g':
+            case 'cellular':
               syncStrategy = 'frequent';
               syncInterval = 5000; // 5 seconds
-              break;
-            case '3g':
-              syncStrategy = 'moderate';
-              syncInterval = 30000; // 30 seconds
-              break;
-            case '2g':
-              syncStrategy = 'minimal';
-              syncInterval = 300000; // 5 minutes
               break;
           }
         }
         
-        if (networkType === '5g' || networkType === 'wifi') {
+        if (networkType === 'wifi') {
           expect(syncStrategy).toBe('realtime');
           expect(syncInterval).toBe(1000);
-        } else if (networkType === '4g') {
+        } else if (networkType === 'cellular') {
           expect(syncStrategy).toBe('frequent');
           expect(syncInterval).toBe(5000);
         } else if (networkType === 'none') {
@@ -483,17 +480,15 @@ describe('Capacitor Network Plugin Tests', () => {
     
     test('should implement adaptive content loading', async () => {
       const testCases = [
-        { type: '5g', imageQuality: 'high', videoQuality: '4k', preloadCount: 10 },
-        { type: '4g', imageQuality: 'high', videoQuality: '1080p', preloadCount: 5 },
-        { type: '3g', imageQuality: 'medium', videoQuality: '720p', preloadCount: 2 },
-        { type: '2g', imageQuality: 'low', videoQuality: '480p', preloadCount: 0 },
+        { type: 'wifi', imageQuality: 'high', videoQuality: '1080p', preloadCount: 10 },
+        { type: 'cellular', imageQuality: 'high', videoQuality: '1080p', preloadCount: 5 },
         { type: 'none', imageQuality: 'cached', videoQuality: 'cached', preloadCount: 0 }
       ];
       
       for (const testCase of testCases) {
         (Network.getStatus as jest.Mock).mockResolvedValue({
           connected: testCase.type !== 'none',
-          connectionType: testCase.type
+          connectionType: testCase.type as ConnectionType
         });
         
         const status = await Network.getStatus();
@@ -505,26 +500,15 @@ describe('Capacitor Network Plugin Tests', () => {
         
         if (status.connected) {
           switch (status.connectionType) {
-            case '5g':
             case 'wifi':
               imageQuality = 'high';
-              videoQuality = status.connectionType === '5g' ? '4k' : '1080p';
+              videoQuality = '1080p';
               preloadCount = 10;
               break;
-            case '4g':
+            case 'cellular':
               imageQuality = 'high';
               videoQuality = '1080p';
               preloadCount = 5;
-              break;
-            case '3g':
-              imageQuality = 'medium';
-              videoQuality = '720p';
-              preloadCount = 2;
-              break;
-            case '2g':
-              imageQuality = 'low';
-              videoQuality = '480p';
-              preloadCount = 0;
               break;
           }
         }
