@@ -24,16 +24,14 @@ import {
   performanceTestUtils,
   devicePerformanceExpectations,
   performanceAssertions
-} from '../../../__tests__/utils/mobile-performance-framework';
+} from '@tests/utils/mobile-performance-framework';
 import {
   createMockDevice,
   createMockPlan,
   createMockUser,
   renderMobile,
-  simulateOfflineScenario,
-  simulateConflictResolution,
   offlinePerformanceHelpers
-} from '../../../__tests__/utils/mobile-test-factories';
+} from '@tests/utils/mobile-test-factories';
 import {
   simulateTouch,
   simulateSwipe,
@@ -41,7 +39,7 @@ import {
   measurePerformance,
   resetTestEnvironment,
   setDeviceProfile
-} from '../../../__tests__/utils/android-test-utils';
+} from '@tests/utils/android-test-utils';
 
 // Mock dependencies
 jest.mock('@/hooks/use-global-state');

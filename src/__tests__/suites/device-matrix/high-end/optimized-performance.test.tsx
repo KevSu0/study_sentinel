@@ -1,6 +1,7 @@
+import React from 'react';
 import { jest } from '@jest/globals';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { renderMobile } from '../../../mobile-test-factories';
+import { renderMobile } from '../../../utils/mobile-test-factories';
 
 // Mock components for high-end testing
 const MockAdvancedStudyDashboard = () => {
@@ -142,7 +143,7 @@ describe('High-End Device Optimized Performance', () => {
   describe('Maximum Performance', () => {
     it('should maintain 60fps during complex interactions', async () => {
       const { container } = renderMobile(<MockAdvancedStudyDashboard />, {
-        viewport: 'mobile',
+        viewport: 'android_phone',
         networkCondition: '5g'
       });
 

@@ -1,6 +1,7 @@
+import React from 'react';
 import { jest } from '@jest/globals';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { renderMobile } from '../../../mobile-test-factories';
+import { renderMobile } from '../../../utils/mobile-test-factories';
 
 // Mock components for mid-range testing
 const MockStudyPlan = () => {
@@ -79,7 +80,7 @@ describe('Mid-Range Device Balanced Performance', () => {
   describe('UI Responsiveness', () => {
     it('should maintain 45fps during interactions', async () => {
       const { container } = renderMobile(<MockStudyPlan />, {
-        viewport: 'mobile',
+      viewport: 'android_phone',
         networkCondition: '4g'
       });
 

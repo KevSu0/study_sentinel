@@ -2,14 +2,13 @@ import { Device } from '@capacitor/device';
 import { jest } from '@jest/globals';
 import {
   createMockDevice,
-  simulateOfflineScenario,
   offlinePerformanceHelpers
-} from '../utils/mobile-test-factories';
+} from '@tests/utils/mobile-test-factories';
 import {
   setDeviceProfile,
   measurePerformance,
   resetTestEnvironment
-} from '../utils/android-test-utils';
+} from '@tests/utils/android-test-utils';
 
 // Mock Capacitor Device plugin
 jest.mock('@capacitor/device', () => ({

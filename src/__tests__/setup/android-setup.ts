@@ -76,16 +76,11 @@ global.Capacitor = {
 Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
 
 // Mock battery API for mobile testing
-Object.defineProperty(navigator, 'getBattery', {
-  value: jest.fn().mockResolvedValue({
-    charging: true,
-    chargingTime: 3600,
-    dischargingTime: Infinity,
-    level: 0.85,
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-  }),
+Object.defineProperty(globalThis.navigator, 'getBattery', {
   configurable: true,
+  value: () => Promise.resolve({
+    charging: true, chargingTime: 0, dischargingTime: 0, level: 1
+  })
 });
 
 // Mock vibration API
