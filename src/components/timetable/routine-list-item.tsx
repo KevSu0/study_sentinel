@@ -60,15 +60,15 @@ export const RoutineListItem = memo(function RoutineListItem({
   onComplete,
 }: RoutineListItemProps) {
   const {
-    state: {activeItem},
+    state: {activeAttempt},
     startTimer,
     openRoutineLogDialog,
   } = useGlobalState();
   const [isAlertOpen, setAlertOpen] = useState(false);
 
   const isTimerActiveForThis =
-    activeItem?.type === 'routine' && activeItem.item.id === routine.id;
-  const isAnyTimerActive = !!activeItem;
+    activeAttempt?.templateId === routine.id;
+  const isAnyTimerActive = !!activeAttempt;
 
   const handleStartTimer = () => {
     if (isAnyTimerActive && !isTimerActiveForThis) {

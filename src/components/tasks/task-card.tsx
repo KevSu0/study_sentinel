@@ -82,9 +82,9 @@ export const TaskCard = React.memo(function TaskCard({
   const [isTimerOpen, setTimerOpen] = useState(false);
   const {fire} = useConfetti();
   const {state} = useGlobalState();
-  const {activeItem} = state;
+  const {activeAttempt} = state;
   const isTimerActive =
-    activeItem?.type === 'task' && activeItem.item.id === task.id;
+    activeAttempt?.templateId === task.id;
 
   const isCompleted = task.status === 'completed';
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);

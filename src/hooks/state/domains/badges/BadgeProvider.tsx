@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useCallback, useEffect, ReactNode } from 'react';
 import { Badge } from '@/lib/types';
-import { LogEvent, StudyTask, Routine } from '@/lib/types';
+import { ActivityAttempt, ActivityEvent, StudyTask, Routine } from '@/lib/types';
 import { BadgeContextType, BadgeState, BadgeActions } from './badge-state-types';
 import { useBadgeState } from './use-badge-state';
 import { useBadgeChecker, useBadgeValidation } from './use-badge-checker';
@@ -29,12 +29,18 @@ export function BadgeProvider({ children }: BadgeProviderProps) {
   /**
    * Enhanced check and award badges function
    */
-  const checkAndAwardBadges = useCallback((tasks: StudyTask[], logs: LogEvent[], routines: Routine[]) => {
+  const checkAndAwardBadges = useCallback((
+    tasks: StudyTask[],
+    attempts: ActivityAttempt[],
+    events: ActivityEvent[],
+    routines: Routine[]
+  ) => {
     const newlyEarned = badgeChecker.getNewlyEarnedBadges(
       state.allBadges,
       state.earnedBadges,
       tasks,
-      logs,
+      attempts,
+      events,
       routines
     );
 
@@ -151,9 +157,7 @@ export function useBadgeStats() {
   
   return badgeChecker.getBadgeStatistics(
     state.allBadges,
-    state.earnedBadges,
-    [], // tasks - will be provided by parent context
-    []  // logs - will be provided by parent context
+    state.earnedBadges
   );
 }
 

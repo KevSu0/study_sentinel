@@ -1,44 +1,33 @@
 import { useCallback, useMemo } from 'react';
-import { Badge, LogEvent, StudyTask, Routine } from '@/lib/types';
+import { Badge, ActivityAttempt, ActivityEvent, StudyTask, Routine } from '@/lib/types';
 import { BadgeAwardingCriteria } from './badge-state-types';
-import { checkBadge } from '@/lib/badges';
 import { getBadgeAwardingCriteria, shouldAwardBadge } from '@/utils/badge-utils';
 
 /**
  * Badge checking and awarding logic hook
- * Handles the complex logic for determining when badges should be awarded
  */
 export function useBadgeChecker() {
   /**
    * Get badge awarding criteria from current data
    */
-  const getBadgeCriteria = useCallback((logs: LogEvent[], tasks: StudyTask[], routines: Routine[]): BadgeAwardingCriteria => {
+  const getBadgeCriteria = useCallback((attempts: ActivityAttempt[], events: ActivityEvent[], tasks: StudyTask[], routines: Routine[]): BadgeAwardingCriteria => {
     const tasksMap = new Map(tasks.map(t => [t.id, t]));
     const routinesMap = new Map(routines.map(r => [r.id, r]));
     
-    const criteria = getBadgeAwardingCriteria(logs, tasksMap, routinesMap);
+    const criteria = getBadgeAwardingCriteria(attempts, events, tasksMap, routinesMap);
     
     const today = new Date();
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     
-    const todaysLogs = logs.filter(log => {
-      const logDate = new Date(parseInt(log.timestamp));
-      return logDate >= todayStart;
+    const todaysAttempts = attempts.filter(attempt => {
+      const attemptDate = new Date(attempt.createdAt);
+      return attemptDate >= todayStart;
     });
     
     return {
       ...criteria,
-      todaysLogs,
+      todaysAttempts, // Changed from todaysLogs
     };
-  }, []);
-
-  /**
-   * Check if a specific badge should be awarded
-   */
-  const checkBadgeEligibility = useCallback((badge: Badge, tasks: StudyTask[], logs: LogEvent[]): boolean => {
-    if (!badge.isEnabled) return false;
-    
-    return checkBadge(badge, { tasks, logs });
   }, []);
 
   /**
@@ -55,10 +44,11 @@ export function useBadgeChecker() {
     allBadges: Badge[],
     earnedBadges: Map<string, number>,
     tasks: StudyTask[],
-    logs: LogEvent[],
+    attempts: ActivityAttempt[],
+    events: ActivityEvent[],
     routines: Routine[]
   ): Badge[] => {
-    const criteria = getBadgeCriteria(logs, tasks, routines);
+    const criteria = getBadgeCriteria(attempts, events, tasks, routines);
     const newlyEarned: Badge[] = [];
     
     for (const badge of allBadges) {
@@ -66,17 +56,13 @@ export function useBadgeChecker() {
       if (earnedBadges.has(badge.id)) continue;
       
       // Check if badge should be awarded
-      const shouldAward = badge.conditions 
-        ? checkBadgeEligibility(badge, tasks, logs)
-        : shouldBadgeBeAwarded(badge, criteria);
-      
-      if (shouldAward) {
+      if (shouldBadgeBeAwarded(badge, criteria)) {
         newlyEarned.push(badge);
       }
     }
     
     return newlyEarned;
-  }, [getBadgeCriteria, checkBadgeEligibility, shouldBadgeBeAwarded]);
+  }, [getBadgeCriteria, shouldBadgeBeAwarded]);
 
   /**
    * Get badges earned today
@@ -87,10 +73,9 @@ export function useBadgeChecker() {
   ): Badge[] => {
     const today = new Date();
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-    const todayEnd = todayStart + 24 * 60 * 60 * 1000;
     
     const todaysBadgeIds = Array.from(earnedBadges.entries())
-      .filter(([_, timestamp]) => timestamp >= todayStart && timestamp < todayEnd)
+      .filter(([_, timestamp]) => timestamp >= todayStart)
       .map(([badgeId]) => badgeId);
     
     return allBadges.filter(badge => todaysBadgeIds.includes(badge.id));
@@ -101,9 +86,7 @@ export function useBadgeChecker() {
    */
   const getBadgeStatistics = useCallback((
     allBadges: Badge[],
-    earnedBadges: Map<string, number>,
-    tasks: StudyTask[],
-    logs: LogEvent[]
+    earnedBadges: Map<string, number>
   ) => {
     const totalBadges = allBadges.length;
     const earnedCount = earnedBadges.size;
@@ -140,39 +123,20 @@ export function useBadgeChecker() {
   const getBadgeProgress = useCallback((
     badge: Badge,
     tasks: StudyTask[],
-    logs: LogEvent[],
+    attempts: ActivityAttempt[],
+    events: ActivityEvent[],
     routines: Routine[]
   ) => {
     if (!badge.conditions || badge.conditions.length === 0) {
       return { progress: 0, total: 1, percentage: 0 };
     }
     
-    const criteria = getBadgeCriteria(logs, tasks, routines);
+    const criteria = getBadgeCriteria(attempts, events, tasks, routines);
     let completedConditions = 0;
     const totalConditions = badge.conditions.length;
     
     for (const condition of badge.conditions) {
-      let conditionMet = false;
-      
-      switch (condition.type) {
-        case 'TASKS_COMPLETED':
-          conditionMet = criteria.completedTasks >= (condition.target || 0);
-          break;
-        case 'ROUTINES_COMPLETED':
-          conditionMet = criteria.completedRoutines >= (condition.target || 0);
-          break;
-        case 'TOTAL_STUDY_TIME':
-          conditionMet = criteria.totalStudyTime >= (condition.target || 0);
-          break;
-        case 'DAY_STREAK':
-          conditionMet = criteria.consecutiveDays >= (condition.target || 0);
-          break;
-        default:
-          // For complex conditions, use the full badge checker
-          conditionMet = checkBadgeEligibility(badge, tasks, logs);
-      }
-      
-      if (conditionMet) {
+      if (shouldAwardBadge({ ...badge, conditions: [condition] }, criteria)) {
         completedConditions++;
       }
     }
@@ -182,7 +146,7 @@ export function useBadgeChecker() {
       total: totalConditions,
       percentage: totalConditions > 0 ? (completedConditions / totalConditions) * 100 : 0,
     };
-  }, [getBadgeCriteria, checkBadgeEligibility]);
+  }, [getBadgeCriteria]);
 
   /**
    * Check if any milestone badges should be awarded
@@ -191,19 +155,19 @@ export function useBadgeChecker() {
     allBadges: Badge[],
     earnedBadges: Map<string, number>,
     tasks: StudyTask[],
-    logs: LogEvent[],
+    attempts: ActivityAttempt[],
+    events: ActivityEvent[],
     routines: Routine[]
   ): Badge[] => {
     const milestoneBadges = allBadges.filter(badge => 
       badge.category === 'overall' && !earnedBadges.has(badge.id)
     );
     
-    return getNewlyEarnedBadges(milestoneBadges, earnedBadges, tasks, logs, routines);
+    return getNewlyEarnedBadges(milestoneBadges, earnedBadges, tasks, attempts, events, routines);
   }, [getNewlyEarnedBadges]);
 
   return {
     getBadgeCriteria,
-    checkBadgeEligibility,
     shouldBadgeBeAwarded,
     getNewlyEarnedBadges,
     getTodaysEarnedBadges,

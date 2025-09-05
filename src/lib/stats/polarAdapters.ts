@@ -40,7 +40,6 @@ export function daysToPolarActivities<T extends AnySession>(days: T[][]): PolarA
 }
 
 
-import type { LogEvent } from '@/lib/types';
 import { getTimeSinceStudyDayStart } from '@/lib/utils';
 
 

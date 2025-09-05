@@ -26,13 +26,13 @@ export const RoutineCard = React.memo(function RoutineCard({
   routine,
 }: RoutineCardProps) {
   const {
-    state: {activeItem},
+    state: {activeAttempt},
     startTimer,
   } = useGlobalState();
 
   const isTimerActiveForThis =
-    activeItem?.type === 'routine' && activeItem.item.id === routine.id;
-  const isAnyTimerActive = !!activeItem;
+    activeAttempt?.templateId === routine.id;
+  const isAnyTimerActive = !!activeAttempt;
 
   const handleStartTimer = () => {
     if (isAnyTimerActive) {

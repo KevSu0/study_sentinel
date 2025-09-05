@@ -56,7 +56,7 @@ export default function TimerPage() {
   useWakeLock();
   const router = useRouter();
   const { state, togglePause, completeTimer, stopTimer, toggleMute } = useGlobalState();
-  const { activeItem, timeDisplay, isOvertime, timerProgress, isMuted, starCount, showStarAnimation } = state;
+  const { activeAttempt, timeDisplay, isOvertime, timerProgress, isMuted, starCount, showStarAnimation, tasks, routines } = state;
   
   const [isStopDialogOpen, setStopDialogOpen] = useState(false);
 
@@ -79,16 +79,18 @@ export default function TimerPage() {
   };
 
   useEffect(() => {
-    if (!activeItem) {
+    if (!activeAttempt) {
       router.replace('/');
     }
-  }, [activeItem, router]);
+  }, [activeAttempt, router]);
 
-  if (!activeItem) {
+  if (!activeAttempt) {
     return null;
   }
 
   const progress = timerProgress ?? 0;
+  const item = [...tasks, ...routines].find(t => t.id === activeAttempt.templateId);
+  const title = item?.title ?? 'Studying';
 
   return (
     <div className="h-screen w-full bg-background flex flex-col p-4 overflow-hidden">
@@ -113,7 +115,7 @@ export default function TimerPage() {
 
       <main className="flex-grow flex flex-col items-center justify-center text-center relative">
         <Hourglass progress={progress} />
-        <h1 className="text-lg sm:text-2xl text-muted-foreground font-medium px-4">{activeItem.item.title}</h1>
+        <h1 className="text-lg sm:text-2xl text-muted-foreground font-medium px-4">{title}</h1>
         <p className={cn(
           "font-mono font-bold tracking-widest my-4",
           isOvertime ? 'text-destructive animate-pulse' : 'text-primary',

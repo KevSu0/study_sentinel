@@ -1,7 +1,6 @@
 
 import Dexie, { Table } from 'dexie';
-import { Badge, StudyTask, Routine, LogEvent, UserProfile } from './types';
-import { runMigration } from './migration';
+import { ActivityAttempt, ActivityEvent, Badge, StudyTask, Routine, UserProfile } from './types';
 
 // Define your interfaces based on the application's needs
 export interface Plan extends StudyTask {}
@@ -98,8 +97,9 @@ export class MyDatabase extends Dexie {
   public meta!: Table<Meta, string>;
   public outbox!: Table<Outbox, number>;
   public routines!: Table<Routine, string>;
-  public logs!: Table<LogEvent, string>;
   public badges!: Table<Badge, string>;
+  public activityAttempts!: Table<ActivityAttempt, string>;
+  public activityEvents!: Table<ActivityEvent, string>;
   
   // New tables for offline-first functionality
   public syncConflicts!: Table<SyncConflict, string>;
@@ -108,7 +108,7 @@ export class MyDatabase extends Dexie {
 
   constructor(name: string = 'MyDatabase') {
     super(name);
-    this.version(6).stores({
+    this.version(7).stores({
       plans: 'id, date, status', // Added indexes for date and status
       users: 'id',
       sessions: 'id, date',
@@ -116,8 +116,9 @@ export class MyDatabase extends Dexie {
       meta: 'key',
       outbox: '++id, timestamp, retries',
       routines: 'id',
-      logs: 'id, timestamp, type', // Added indexes for timestamp and type
       badges: 'id',
+      activityAttempts: '++id, templateId, isActive, activeKey, status',
+      activityEvents: '++id, attemptId, type, occurredAt',
       
       // New tables for offline-first functionality
       syncConflicts: 'id, tableName, recordId, createdAt',
@@ -128,7 +129,8 @@ export class MyDatabase extends Dexie {
     this.on('populate', async (tx) => {
         // This event runs only when the database is first created.
         console.log("Populating database for the first time.");
-        await runMigration(tx);
+        // The old migration logic has been removed as it's no longer needed.
+        // New installations will start with the new schema.
     });
   }
 }

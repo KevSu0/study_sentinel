@@ -35,12 +35,12 @@ export function TimerDialog({
     completeTimer,
     stopTimer,
   } = useGlobalState();
-  const {activeItem, timeDisplay, isPaused, isOvertime} = state;
+  const {activeAttempt, timeDisplay, isPaused, isOvertime, tasks, routines} = state;
 
   const [isStopDialogOpen, setStopDialogOpen] = useState(false);
 
   const isTimerForThisTask =
-    activeItem?.type === 'task' && activeItem.item.id === task.id;
+    activeAttempt?.templateId === task.id;
 
   const handleStart = () => {
     startTimer(task);
@@ -64,7 +64,10 @@ export function TimerDialog({
     onOpenChange(false);
   };
 
-  if (isOpen && activeItem && !isTimerForThisTask) {
+  if (isOpen && activeAttempt && !isTimerForThisTask) {
+    const activeItem = [...tasks, ...routines].find(t => t.id === activeAttempt.templateId);
+    const activeTitle = activeItem?.title ?? 'another task';
+
     return (
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         <DialogContent>
@@ -72,7 +75,7 @@ export function TimerDialog({
             <DialogTitle>Another Timer is Active</DialogTitle>
             <DialogDescription>
               You can only have one timer running at a time. Please complete or
-              stop the active timer for "{activeItem.item.title}" before
+              stop the active timer for "{activeTitle}" before
               starting a new one.
             </DialogDescription>
           </DialogHeader>

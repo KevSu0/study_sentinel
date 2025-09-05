@@ -67,31 +67,6 @@ export type Badge = {
   color?: string;
 };
 
-export type LogEventType =
-  | 'TASK_ADD'
-  | 'TASK_UPDATE'
-  | 'TASK_COMPLETE'
-  | 'TASK_RETRY'
-  | 'TASK_IN_PROGRESS'
-  | 'TASK_ARCHIVE'
-  | 'TASK_UNARCHIVE'
-  | 'TASK_PUSH_NEXT_DAY'
-  | 'TIMER_START'
-  | 'TIMER_PAUSE'
-  | 'TIMER_MILESTONE'
-  | 'TIMER_OVERTIME_STARTED'
-  | 'TIMER_SESSION_COMPLETE'
-  | 'TIMER_STOP'
-  | 'ROUTINE_SESSION_COMPLETE'
-  | 'ROUTINE_RETRY';
-
-export type LogEvent = {
-  id: string;
-  timestamp: string; // ISO 8601 format
-  type: LogEventType;
-  payload: Record<string, any>;
-  isUndone?: boolean;
-};
 
 export type UserProfile = {
   id?: string;
@@ -212,3 +187,52 @@ export interface Milestone extends BaseCalendarEvent {
 }
 
 export type CalendarEvent = StudyBlock | PersonalEvent | Milestone;
+
+export type ActivityAttemptStatus = 'NOT_STARTED' | 'COMPLETED' | 'CANCELLED' | 'INVALIDATED';
+
+export interface ActivityAttempt {
+  id: string; // Unique ID for the attempt
+  templateId: string; // ID of the associated StudyTask or Routine
+  ordinal: number; // Order of this attempt for a given template
+  status: ActivityAttemptStatus;
+  isActive: boolean; // True if this is the currently active attempt for its template
+  activeKey: string | null; // `${userId}|${templateId}` if isActive, null otherwise (for unique index)
+  createdAt: number; // Timestamp of creation
+  updatedAt: number; // Timestamp of last update
+  deletedAt?: number; // Timestamp if soft-deleted (INVALIDATED)
+}
+
+export type ActivityEventType =
+  | 'CREATE'
+  | 'START'
+  | 'PAUSE'
+  | 'RESUME'
+  | 'COMPLETE'
+  | 'CANCEL'
+  | 'UNDO_NORMAL'
+  | 'RETRY'
+  | 'MANUAL_LOG'
+  | 'INVALIDATE' // For soft-deleting an attempt
+  | 'PURGE_EVENTS' // For hard-deleting events of an attempt
+  | 'CONFLICT_RESOLVED'; // For when sync resolves a conflict
+
+export interface ActivityEvent {
+  id: string; // Unique ID for the event
+  attemptId: string; // ID of the ActivityAttempt this event belongs to
+  type: ActivityEventType;
+  payload: any; // Event-specific data (e.g., duration, reason, manual log fields)
+  source: 'timer' | 'manual' | 'sync' | 'system'; // Who or what generated the event
+  occurredAt: number; // Wall-clock timestamp when the event happened
+  createdAt: number; // Timestamp when the event was recorded in the system
+}
+
+export type CompletedActivity = {
+  attempt: ActivityAttempt;
+  completeEvent: ActivityEvent;
+  template: StudyTask | Routine;
+};
+
+export type HydratedActivityAttempt = ActivityAttempt & {
+    events: ActivityEvent[];
+    template?: StudyTask | Routine;
+};

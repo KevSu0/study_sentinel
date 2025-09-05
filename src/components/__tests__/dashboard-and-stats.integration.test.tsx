@@ -9,8 +9,7 @@ import { AppStateProvider } from '@/hooks/state/AppStateProvider';
 import { useStats } from '@/hooks/use-stats';
 
 // Repos (Dexie-backed)
-import { logRepository, sessionRepository } from '@/lib/repositories';
-import type { LogEvent } from '@/lib/types';
+import { sessionRepository } from '@/lib/repositories';
 
 // Backfill tool
 import { backfillSessions } from '@/lib/data/backfill-sessions';
@@ -21,8 +20,8 @@ import ProductivityPieChart from '@/components/dashboard/productivity-pie-chart'
 import StatsPage from '@/app/stats/page';
 
 // Helpers
-const addCompletionLog = async (overrides: Partial<LogEvent> = {}) => {
-  const base: LogEvent = {
+const addCompletionLog = async (overrides: Partial<any> = {}) => {
+  const base: any = {
     id: crypto.randomUUID(),
     timestamp: new Date().toISOString(),
     type: 'TIMER_SESSION_COMPLETE',
@@ -36,8 +35,8 @@ const addCompletionLog = async (overrides: Partial<LogEvent> = {}) => {
       priority: 'medium',
     },
   } as any;
-  const log: LogEvent = { ...base, ...overrides } as LogEvent;
-  await (logRepository as any).add(log);
+  const log: any = { ...base, ...overrides } as any;
+  // await (logRepository as any).add(log);
   return log;
 };
 

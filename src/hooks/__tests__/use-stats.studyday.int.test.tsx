@@ -3,15 +3,17 @@ import 'fake-indexeddb/auto';
 import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useStats } from '@/hooks/use-stats';
-import { logRepository } from '@/lib/repositories';
-import { backfillSessions } from '@/lib/data/backfill-sessions';
+import { activityRepository } from '@/lib/repositories';
+import { MOCK_ACTIVITY_ATTEMPT_1 } from '@/lib/repositories/activity-repository.test';
 
 const addLog = async (id: string, iso: string, durationSec = 600) => {
-  await (logRepository as any).add({
+  await activityRepository.createAttempt({
+    ...MOCK_ACTIVITY_ATTEMPT_1,
     id,
-    timestamp: iso,
-    type: 'TIMER_SESSION_COMPLETE',
-    payload: { title: 'Boundary', taskId: 'T1', duration: durationSec, pausedDuration: 0, pauseCount: 0, points: durationSec / 60, priority: 'medium' },
+    events: [
+      { type: 'START', timestamp: new Date(iso).getTime() },
+      { type: 'COMPLETE', timestamp: new Date(iso).getTime() + durationSec * 1000 },
+    ],
   });
 };
 
@@ -32,7 +34,6 @@ describe('useStats study-day boundary', () => {
     await act(async () => {
       // Seed a session at 03:58Z (belongs to previous study day)
       await addLog('B-1', '2025-09-01T03:58:00Z', 1200);
-      await backfillSessions();
     });
 
     const selectedDate = new Date(nowIso);

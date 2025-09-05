@@ -1,4 +1,4 @@
-import type { Badge, LogEvent, StudyTask, Routine } from '@/lib/types';
+import type { Badge, ActivityAttempt, ActivityEvent, StudyTask, Routine } from '@/lib/types';
 
 export type BadgeState = {
   allBadges: Badge[];
@@ -12,7 +12,7 @@ export type BadgeAwardingCriteria = {
   completedRoutines: number;
   totalStudyTime: number; // minutes
   consecutiveDays: number;
-  todaysLogs: LogEvent[];
+  todaysAttempts: ActivityAttempt[];
 };
 
 export type BadgeActions = {
@@ -21,7 +21,8 @@ export type BadgeActions = {
   deleteBadge: (id: string) => void | Promise<void>;
   checkAndAwardBadges: (
     tasks: StudyTask[],
-    logs: LogEvent[],
+    attempts: ActivityAttempt[],
+    events: ActivityEvent[],
     routines: Routine[]
   ) => void | Promise<void>;
   resetBadges: () => void;

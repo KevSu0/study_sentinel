@@ -1,5 +1,5 @@
 import { format, parseISO, subDays, isSameDay, set, startOfDay } from 'date-fns';
-import type { CompletedWork, StudyTask, UserProfile, Badge, LogEvent } from '@/lib/types';
+import type { CompletedWork, StudyTask, UserProfile, Badge } from '@/lib/types';
 import { getStudyDateForTimestamp, getStudyDay, getTimeSinceStudyDayStart } from '@/lib/utils';
 import { checkBadge } from '@/lib/badges';
 

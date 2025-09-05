@@ -11,7 +11,7 @@ import {
   selectAiBriefingData,
   selectAchievementProgress,
 } from '@/lib/stats/selectors';
-import type { CompletedWork, StudyTask, Badge, LogEvent, UserProfile } from '@/lib/types';
+import type { CompletedWork, StudyTask, Badge, UserProfile } from '@/lib/types';
 
 const makeWork = (overrides: Partial<CompletedWork> = {}): CompletedWork => ({
   date: '2025-01-01',
@@ -158,7 +158,7 @@ describe('selectors (Phase 1)', () => {
       { id: 'b1', name: 'One Task', description: '', category: 'overall', icon: 'Star', isCustom: false, isEnabled: true, requiredCount: 0, conditions: [ { type: 'TASKS_COMPLETED', target: 1, timeframe: 'TOTAL' } ] },
     ];
     const tasks: any[] = [ { id: 't1', date: '2025-01-01', status: 'completed' } ];
-    const logs: LogEvent[] = [] as any;
+    const logs: any[] = [] as any;
     const result = selectBadgeEligibility(badges, { tasks: tasks as any, logs });
     expect(result.map(b => b.id)).toContain('b1');
   });

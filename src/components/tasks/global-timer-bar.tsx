@@ -17,7 +17,7 @@ export function GlobalTimerBar() {
     completeTimer,
     openRoutineLogDialog
   } = useGlobalState();
-  const {activeItem, timeDisplay, isPaused, isOvertime} = state;
+  const {activeAttempt, timeDisplay, isPaused, isOvertime, tasks, routines} = state;
 
   const [isStopTaskDialogOpen, setStopTaskDialogOpen] = useState(false);
 
@@ -29,12 +29,14 @@ export function GlobalTimerBar() {
     }
   }, []);
 
-  if (!activeItem) {
+  if (!activeAttempt) {
     return null;
   }
 
-  const isTask = activeItem.type === 'task';
-  const item = activeItem.item as StudyTask | Routine;
+  const item = [...tasks, ...routines].find(t => t.id === activeAttempt.templateId);
+  if (!item) return null; // Should not happen if activeAttempt exists
+
+  const isTask = 'timerType' in item;
 
   const handleStop = () => {
     if (isTask) {

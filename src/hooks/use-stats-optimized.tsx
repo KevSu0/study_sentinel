@@ -3,9 +3,10 @@
 import { useMemo, useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { format, startOfDay, endOfDay, subDays, addDays, isToday, parseISO } from 'date-fns';
-import { getSessionDate, getStudyDateForTimestamp } from '@/lib/utils';
-import { taskRepository, logRepository } from '@/lib/repositories';
-import type { StudyTask, LogEvent } from '@/lib/types';
+import { getSessionDate } from '@/lib/utils';
+import { taskRepository } from '@/lib/repositories';
+import { db } from '@/lib/db';
+import type { StudyTask, ActivityAttempt, ActivityEvent } from '@/lib/types';
 
 // Memoized selectors for better performance
 interface OptimizedStatsData {
@@ -67,32 +68,33 @@ interface OptimizedStatsData {
   };
 }
 
+const getDurationFromEvent = (event: ActivityEvent | undefined): number => {
+    return event?.payload?.duration || 0;
+}
+
 // Memoized calculation functions
-const calculateTodaysStats = (tasks: StudyTask[], logs: LogEvent[]) => {
+const calculateTodaysStats = (tasks: StudyTask[], attempts: ActivityAttempt[], events: ActivityEvent[]) => {
   const today = format(getSessionDate(), 'yyyy-MM-dd');
   const todaysTasks = tasks.filter(task => task.date === today && task.status !== 'archived');
   const completedTasks = todaysTasks.filter(task => task.status === 'completed');
   
-  const todaysLogs = logs.filter(log => {
-    const logDate = format(parseISO(log.timestamp), 'yyyy-MM-dd');
-    return logDate === today;
+  const todaysAttempts = attempts.filter(attempt => {
+    const attemptDate = format(new Date(attempt.createdAt), 'yyyy-MM-dd');
+    return attemptDate === today && attempt.status === 'COMPLETED';
   });
+
+  const eventMap = new Map(events.map(e => [e.id, e]));
+  const todaysEvents = todaysAttempts.flatMap(a => events.filter(e => e.attemptId === a.id));
+
+  const completeEvents = todaysEvents.filter(e => e.type === 'COMPLETE');
   
-  const studyLogs = todaysLogs.filter(log => log.type === 'TASK_COMPLETE' || log.type === 'ROUTINE_SESSION_COMPLETE');
-  const totalStudyTime = studyLogs.reduce((total, log) => {
-    if (log.payload?.duration) {
-      return total + log.payload.duration;
-    }
-    return total;
-  }, 0);
+  const totalStudyTime = completeEvents.reduce((total, event) => total + getDurationFromEvent(event), 0);
   
-  // Break logs are not currently tracked in LogEventType
-  // const breakLogs = todaysLogs.filter(log => log.type === 'break_complete');
-  const totalBreakTime = 0; // Placeholder until break tracking is implemented
+  const totalBreakTime = 0; // Placeholder
   
-  const routineLogs = todaysLogs.filter(log => log.type === 'ROUTINE_SESSION_COMPLETE');
-  const totalRoutines = new Set(routineLogs.map(log => log.payload?.routineId)).size;
-  const completedRoutines = routineLogs.length;
+  const routineAttempts = todaysAttempts.filter(attempt => !attempt.templateId.startsWith('task-'));
+  const totalRoutines = new Set(routineAttempts.map(attempt => attempt.templateId)).size;
+  const completedRoutines = routineAttempts.length;
   
   const productivity = todaysTasks.length > 0 ? (completedTasks.length / todaysTasks.length) * 100 : 0;
   const focusScore = totalStudyTime > 0 ? Math.min(100, (totalStudyTime / (totalStudyTime + totalBreakTime)) * 100) : 0;
@@ -109,9 +111,9 @@ const calculateTodaysStats = (tasks: StudyTask[], logs: LogEvent[]) => {
   };
 };
 
-const calculateWeeklyStats = (tasks: StudyTask[], logs: LogEvent[]) => {
+const calculateWeeklyStats = (tasks: StudyTask[], attempts: ActivityAttempt[], events: ActivityEvent[]) => {
   const today = getSessionDate();
-  const weekStart = subDays(today, 6); // Last 7 days including today
+  const weekStart = subDays(today, 6);
   
   const weeklyTasks = tasks.filter(task => {
     if (!task.date) return false;
@@ -119,19 +121,19 @@ const calculateWeeklyStats = (tasks: StudyTask[], logs: LogEvent[]) => {
     return taskDate >= weekStart && taskDate <= today && task.status !== 'archived';
   });
   
-  const weeklyLogs = logs.filter(log => {
-    const logDate = parseISO(log.timestamp);
-    return logDate >= weekStart && logDate <= today;
+  const weeklyAttempts = attempts.filter(attempt => {
+    const attemptDate = new Date(attempt.createdAt);
+    return attemptDate >= weekStart && attemptDate <= today && attempt.status === 'COMPLETED';
   });
+
+  const weeklyAttemptIds = new Set(weeklyAttempts.map(a => a.id));
+  const weeklyEvents = events.filter(e => weeklyAttemptIds.has(e.attemptId));
+  const completeEvents = weeklyEvents.filter(e => e.type === 'COMPLETE');
   
-  const studyLogs = weeklyLogs.filter(log => log.type === 'TASK_COMPLETE' || log.type === 'ROUTINE_SESSION_COMPLETE');
-  const totalStudyTime = studyLogs.reduce((total, log) => {
-    return total + (log.payload?.duration || 0);
-  }, 0);
+  const totalStudyTime = completeEvents.reduce((total, event) => total + getDurationFromEvent(event), 0);
   
   const completedTasks = weeklyTasks.filter(task => task.status === 'completed');
   
-  // Daily breakdown
   const dailyBreakdown = [];
   for (let i = 0; i < 7; i++) {
     const date = subDays(today, 6 - i);
@@ -139,14 +141,11 @@ const calculateWeeklyStats = (tasks: StudyTask[], logs: LogEvent[]) => {
     
     const dayTasks = weeklyTasks.filter(task => task.date === dateStr);
     const dayCompletedTasks = dayTasks.filter(task => task.status === 'completed');
-    const dayLogs = weeklyLogs.filter(log => {
-      const logDate = format(parseISO(log.timestamp), 'yyyy-MM-dd');
-      return logDate === dateStr;
-    });
-    
-    const dayStudyTime = dayLogs
-      .filter(log => log.type === 'TASK_COMPLETE' || log.type === 'ROUTINE_SESSION_COMPLETE')
-      .reduce((total, log) => total + (log.payload?.duration || 0), 0);
+    const dayAttempts = weeklyAttempts.filter(attempt => format(new Date(attempt.createdAt), 'yyyy-MM-dd') === dateStr);
+    const dayAttemptIds = new Set(dayAttempts.map(a => a.id));
+    const dayCompleteEvents = events.filter(e => dayAttemptIds.has(e.attemptId) && e.type === 'COMPLETE');
+
+    const dayStudyTime = dayCompleteEvents.reduce((total, event) => total + getDurationFromEvent(event), 0);
     
     const productivity = dayTasks.length > 0 ? (dayCompletedTasks.length / dayTasks.length) * 100 : 0;
     
@@ -161,7 +160,6 @@ const calculateWeeklyStats = (tasks: StudyTask[], logs: LogEvent[]) => {
   
   const averageProductivity = dailyBreakdown.reduce((sum, day) => sum + day.productivity, 0) / 7;
   
-  // Calculate streak
   let streakDays = 0;
   for (let i = dailyBreakdown.length - 1; i >= 0; i--) {
     if (dailyBreakdown[i].completedTasks > 0) {
@@ -181,9 +179,9 @@ const calculateWeeklyStats = (tasks: StudyTask[], logs: LogEvent[]) => {
   };
 };
 
-const calculateMonthlyStats = (tasks: StudyTask[], logs: LogEvent[]) => {
+const calculateMonthlyStats = (tasks: StudyTask[], attempts: ActivityAttempt[], events: ActivityEvent[]) => {
   const today = getSessionDate();
-  const monthStart = subDays(today, 29); // Last 30 days
+  const monthStart = subDays(today, 29);
   
   const monthlyTasks = tasks.filter(task => {
     if (!task.date) return false;
@@ -191,20 +189,20 @@ const calculateMonthlyStats = (tasks: StudyTask[], logs: LogEvent[]) => {
     return taskDate >= monthStart && taskDate <= today && task.status !== 'archived';
   });
   
-  const monthlyLogs = logs.filter(log => {
-    const logDate = parseISO(log.timestamp);
-    return logDate >= monthStart && logDate <= today;
+  const monthlyAttempts = attempts.filter(attempt => {
+    const attemptDate = new Date(attempt.createdAt);
+    return attemptDate >= monthStart && attemptDate <= today && attempt.status === 'COMPLETED';
   });
-  
-  const studyLogs = monthlyLogs.filter(log => log.type === 'TASK_COMPLETE' || log.type === 'ROUTINE_SESSION_COMPLETE');
-  const totalStudyTime = studyLogs.reduce((total, log) => {
-    return total + (log.payload?.duration || 0);
-  }, 0);
+
+  const monthlyAttemptIds = new Set(monthlyAttempts.map(a => a.id));
+  const monthlyEvents = events.filter(e => monthlyAttemptIds.has(e.attemptId));
+  const completeEvents = monthlyEvents.filter(e => e.type === 'COMPLETE');
+
+  const totalStudyTime = completeEvents.reduce((total, event) => total + getDurationFromEvent(event), 0);
   
   const completedTasks = monthlyTasks.filter(task => task.status === 'completed');
   const averageProductivity = monthlyTasks.length > 0 ? (completedTasks.length / monthlyTasks.length) * 100 : 0;
   
-  // Find best and worst days
   const dailyStats = new Map<string, { studyTime: number; productivity: number }>();
   
   for (let i = 0; i < 30; i++) {
@@ -213,14 +211,11 @@ const calculateMonthlyStats = (tasks: StudyTask[], logs: LogEvent[]) => {
     
     const dayTasks = monthlyTasks.filter(task => task.date === dateStr);
     const dayCompletedTasks = dayTasks.filter(task => task.status === 'completed');
-    const dayLogs = monthlyLogs.filter(log => {
-      const logDate = format(parseISO(log.timestamp), 'yyyy-MM-dd');
-      return logDate === dateStr;
-    });
-    
-    const dayStudyTime = dayLogs
-      .filter(log => log.type === 'TASK_COMPLETE' || log.type === 'ROUTINE_SESSION_COMPLETE')
-      .reduce((total, log) => total + (log.payload?.duration || 0), 0);
+    const dayAttempts = monthlyAttempts.filter(attempt => format(new Date(attempt.createdAt), 'yyyy-MM-dd') === dateStr);
+    const dayAttemptIds = new Set(dayAttempts.map(a => a.id));
+    const dayCompleteEvents = events.filter(e => dayAttemptIds.has(e.attemptId) && e.type === 'COMPLETE');
+
+    const dayStudyTime = dayCompleteEvents.reduce((total, event) => total + getDurationFromEvent(event), 0);
     
     const productivity = dayTasks.length > 0 ? (dayCompletedTasks.length / dayTasks.length) * 100 : 0;
     
@@ -253,30 +248,30 @@ const calculateMonthlyStats = (tasks: StudyTask[], logs: LogEvent[]) => {
   };
 };
 
-const calculateProductivityTrends = (logs: LogEvent[]) => {
+const calculateProductivityTrends = (attempts: ActivityAttempt[], events: ActivityEvent[]) => {
   const today = getSessionDate();
   const weekStart = subDays(today, 6);
   
-  const weeklyLogs = logs.filter(log => {
-    const logDate = parseISO(log.timestamp);
-    return logDate >= weekStart && logDate <= today;
+  const weeklyAttempts = attempts.filter(attempt => {
+    const attemptDate = new Date(attempt.createdAt);
+    return attemptDate >= weekStart && attemptDate <= today && attempt.status === 'COMPLETED';
   });
+
+  const weeklyAttemptIds = new Set(weeklyAttempts.map(a => a.id));
+  const weeklyEvents = events.filter(e => weeklyAttemptIds.has(e.attemptId));
   
-  // Hourly breakdown
   const hourlyStats = new Map<number, { studyTime: number; sessions: number }>();
   
   for (let hour = 0; hour < 24; hour++) {
     hourlyStats.set(hour, { studyTime: 0, sessions: 0 });
   }
   
-  weeklyLogs
-    .filter(log => log.type === 'TASK_COMPLETE' || log.type === 'ROUTINE_SESSION_COMPLETE')
-    .forEach(log => {
-      const hour = parseISO(log.timestamp).getHours();
+  weeklyEvents.filter(e => e.type === 'COMPLETE').forEach(event => {
+      const hour = new Date(event.occurredAt).getHours();
       const stats = hourlyStats.get(hour)!;
-      stats.studyTime += log.payload?.duration || 0;
+      stats.studyTime += getDurationFromEvent(event);
       stats.sessions += 1;
-    });
+  });
   
   const hourlyBreakdown = Array.from(hourlyStats.entries()).map(([hour, stats]) => ({
     hour,
@@ -284,34 +279,27 @@ const calculateProductivityTrends = (logs: LogEvent[]) => {
     productivity: stats.sessions > 0 ? stats.studyTime / stats.sessions : 0,
   }));
   
-  // Find peak hours (top 3 hours with most study time)
   const peakHours = hourlyBreakdown
     .sort((a, b) => b.studyTime - a.studyTime)
     .slice(0, 3)
     .map(item => item.hour);
   
-  // Calculate weekly trend
-  const firstHalf = weeklyLogs.filter(log => {
-    const logDate = parseISO(log.timestamp);
-    return logDate >= weekStart && logDate <= addDays(weekStart, 2);
+  const firstHalfEvents = weeklyEvents.filter(e => {
+    const eventDate = new Date(e.occurredAt);
+    return eventDate >= weekStart && eventDate <= addDays(weekStart, 2) && e.type === 'COMPLETE';
   });
   
-  const secondHalf = weeklyLogs.filter(log => {
-    const logDate = parseISO(log.timestamp);
-    return logDate >= addDays(weekStart, 4) && logDate <= today;
+  const secondHalfEvents = weeklyEvents.filter(e => {
+    const eventDate = new Date(e.occurredAt);
+    return eventDate >= addDays(weekStart, 4) && eventDate <= today && e.type === 'COMPLETE';
   });
   
-  const firstHalfTime = firstHalf
-    .filter(log => log.type === 'TASK_COMPLETE' || log.type === 'ROUTINE_SESSION_COMPLETE')
-    .reduce((total, log) => total + (log.payload?.duration || 0), 0);
-  
-  const secondHalfTime = secondHalf
-    .filter(log => log.type === 'TASK_COMPLETE' || log.type === 'ROUTINE_SESSION_COMPLETE')
-    .reduce((total, log) => total + (log.payload?.duration || 0), 0);
+  const firstHalfTime = firstHalfEvents.reduce((total, event) => total + getDurationFromEvent(event), 0);
+  const secondHalfTime = secondHalfEvents.reduce((total, event) => total + getDurationFromEvent(event), 0);
   
   let weeklyTrend: 'improving' | 'declining' | 'stable' = 'stable';
   const difference = secondHalfTime - firstHalfTime;
-  const threshold = Math.max(firstHalfTime * 0.1, 300); // 10% or 5 minutes
+  const threshold = Math.max(firstHalfTime * 0.1, 300);
   
   if (difference > threshold) {
     weeklyTrend = 'improving';
@@ -328,26 +316,25 @@ const calculateProductivityTrends = (logs: LogEvent[]) => {
 
 // Main optimized hook
 export function useOptimizedStats(): OptimizedStatsData {
-  // Use live queries for reactive data
   const tasks = useLiveQuery(() => taskRepository.getAll()) || [];
-  const logs = useLiveQuery(() => logRepository.getAll()) || [];
+  const attempts = useLiveQuery(() => db.activityAttempts.toArray()) || [];
+  const events = useLiveQuery(() => db.activityEvents.toArray()) || [];
   
-  // Memoized calculations
   const todaysStats = useMemo(() => {
-    return calculateTodaysStats(tasks, logs);
-  }, [tasks, logs]);
+    return calculateTodaysStats(tasks, attempts, events);
+  }, [tasks, attempts, events]);
   
   const weeklyStats = useMemo(() => {
-    return calculateWeeklyStats(tasks, logs);
-  }, [tasks, logs]);
+    return calculateWeeklyStats(tasks, attempts, events);
+  }, [tasks, attempts, events]);
   
   const monthlyStats = useMemo(() => {
-    return calculateMonthlyStats(tasks, logs);
-  }, [tasks, logs]);
+    return calculateMonthlyStats(tasks, attempts, events);
+  }, [tasks, attempts, events]);
   
   const productivityTrends = useMemo(() => {
-    return calculateProductivityTrends(logs);
-  }, [logs]);
+    return calculateProductivityTrends(attempts, events);
+  }, [attempts, events]);
   
   return useMemo(() => ({
     todaysStats,
@@ -357,7 +344,7 @@ export function useOptimizedStats(): OptimizedStatsData {
   }), [todaysStats, weeklyStats, monthlyStats, productivityTrends]);
 }
 
-// Selector hooks for specific stats to prevent unnecessary re-renders
+// Selector hooks for specific stats
 export function useTodaysStatsSelector() {
   const { todaysStats } = useOptimizedStats();
   return todaysStats;
@@ -382,14 +369,12 @@ export function useProductivityTrendsSelector() {
 export function useStatsActions() {
   return useMemo(() => ({
     refreshStats: useCallback(() => {
-      // Force refresh by invalidating queries
-      taskRepository.getAll();
-      logRepository.getAll();
+      // This is now handled by dexie-react-hooks, but we can keep it for manual refresh if needed
     }, []),
     
     getStatsForDate: useCallback((date: Date) => {
-      const dateStr = format(date, 'yyyy-MM-dd');
-      // Implementation for getting stats for specific date
+      // This would require a more complex, non-reactive query.
+      // Placeholder implementation.
       return {
         totalTasks: 0,
         completedTasks: 0,
@@ -399,7 +384,8 @@ export function useStatsActions() {
     }, []),
     
     getStatsForDateRange: useCallback((startDate: Date, endDate: Date) => {
-      // Implementation for getting stats for date range
+      // This would require a more complex, non-reactive query.
+      // Placeholder implementation.
       return {
         totalTasks: 0,
         completedTasks: 0,

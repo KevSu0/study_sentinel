@@ -57,14 +57,6 @@ jest.mock('@/lib/repositories', () => ({
     delete: jest.fn(() => Promise.resolve()),
     getById: jest.fn(() => Promise.resolve(null)),
   })),
-  createLogRepository: jest.fn(() => ({
-    getAll: jest.fn(() => Promise.resolve([])),
-    add: jest.fn(() => Promise.resolve()),
-    update: jest.fn(() => Promise.resolve()),
-    delete: jest.fn(() => Promise.resolve()),
-    getById: jest.fn(() => Promise.resolve(null)),
-    getLogsByDate: jest.fn(() => Promise.resolve([])),
-  })),
   createBadgeRepository: jest.fn(() => ({
     getAll: jest.fn(() => Promise.resolve([])),
     add: jest.fn(() => Promise.resolve()),
@@ -195,12 +187,11 @@ describe('useGlobalState', () => {
       expect(result.current.state).toMatchObject({
         tasks: expect.any(Array),
         routines: expect.any(Array),
-        logs: expect.any(Array),
         allBadges: expect.any(Array),
         earnedBadges: expect.any(Map),
         profile: expect.any(Object),
         soundSettings: expect.any(Object),
-        activeItem: null,
+        activeAttempt: null,
         isPaused: true,
         isMuted: false,
         routineLogDialog: expect.objectContaining({
@@ -374,8 +365,8 @@ describe('useGlobalState', () => {
         await result.current.startTimer(task);
       });
 
-      expect(result.current.state.activeItem).toMatchObject({
-        id: task.id,
+      expect(result.current.state.activeAttempt).toMatchObject({
+        itemId: task.id,
         title: task.title,
       });
     });
@@ -425,7 +416,7 @@ describe('useGlobalState', () => {
         await result.current.stopTimer('test');
       });
 
-      expect(result.current.state.activeItem).toBe(null);
+      expect(result.current.state.activeAttempt).toBe(null);
     });
 
     it('should complete timer', async () => {
@@ -446,7 +437,7 @@ describe('useGlobalState', () => {
         await result.current.completeTimer();
       });
 
-      expect(result.current.state.activeItem).toBe(null);
+      expect(result.current.state.activeAttempt).toBe(null);
       expect(result.current.state.tasks[0].status).toBe('completed');
     });
   });
@@ -712,74 +703,6 @@ describe('useGlobalState', () => {
     });
   });
 
-  describe('Log Management', () => {
-    it('should add a log entry', async () => {
-      const { result } = renderHook(() => useGlobalState(), { wrapper });
-
-      await act(async () => {
-        await result.current.addLog('TASK_COMPLETE', {
-          task: { id: 'test-task', title: 'Test Task' },
-          duration: 1500000,
-          points: 25,
-        });
-      });
-
-      expect(result.current.state.logs).toHaveLength(1);
-      expect(result.current.state.logs[0]).toMatchObject({
-        type: 'TASK_COMPLETE',
-        payload: expect.objectContaining({
-          task: expect.objectContaining({ id: 'test-task' }),
-          duration: 1500000,
-          points: 25,
-        }),
-      });
-    });
-
-    it('should remove a log entry', async () => {
-      const { result } = renderHook(() => useGlobalState(), { wrapper });
-
-      // Add a log first
-      await act(async () => {
-        await result.current.addLog('TASK_COMPLETE', {
-          task: { id: 'test-task', title: 'Test Task' },
-        });
-      });
-
-      const logId = result.current.state.logs[0].id;
-
-      await act(async () => {
-        await result.current.removeLog(logId);
-      });
-
-      expect(result.current.state.logs).toHaveLength(0);
-    });
-
-    it('should update a log entry', async () => {
-      const { result } = renderHook(() => useGlobalState(), { wrapper });
-
-      // Add a log first
-      await act(async () => {
-        await result.current.addLog('TASK_COMPLETE', {
-          task: { id: 'test-task', title: 'Original Task' },
-        });
-      });
-
-      const log = result.current.state.logs[0];
-      const updatedLog = {
-        ...log,
-        payload: {
-          ...log.payload,
-          task: { ...log.payload.task, title: 'Updated Task' },
-        },
-      };
-
-      await act(async () => {
-        await result.current.updateLog(log.id, updatedLog);
-      });
-
-      expect(result.current.state.logs[0].payload.task.title).toBe('Updated Task');
-    });
-  });
 
   describe('Manual Completion', () => {
     it('should manually complete a task', async () => {
@@ -887,87 +810,12 @@ describe('useGlobalState', () => {
       // For tasks, retry should unarchive the task (change status back to todo)
       expect(result.current.state.tasks.length).toBe(1); // Same task, status changed
       expect(result.current.state.tasks[0].status).toBe('todo');
-      expect(result.current.state.logs.some(log => log.type === 'TASK_RETRY')).toBe(true);
-    });
-
-    it('should retry a completed routine', async () => {
-      const { result } = renderHook(() => useGlobalState(), { wrapper });
-
-      // Get current day to ensure routine is scheduled for today
-      const today = new Date();
-      const todayNum = today.getDay();
-      
-      // Add a routine scheduled for today
-      await act(async () => {
-        await result.current.addRoutine({
-          title: 'Test Routine',
-          description: 'Test Description',
-          priority: 'medium' as const,
-          days: [todayNum], // Schedule for today
-          startTime: '08:00',
-          endTime: '09:00',
-        });
-      });
-
-      // Wait for routine to be added
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      });
-
-      expect(result.current.state.routines.length).toBeGreaterThan(0);
-      const routine = result.current.state.routines[0];
-      
-      // Add a completion log for today to simulate the routine being completed
-      const todayStr = format(new Date(), 'yyyy-MM-dd');
-      const completionTimestamp = `${todayStr}T10:00:00.000Z`;
-      
-      await act(async () => {
-        await result.current.addLog('ROUTINE_SESSION_COMPLETE', {
-          routineId: routine.id,
-          title: routine.title,
-          duration: 30 * 60, // 30 minutes in seconds
-          points: 5,
-          priority: routine.priority,
-          studyLog: 'Completed routine',
-          timestamp: completionTimestamp
-        });
-      });
-
-      // Wait for activity to be processed
-      await waitFor(() => {
-        const routineActivity = result.current.state.todaysActivity.find(
-          activity => activity.type === 'ROUTINE_COMPLETE' && 
-          activity.data?.routine?.id === routine.id &&
-          !activity.data?.isUndone
-        );
-        expect(routineActivity).toBeDefined();
-      });
-
-      // Find the routine completion activity from today's activity
-      const routineActivity = result.current.state.todaysActivity.find(
-        activity => activity.type === 'ROUTINE_COMPLETE' && 
-        activity.data?.routine?.id === routine.id &&
-        !activity.data?.isUndone
+      const retry = result.current.state.todaysActivity.find(
+        (a: any) => a.attempt.status === 'COMPLETED' && a.attempt.events.some((e: any) => e.type === 'RETRY')
       );
-
-      expect(routineActivity).toBeDefined();
-      expect(routineActivity!.data.isUndone).toBe(false);
-
-      await act(async () => {
-        await result.current.retryItem(routineActivity!);
-      });
-
-      // Wait for retry log to be added
-      await waitFor(() => {
-        const retryLog = result.current.state.logs.find(
-          log => log.type === 'ROUTINE_RETRY' && log.payload.routineId === routine.id
-        );
-        expect(retryLog).toBeDefined();
-      });
-
-      // For routines, retry doesn't add a new routine, just logs the retry
-      expect(result.current.state.routines.length).toBe(1);
+      expect(retry).toBeDefined();
     });
+
   });
 
   describe('LocalStorage Integration', () => {
@@ -1037,7 +885,7 @@ describe('useGlobalState', () => {
       });
 
       // Should not crash and state should remain consistent
-      expect(result.current.state.activeItem).toBe(null);
+      expect(result.current.state.activeAttempt).toBe(null);
       expect(result.current.state.isPaused).toBe(true);
     });
   });
@@ -1087,9 +935,6 @@ describe('useGlobalState', () => {
         'closeRoutineLogDialog',
         'setSoundSettings',
         'toggleMute',
-        'addLog',
-        'removeLog',
-        'updateLog',
         'retryItem',
         'openQuickStart',
         'closeQuickStart',

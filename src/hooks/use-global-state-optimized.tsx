@@ -13,7 +13,6 @@ import React, {
 import {
   type StudyTask,
   type Routine,
-  type LogEvent,
   type UserProfile,
   type Badge,
   type ActiveTimerItem,
@@ -28,7 +27,7 @@ import toast from 'react-hot-toast';
 import { SYSTEM_BADGES, checkBadge } from '@/lib/badges';
 import { getSessionDate, getStudyDateForTimestamp, getStudyDay, generateShortId } from '@/lib/utils';
 import { motivationalQuotes, getRandomMotivationalMessage } from '@/lib/motivation';
-import { taskRepository, profileRepository, routineRepository, logRepository, badgeRepository, sessionRepository } from '@/lib/repositories';
+import { taskRepository, profileRepository, routineRepository, badgeRepository, sessionRepository } from '@/lib/repositories';
 import { SyncEngine } from '@/lib/sync';
 
 // Performance optimized types and interfaces

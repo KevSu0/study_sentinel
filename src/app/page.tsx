@@ -74,7 +74,7 @@ function SortableWidget({
 }
 
 export default function DashboardPage() {
-  const {state, updateTask, updateLog, removeLog, retryItem} = useGlobalState();
+  const {state, updateTask, retryItem} = useGlobalState();
   const {layout, setLayout, isLoaded: layoutLoaded} = useDashboardLayout();
 
   const [isCustomizeOpen, setCustomizeOpen] = React.useState(false);
@@ -106,14 +106,14 @@ export default function DashboardPage() {
   };
 
   const handleHardUndo = (item: ActivityFeedItem) => {
-    if (item.type === 'ROUTINE_COMPLETE') {
-      removeLog(item.data.log.id);
-      toast.error('Routine completion permanently removed.');
-    } else if (item.type === 'TASK_COMPLETE' && item.data.log) {
-      removeLog(item.data.log.id);
-      updateTask({ ...item.data.task, status: 'todo' });
-      toast.error('Task completion has been permanently reset.');
-    }
+    // if (item.type === 'ROUTINE_COMPLETE') {
+    //   removeLog(item.data.log.id);
+    //   toast.error('Routine completion permanently removed.');
+    // } else if (item.type === 'TASK_COMPLETE' && item.data.log) {
+    //   removeLog(item.data.log.id);
+    //   updateTask({ ...item.data.task, status: 'todo' });
+    //   toast.error('Task completion has been permanently reset.');
+    // }
   };
 
   const handleUpdateTask = (task: StudyTask) => {
@@ -147,7 +147,7 @@ export default function DashboardPage() {
 
   const widgetPropsMap: Record<DashboardWidgetType, any> = {
     daily_briefing: {
-        previousDayLogs: state.previousDayLogs,
+        todaysCompletedWork: state.todaysCompletedWork,
         profile: state.profile,
         tasks: state.tasks,
         routines: state.routines

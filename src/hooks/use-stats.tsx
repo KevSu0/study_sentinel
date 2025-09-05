@@ -11,7 +11,6 @@ import {
   statsDailyRepository,
   badgeRepository,
 } from '@/lib/repositories';
-import { logRepository } from '@/lib/repositories/log.repository';
 import { buildSessionFromLog } from '@/lib/data/backfill-sessions';
 import type {
   StudyTask,
@@ -19,7 +18,6 @@ import type {
   Badge,
   BadgeCategory,
   UserProfile,
-  LogEvent,
 } from '@/lib/types';
 import { RoutineStat } from '@/components/stats/routine-stats-list';
 import type { Activity } from '@/components/stats/daily-activity-timeline';

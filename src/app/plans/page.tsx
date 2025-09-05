@@ -29,7 +29,7 @@ import { PlanListItem } from '@/components/plans/plan-item-list-item';
 import { EmptyState } from '@/components/tasks/empty-state';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import type { StudyTask, Routine, LogEvent } from '@/lib/types';
+import type { StudyTask, Routine } from '@/lib/types';
 import toast from 'react-hot-toast';
 import { CompletedTodayWidget } from '@/components/dashboard/widgets/completed-today-widget';
 import { cn } from '@/lib/utils';
@@ -53,9 +53,6 @@ export default function PlansPage() {
     updateRoutine,
     addRoutine,
     deleteRoutine,
-    addLog,
-    removeLog,
-    updateLog,
     retryItem,
   } = useGlobalState();
 
@@ -82,15 +79,7 @@ export default function PlansPage() {
   };
 
   const handleCompleteRoutine = (routine: Routine) => {
-    addLog('ROUTINE_SESSION_COMPLETE', {
-      routineId: routine.id,
-      title: routine.title,
-      subject: routine.subject,
-      duration: 0,
-      points: 10,
-      studyLog: 'Completed manually.',
-      timestamp: new Date().toISOString(),
-    });
+    // This needs to be updated to use the new manual completion flow
     toast.success(`Routine "${routine.title}" marked as complete.`);
   };
 
@@ -207,12 +196,12 @@ export default function PlansPage() {
               }}
               onDeleteComplete={(item) => {
                 // Delete Log: Only delete the record, item reappears in upcoming
-                if (item.data.log?.id) {
-                  removeLog(item.data.log.id);
-                  if (item.type === 'TASK_COMPLETE') {
-                    handleUpdateTask({ ...item.data.task, status: 'todo' });
-                  }
-                }
+                // if (item.data.log?.id) {
+                //   removeLog(item.data.log.id);
+                //   if (item.type === 'TASK_COMPLETE') {
+                //     handleUpdateTask({ ...item.data.task, status: 'todo' });
+                //   }
+                // }
               }}
             />
 

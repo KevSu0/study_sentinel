@@ -1,6 +1,5 @@
 import Dexie, { Table } from 'dexie';
 import { db, type Session } from '../db';
-import type { LogEvent } from '../types';
 import { format } from 'date-fns';
 import { getStudyDateForTimestamp } from '../utils';
 

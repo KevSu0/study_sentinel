@@ -31,7 +31,7 @@ const getIconForLogType = (type: string) => {
 
 export default function LogPage() {
   const {state} = useGlobalState();
-  const {logs, isLoaded} = state;
+  const {todaysActivity, isLoaded} = state;
 
   return (
     <div className="flex flex-col h-full">
@@ -49,28 +49,25 @@ export default function LogPage() {
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-20 w-full" />
           </div>
-        ) : logs.length > 0 ? (
+        ) : todaysActivity.length > 0 ? (
           <div className="space-y-4">
-            {logs
-              .slice()
-              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-              .map(log => (
-                <Card key={log.id} className="bg-card/70" data-testid="log-item">
+            {todaysActivity.map((item, index) => (
+                <Card key={`${item.timestamp}-${index}`} className="bg-card/70" data-testid="log-item">
                   <CardContent className="p-4 flex items-start gap-4">
                     <span className="text-xl mt-1">
-                      {getIconForLogType(log.type)}
+                      {getIconForLogType(item.type)}
                     </span>
                     <div className="flex-grow">
                       <div className="flex justify-between items-center">
                         <p className="font-semibold text-primary/90">
-                          {log.type.replace(/_/g, ' ')}
+                          {item.type.replace(/_/g, ' ')}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {format(parseISO(log.timestamp), 'h:mm:ss a')}
+                          {format(parseISO(item.timestamp), 'h:mm:ss a')}
                         </p>
                       </div>
                       <pre className="text-xs text-muted-foreground mt-1 bg-muted/50 p-2 rounded-md overflow-x-auto">
-                        <code>{JSON.stringify(log.payload, null, 2)}</code>
+                        <code>{JSON.stringify(item.data, null, 2)}</code>
                       </pre>
                     </div>
                   </CardContent>

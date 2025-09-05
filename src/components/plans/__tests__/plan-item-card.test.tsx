@@ -3,7 +3,7 @@ import {render, screen, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {PlanItemCard} from '../plan-item-card';
 import {useGlobalState} from '@/hooks/use-global-state';
-import {StudyTask, Routine, LogEvent} from '@/lib/types';
+import {StudyTask, Routine} from '@/lib/types';
 
 // Mock dependencies
 jest.mock('@/hooks/use-global-state');
@@ -41,7 +41,7 @@ const mockRoutine: Routine = {
   createdAt: Date.now(),
 };
 
-const mockCompletedLog: LogEvent & { title: string } = {
+const mockCompletedLog: any & { title: string } = {
     id: 'log1',
     type: 'ROUTINE_SESSION_COMPLETE',
     timestamp: new Date().toISOString(),

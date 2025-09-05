@@ -1,8 +1,7 @@
 import { taskRepository } from '@/lib/repositories/task.repository';
 import { routineRepository } from '@/lib/repositories/routine.repository';
-import { logRepository } from '@/lib/repositories/log.repository';
 import { sessionRepository } from '@/lib/repositories/session.repository';
-import { StudyTask, Routine, LogEvent } from '@/lib/types';
+import { StudyTask, Routine } from '@/lib/types';
 import { Session } from '@/lib/db';
 
   const today = new Date().toISOString().split('T')[0];
@@ -75,8 +74,8 @@ import { Session } from '@/lib/db';
     }
   ];
 
-function generateSampleSessionData(): { logs: LogEvent[], sessions: Session[] } {
-  const logs: LogEvent[] = [];
+function generateSampleSessionData(): { logs: any[], sessions: Session[] } {
+  const logs: any[] = [];
   const sessions: Session[] = [];
   const today = new Date().toISOString().split('T')[0];
 
@@ -173,7 +172,7 @@ export async function populateSampleData(): Promise<void> {
     const { logs, sessions } = generateSampleSessionData();
     
     for (const log of logs) {
-      await logRepository.add(log);
+      // await logRepository.add(log);
     }
     
     for (const session of sessions) {
@@ -197,7 +196,7 @@ export async function clearSampleData(): Promise<void> {
     // to add specific identifiers to track sample data
     const tasks = await taskRepository.getAll();
     const routines = await routineRepository.getAll();
-    const logs = await logRepository.getAll();
+    const logs = [] as any[]; // await logRepository.getAll();
     const sessions = await sessionRepository.getAll();
 
     // Clear all data (be careful with this in production!)
@@ -208,7 +207,7 @@ export async function clearSampleData(): Promise<void> {
       await routineRepository.delete(routine.id!);
     }
     for (const log of logs) {
-      await logRepository.delete(log.id);
+      // await logRepository.delete(log.id);
     }
     for (const session of sessions) {
       await sessionRepository.delete(session.id);

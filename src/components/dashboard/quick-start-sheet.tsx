@@ -23,6 +23,8 @@ interface QuickStartItemProps {
     isCompleted: boolean;
 }
 
+type CompletedActivity = Extract<ActivityFeedItem, { attempt: { status: 'COMPLETED' } }>;
+
 const QuickStartItem = ({ item, onStart, isAnyTimerActive, isCompleted }: QuickStartItemProps) => {
     const isTask = 'timerType' in item;
     return (
@@ -69,7 +71,7 @@ const QuickStartItem = ({ item, onStart, isAnyTimerActive, isCompleted }: QuickS
 
 export function QuickStartSheet() {
     const { state, closeQuickStart, startTimer } = useGlobalState();
-    const { quickStartOpen, tasks, routines, activeItem, todaysActivity } = state;
+    const { quickStartOpen, tasks, routines, activeAttempt, todaysActivity } = state;
 
     const { todaysItems, completedItemIds } = useMemo(() => {
         const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -88,14 +90,11 @@ export function QuickStartSheet() {
         });
 
         const completedIds = new Set(
-            todaysActivity.map(activity => {
-                if (activity.type === 'TASK_COMPLETE') return activity.data?.task?.id;
-                if (activity.type === 'ROUTINE_COMPLETE') {
-                    // Handle different possible data structures for routine completion
-                    return activity.data?.payload?.routineId || activity.data?.routineId;
-                }
-                return null;
-            }).filter(Boolean)
+            todaysActivity
+                .filter((activity): activity is CompletedActivity =>
+                    'attempt' in activity && activity.attempt.status === 'COMPLETED'
+                )
+                .map(activity => activity.template.id)
         );
 
         return { todaysItems: allTodaysItems, completedItemIds: completedIds };
@@ -124,7 +123,7 @@ export function QuickStartSheet() {
                                     key={item.id} 
                                     item={item} 
                                     onStart={handleStartTimer}
-                                    isAnyTimerActive={!!activeItem}
+                                    isAnyTimerActive={!!activeAttempt}
                                     isCompleted={completedItemIds.has(item.id)}
                                 />
                             ))

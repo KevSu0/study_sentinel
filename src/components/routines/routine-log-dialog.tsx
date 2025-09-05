@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 
 export function RoutineLogDialog() {
   const { state, closeRoutineLogDialog, completeTimer, stopTimer } = useGlobalState();
-  const { activeItem, routineLogDialog } = state;
+  const { activeAttempt, routineLogDialog, routines } = state;
   const [studyLog, setStudyLog] = useState('');
 
   useEffect(() => {
@@ -26,15 +26,18 @@ export function RoutineLogDialog() {
     }
   }, [routineLogDialog.isOpen]);
 
-  if (!routineLogDialog.isOpen || activeItem?.type !== 'routine') {
+  if (!routineLogDialog.isOpen || !activeAttempt) {
     return null;
   }
   
+  const routine = routines.find(r => r.id === activeAttempt.templateId);
+  if (!routine) return null;
+
   const handleConfirm = () => {
     if(routineLogDialog.action === 'complete') {
-        completeTimer(studyLog);
+        completeTimer();
     } else if (routineLogDialog.action === 'stop') {
-        stopTimer('Stopped routine manually', studyLog);
+        stopTimer('Stopped routine manually');
     }
     closeRoutineLogDialog();
   };
@@ -45,7 +48,7 @@ export function RoutineLogDialog() {
         <DialogHeader>
           <DialogTitle>Log Your Study Session</DialogTitle>
           <DialogDescription>
-            You've finished your session for "{activeItem.item.title}". Briefly describe what you studied or accomplished.
+            You've finished your session for "{routine.title}". Briefly describe what you studied or accomplished.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">

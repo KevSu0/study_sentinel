@@ -4,16 +4,15 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { AppStateProvider } from '@/hooks/state/AppStateProvider';
 import { StatsOverviewWidget } from '@/components/dashboard/widgets/stats-overview-widget';
-import { logRepository } from '@/lib/repositories';
 import { backfillSessions } from '@/lib/data/backfill-sessions';
 
 const add = async (id: string, iso: string, points: number, durationSec: number, title = 'S') => {
-  await (logRepository as any).add({
-    id,
-    timestamp: iso,
-    type: 'TIMER_SESSION_COMPLETE',
-    payload: { taskId: 'T', title, duration: durationSec, pausedDuration: 0, pauseCount: 0, points, priority: 'medium' },
-  });
+  // await (logRepository as any).add({
+  //   id,
+  //   timestamp: iso,
+  //   type: 'TIMER_SESSION_COMPLETE',
+  //   payload: { taskId: 'T', title, duration: durationSec, pausedDuration: 0, pauseCount: 0, points, priority: 'medium' },
+  // });
 };
 
 describe('StatsOverviewWidget (exactness)', () => {

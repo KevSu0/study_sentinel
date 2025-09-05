@@ -47,9 +47,9 @@ export const SimpleTaskItem = React.memo(function SimpleTaskItem({
   onEdit,
 }: SimpleTaskItemProps) {
   const {state} = useGlobalState();
-  const {activeItem} = state;
+  const {activeAttempt} = state;
   const isTimerActive =
-    activeItem?.type === 'task' && activeItem.item.id === task.id;
+    activeAttempt?.templateId === task.id;
   const isCompleted = task.status === 'completed';
   const {fire} = useConfetti();
   const [isTimerOpen, setTimerOpen] = useState(false);

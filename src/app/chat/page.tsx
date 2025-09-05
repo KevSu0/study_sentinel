@@ -85,7 +85,7 @@ export default function ChatPage() {
             work => work.subjectId === routine.id
           )
         ),
-        logs: globalState.todaysLogs,
+        logs: globalState.todaysCompletedWork,
       });
 
       const upcomingTasks = globalState.tasks.filter(

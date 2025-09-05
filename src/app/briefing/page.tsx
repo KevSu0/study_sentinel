@@ -12,7 +12,7 @@ import { getSessionDate } from '@/lib/utils';
 
 export default function DailyBriefingPage() {
   const {state} = useGlobalState();
-  const {isLoaded, previousDayLogs, profile, tasks, routines} = state;
+  const {isLoaded, todaysCompletedWork, profile, tasks, routines} = state;
   const [dailySummary, setDailySummary] = useState<{
     evaluation: string;
     motivationalParagraph: string;
@@ -39,9 +39,9 @@ export default function DailyBriefingPage() {
         }
       }
 
-      if (previousDayLogs.length > 0) {
+      if (todaysCompletedWork.length > 0) {
         const summary = await getDailySummary({
-          logs: previousDayLogs,
+          logs: todaysCompletedWork,
           profile: {
             name: profile.name || 'User',
             dream: profile.dream || 'achieving their goals',
@@ -66,7 +66,7 @@ export default function DailyBriefingPage() {
       fetchDailySummary();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, previousDayLogs, profile, routines, tasks]);
+  }, [isLoaded, todaysCompletedWork, profile, routines, tasks]);
 
   return (
     <div className="flex flex-col h-full">

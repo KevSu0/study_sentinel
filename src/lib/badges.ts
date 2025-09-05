@@ -1,6 +1,5 @@
-import type {Badge, StudyTask, LogEvent, BadgeCondition} from '@/lib/types';
+import type {Badge, StudyTask, BadgeCondition, HydratedActivityAttempt, CompletedWork} from '@/lib/types';
 import {
-  isSameDay,
   parseISO,
   startOfWeek,
   endOfWeek,
@@ -244,90 +243,59 @@ function getTimeframeDates(
   }
 }
 
-// A unified list of all completed work, tasks and routines.
+// This function is now a thin wrapper, as the main logic has moved to use-stats.tsx
 function getAllCompletedWork(
   tasks: StudyTask[],
-  logs: LogEvent[]
-): {
-  date: string;
-  duration: number;
-  type: 'task' | 'routine';
-  subjectId?: string;
-  points: number;
-}[] {
-  const workItems: {
-    date: string;
-    duration: number; // minutes
-    type: 'task' | 'routine';
-    subjectId?: string;
-    points: number;
-  }[] = [];
+  attempts: HydratedActivityAttempt[]
+): CompletedWork[] {
+    // This is a simplified version for badge checking.
+    // The real `getAllCompletedWork` in `use-stats.tsx` is more robust.
+    return attempts
+        .filter(a => a.status === 'COMPLETED' && a.events.some(e => e.type === 'COMPLETE'))
+        .map(a => {
+            const completeEvent = a.events.find(e => e.type === 'COMPLETE');
+            const duration = completeEvent?.payload?.duration ?? 0;
+            const points = completeEvent?.payload?.points ?? 0;
+            const task = tasks.find(t => t.id === a.templateId);
 
-  const sessionLogs = logs.filter(
-    l =>
-      l.type === 'ROUTINE_SESSION_COMPLETE' ||
-      l.type === 'TIMER_SESSION_COMPLETE'
-  );
-  const timedTaskIds = new Set(
-    sessionLogs.map(l => l.payload.taskId).filter(Boolean)
-  );
-
-  workItems.push(
-    ...sessionLogs.map(l => {
-      const isRoutine = l.type === 'ROUTINE_SESSION_COMPLETE';
-      return {
-        date: l.timestamp.split('T')[0],
-        duration: Math.round(l.payload.duration / 60),
-        type: isRoutine ? ('routine' as const) : ('task' as const),
-        subjectId: (isRoutine
-          ? l.payload.routineId
-          : l.payload.taskId) as string,
-        points: Number(l.payload.points || 0),
-      };
-    })
-  );
-
-  const manuallyCompletedTasks = tasks.filter(
-    t => t.status === 'completed' && !timedTaskIds.has(t.id)
-  );
-  workItems.push(
-    ...manuallyCompletedTasks.map(t => ({
-      date: t.date,
-      duration: t.duration ?? 0,
-      type: 'task' as const,
-      subjectId: t.id,
-      points: t.points,
-    }))
-  );
-
-  return workItems;
+            return {
+                date: format(new Date(a.createdAt), 'yyyy-MM-dd'),
+                duration: Math.round(duration / 60), // convert to minutes
+                type: task ? 'task' : 'routine',
+                subjectId: a.templateId,
+                points: points,
+                title: task?.title ?? 'Routine',
+                timestamp: new Date(a.createdAt).toISOString(),
+            };
+        });
 }
+
 
 export function checkBadge(
   badge: Badge,
-  data: {tasks: StudyTask[]; logs: LogEvent[]}
+  data: {tasks: StudyTask[]; attempts: HydratedActivityAttempt[], allCompletedWork: CompletedWork[]}
 ): boolean {
   if (!badge.isEnabled) return false;
 
-  const allWork = getAllCompletedWork(data.tasks, data.logs);
-  const allCompletedTasks = data.tasks.filter(t => t.status === 'completed');
-  const allCompletedRoutines = allWork.filter(w => w.type === 'routine');
+  const { tasks, attempts, allCompletedWork } = data;
+  const allCompletedTasks = tasks.filter(t => t.status === 'completed');
+  const allCompletedRoutines = allCompletedWork.filter(w => w.type === 'routine');
 
   for (const condition of badge.conditions) {
     let conditionMet = false;
 
     // Handle special, non-standard condition types first
     if (condition.type === 'SINGLE_SESSION_TIME') {
-        conditionMet = allWork.some(w => w.duration >= condition.target);
+        conditionMet = allCompletedWork.some(w => w.duration >= condition.target);
     } else if (condition.type === 'ALL_TASKS_COMPLETED_ON_DAY') {
-        const tasksByDay = data.tasks.reduce((acc, task) => {
+        const tasksByDay = tasks.reduce((acc, task) => {
             if (task.status !== 'archived') {
                 (acc[task.date] = acc[task.date] || []).push(task);
             }
             return acc;
         }, {} as Record<string, StudyTask[]>);
 
-        conditionMet = Object.values(tasksByDay).some(dayTasks => 
+        conditionMet = Object.values(tasksByDay).some(dayTasks =>
             dayTasks.length > 0 && dayTasks.every(t => t.status === 'completed')
         );
     }
@@ -339,15 +307,15 @@ export function checkBadge(
       } else if (condition.type === 'ROUTINES_COMPLETED') {
         currentValue = allCompletedRoutines.length;
       } else if (condition.type === 'TOTAL_STUDY_TIME') {
-        currentValue = allWork.reduce((sum, item) => sum + item.duration, 0);
+        currentValue = allCompletedWork.reduce((sum, item) => sum + item.duration, 0);
       } else if (condition.type === 'POINTS_EARNED') {
-        currentValue = allWork.reduce((sum, item) => sum + item.points, 0);
+        currentValue = allCompletedWork.reduce((sum, item) => sum + item.points, 0);
       } else if (condition.type === 'TIME_ON_SUBJECT') {
-        currentValue = allWork
+        currentValue = allCompletedWork
           .filter(w => w.subjectId === condition.subjectId)
           .reduce((sum, item) => sum + item.duration, 0);
       } else if (condition.type === 'DAY_STREAK') {
-        const studyDays = new Set(allWork.map(w => w.date));
+        const studyDays = new Set(allCompletedWork.map(w => w.date));
         if (studyDays.size < condition.target) return false;
 
         let streak = 0;
@@ -368,19 +336,19 @@ export function checkBadge(
       }
     } else {
       // Time-boxed timeframe logic (DAY, WEEK, MONTH)
-      const dateSet = new Set(allWork.map(w => w.date));
+      const dateSet = new Set(allCompletedWork.map(w => w.date));
       for (const dateStr of dateSet) {
         const checkDate = parseISO(dateStr);
         const {start, end} = getTimeframeDates(condition.timeframe, checkDate);
 
-        const workInTimeframe = allWork.filter(w => {
+        const workInTimeframe = allCompletedWork.filter(w => {
           const wDate = parseISO(w.date);
           return wDate >= start && wDate <= end;
         });
 
         let currentValue = 0;
         if (condition.type === 'TASKS_COMPLETED') {
-          const completedTasksInTimeframe = data.tasks.filter(t => {
+          const completedTasksInTimeframe = tasks.filter(t => {
             const tDate = parseISO(t.date);
             return t.status === 'completed' && tDate >= start && tDate <= end;
           });
