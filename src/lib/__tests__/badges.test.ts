@@ -1,5 +1,5 @@
 import { checkBadge } from '../badges';
-import { ActivityAttempt, ActivityAttemptStatus, Badge, StudyTask } from '@/lib/types';
+import { AttemptStatus, Badge, HydratedActivityAttempt, StudyTask } from '@/lib/types';
 import { format, subDays } from 'date-fns';
 
 // --- Mock Data & Helpers ---
@@ -9,38 +9,40 @@ const todayStr = format(today, 'yyyy-MM-dd');
 const yesterdayStr = format(subDays(today, 1), 'yyyy-MM-dd');
 
 const createAttempt = (
-  status: ActivityAttemptStatus,
+  status: AttemptStatus,
   daysAgo = 0,
   durationMinutes = 10,
-  options: { itemId?: string; points?: number } = {}
-): ActivityAttempt => {
+  options: { itemId?: string; points?: number, task?: StudyTask } = {}
+): HydratedActivityAttempt => {
   const startTime = subDays(today, daysAgo).getTime();
   const endTime = startTime + durationMinutes * 60 * 1000;
+  const entityId = options.itemId ?? `task-${Math.random()}`;
   return {
     id: `attempt-${Math.random()}`,
-    templateId: options.itemId ?? `task-${Math.random()}`,
+    entityId,
+    entityType: 'task',
     ordinal: 1,
     status,
     isActive: false,
     activeKey: null,
     createdAt: startTime,
     updatedAt: endTime,
-    // Note: For badge checking, we don't need full event sourcing,
-    // just the final state and duration. We can mock the payload
-    // of a 'COMPLETE' event to simulate this.
-    // A real HydratedActivityAttempt would have a full event array.
-    events: [
-      { type: 'START', occurredAt: startTime },
-      {
-        type: 'COMPLETE',
-        occurredAt: endTime,
-        payload: {
-          duration: durationMinutes * 60,
-          points: options.points ?? durationMinutes, // Simple point system for testing
-        },
-      },
-    ],
-  } as any; // Using 'as any' because we are mocking a HydratedAttempt
+    events: [],
+    template: options.task ?? {
+      id: entityId,
+      shortId: 'T-MOCK',
+      title: 'Mock Task',
+      status: 'completed',
+      date: format(subDays(today, daysAgo), 'yyyy-MM-dd'),
+      time: '10:00',
+      priority: 'medium',
+      points: options.points ?? 10,
+      timerType: 'infinity',
+    },
+    // Mocked payload for calculation purposes
+    productiveDuration: durationMinutes * 60,
+    points: options.points ?? durationMinutes,
+  };
 };
 
 const createTask = (

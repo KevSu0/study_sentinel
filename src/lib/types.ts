@@ -188,18 +188,31 @@ export interface Milestone extends BaseCalendarEvent {
 
 export type CalendarEvent = StudyBlock | PersonalEvent | Milestone;
 
-export type ActivityAttemptStatus = 'NOT_STARTED' | 'COMPLETED' | 'CANCELLED' | 'INVALIDATED';
+export type AttemptStatus = 'NOT_STARTED' | 'COMPLETED' | 'CANCELLED' | 'INVALIDATED';
 
 export interface ActivityAttempt {
   id: string; // Unique ID for the attempt
-  templateId: string; // ID of the associated StudyTask or Routine
+  entityId: string; // ID of the associated StudyTask or Routine
+  entityType: 'task' | 'routine';
   ordinal: number; // Order of this attempt for a given template
-  status: ActivityAttemptStatus;
-  isActive: boolean; // True if this is the currently active attempt for its template
+  status: AttemptStatus;
+  isActive?: boolean; // True if this is the currently active attempt for its template
   activeKey: string | null; // `${userId}|${templateId}` if isActive, null otherwise (for unique index)
   createdAt: number; // Timestamp of creation
   updatedAt: number; // Timestamp of last update
   deletedAt?: number; // Timestamp if soft-deleted (INVALIDATED)
+  
+  // Projections (denormalized data for performance)
+  startTime?: number;
+  endTime?: number;
+  duration?: number;
+  pausedDuration?: number;
+  pointsEarned?: number;
+
+  events?: ActivityEvent[];
+  productiveDuration?: number;
+  points?: number;
+  date?: string; // YYYY-MM-DD
 }
 
 export type ActivityEventType =
@@ -210,11 +223,14 @@ export type ActivityEventType =
   | 'COMPLETE'
   | 'CANCEL'
   | 'UNDO_NORMAL'
+  | 'HARD_UNDO'
   | 'RETRY'
   | 'MANUAL_LOG'
   | 'INVALIDATE' // For soft-deleting an attempt
   | 'PURGE_EVENTS' // For hard-deleting events of an attempt
-  | 'CONFLICT_RESOLVED'; // For when sync resolves a conflict
+  | 'CONFLICT_RESOLVED' // For when sync resolves a conflict
+  | 'CANCEL_DUPLICATE'
+  | 'POINTS_AWARDED';
 
 export interface ActivityEvent {
   id: string; // Unique ID for the event
@@ -224,6 +240,7 @@ export interface ActivityEvent {
   source: 'timer' | 'manual' | 'sync' | 'system'; // Who or what generated the event
   occurredAt: number; // Wall-clock timestamp when the event happened
   createdAt: number; // Timestamp when the event was recorded in the system
+  idempotencyKey?: string;
 }
 
 export type CompletedActivity = {

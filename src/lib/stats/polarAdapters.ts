@@ -41,23 +41,27 @@ export function daysToPolarActivities<T extends AnySession>(days: T[][]): PolarA
 
 
 import { getTimeSinceStudyDayStart } from '@/lib/utils';
+import { HydratedActivityAttempt } from '../types';
 
 
-/** Map a list of LogEvents to AnySession[] */
-export function logsToAnySessions(logs: LogEvent[]): AnySession[] {
-	return logs
-		.map((log) => {
-			const startMs = getTimeSinceStudyDayStart(log.payload.startTime)
+/** Map a list of HydratedActivityAttempt to AnySession[] */
+export function attemptsToAnySessions(attempts: HydratedActivityAttempt[]): AnySession[] {
+	return attempts
+		.map((attempt) => {
+			const startEvent = attempt.events.find((e) => e.type === 'START');
+			const endEvent = attempt.events.find((e) => e.type === 'COMPLETE');
+
+			if (!startEvent || !endEvent) return null;
+
+			const startMs = getTimeSinceStudyDayStart(startEvent.occurredAt)
 			if (startMs === null) return null
 
 			const startHour = 4 + startMs / (1000 * 60 * 60)
-			const endHour = startHour + log.payload.duration / 3600
+			const endHour = startHour + (attempt.productiveDuration || 0) / 3600
 
 			return {
 				time: [startHour, endHour] as [number, number],
-				durationSec: log.payload.duration,
-                pausedSec: log.payload.pausedDuration,
-                pauseCount: log.payload.pauseCount,
+				durationSec: attempt.productiveDuration,
 			} as AnySession
 		})
 		.filter((item): item is AnySession => item !== null)

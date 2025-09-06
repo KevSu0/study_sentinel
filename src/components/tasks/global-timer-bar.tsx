@@ -33,7 +33,7 @@ export function GlobalTimerBar() {
     return null;
   }
 
-  const item = [...tasks, ...routines].find(t => t.id === activeAttempt.templateId);
+  const item = [...tasks, ...routines].find(t => t.id === activeAttempt.entityId);
   if (!item) return null; // Should not happen if activeAttempt exists
 
   const isTask = 'timerType' in item;

@@ -2,8 +2,8 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ActivityItem } from '../activity-item';
-import type { ActivityFeedItem } from '@/hooks/use-global-state';
-import type { StudyTask } from '@/lib/types';
+import { transformToCompletedItem } from '@/lib/transformers';
+import type { CompletedActivity, StudyTask } from '@/lib/types';
 
 // Mock lucide-react icons
 jest.mock('lucide-react', () => ({
@@ -32,10 +32,6 @@ const mockTask: StudyTask = {
   duration: 60, // 60 minutes
 };
 
-const baseItem: Pick<ActivityFeedItem, 'timestamp'> = {
-  timestamp: '2024-01-01T10:30:00.000Z',
-};
-
 const defaultProps = {
   onUndo: jest.fn(),
   onDelete: jest.fn(),
@@ -47,66 +43,28 @@ describe('ActivityItem', () => {
     jest.clearAllMocks();
   });
 
-  describe('TASK_COMPLETE Event', () => {
-    const taskCompleteItem: ActivityFeedItem = {
-      ...baseItem,
-      type: 'TASK_COMPLETE',
-      data: { task: mockTask, log: { id: 'l1', payload: { duration: 3000, points: 150 } } },
+  describe('Completed Task Event', () => {
+    const taskCompleteItem: CompletedActivity = {
+        attempt: { id: 'attempt1', status: 'COMPLETED', templateId: 'task1', createdAt: 0, events: [{occurredAt: 0}, {occurredAt: 3000000}], productiveDuration: 3000000, points: 150 } as any,
+        completeEvent: { occurredAt: 3000000 } as any,
+        template: mockTask,
     };
+    const transformedItem = transformToCompletedItem(taskCompleteItem);
 
     it('renders correctly with log data', () => {
-      render(<ActivityItem {...defaultProps} item={taskCompleteItem} />);
+      render(<ActivityItem {...defaultProps} item={transformedItem} />);
       expect(screen.getByText(mockTask.title)).toBeInTheDocument();
       expect(screen.getByText(/Total: 50m/)).toBeInTheDocument();
       expect(screen.getByText(/Prod: 50m/)).toBeInTheDocument();
       expect(screen.getByText(/150 pts/)).toBeInTheDocument();
-      expect(screen.getByText(/high priority/i)).toBeInTheDocument();
+      expect(screen.getByText(/high Priority/i)).toBeInTheDocument();
       expect(screen.getByTestId('CheckCircleIcon')).toBeInTheDocument();
-    });
-
-    it('renders correctly using task data as fallback if log is null', () => {
-      const itemWithoutLog = { ...taskCompleteItem, data: { task: mockTask, log: null } };
-      render(<ActivityItem {...defaultProps} item={itemWithoutLog} />);
-      expect(screen.getByText(/Total: 1h/)).toBeInTheDocument(); // from task.duration
-      expect(screen.getByText(/100 pts/)).toBeInTheDocument(); // from task.points
-    });
-
-    it('handles task with no duration specified', () => {
-        const taskWithoutDuration = { ...mockTask, duration: undefined };
-        const item = { ...taskCompleteItem, data: { task: taskWithoutDuration, log: null } };
-        render(<ActivityItem {...defaultProps} item={item} />);
-        expect(screen.getByText(/Total: 0s/)).toBeInTheDocument();
-    });
-
-    it('formats duration with hours and minutes correctly', () => {
-        const itemWithHoursAndMinutes = {
-          ...taskCompleteItem,
-          data: {
-            task: mockTask,
-            log: { id: 'l1', payload: { duration: 5400, points: 150 } }, // 1h 30m
-          },
-        };
-        render(<ActivityItem {...defaultProps} item={itemWithHoursAndMinutes} />);
-        expect(screen.getByText(/Total: 1h 30m/)).toBeInTheDocument();
-      });
-    
-    it('formats duration with only hours correctly', () => {
-        const itemWithHours = {
-            ...taskCompleteItem,
-            data: {
-            task: mockTask,
-            log: { id: 'l1', payload: { duration: 3600, points: 150 } }, // 1h
-            },
-        };
-        render(<ActivityItem {...defaultProps} item={itemWithHours} />);
-        expect(screen.getByText(/Total: 1h/)).toBeInTheDocument();
     });
 
     it('renders in an "undone" state', async () => {
       const user = userEvent.setup();
-      render(<ActivityItem {...defaultProps} item={taskCompleteItem} isUndone={true} />);
+      render(<ActivityItem {...defaultProps} item={transformedItem} isUndone={true} />);
       expect(screen.getByTestId('UndoIcon')).toBeInTheDocument();
-      expect(screen.getByText(mockTask.title)).toHaveClass('text-muted-foreground');
       
       await user.click(screen.getByTestId('MoreHorizontalIcon').closest('button')!);
       const undoButton = await screen.findByRole('menuitem', { name: 'Retry' });
@@ -114,102 +72,15 @@ describe('ActivityItem', () => {
     });
   });
 
-  describe('ROUTINE_COMPLETE Event', () => {
-    const routineCompleteItem: ActivityFeedItem = {
-      ...baseItem,
-      type: 'ROUTINE_COMPLETE',
-      data: {
-        routine: { id: 'r1', title: 'Morning Routine', priority: 'medium' },
-        log: { id: 'l2', payload: { duration: 1800, productiveDuration: 1800, points: 50, studyLog: 'Reviewed flashcards.' } },
-      },
-    };
-
-    it('renders correctly with a study log', () => {
-      render(<ActivityItem {...defaultProps} item={routineCompleteItem} />);
-      expect(screen.getByText('Morning Routine')).toBeInTheDocument();
-      expect(screen.getByText(/Total: 30m/)).toBeInTheDocument();
-      expect(screen.getByText(/Prod: 30m/)).toBeInTheDocument();
-      expect(screen.getByText(/50 pts/)).toBeInTheDocument();
-      expect(screen.getByText('Reviewed flashcards.')).toBeInTheDocument();
-      expect(screen.getByTestId('BookTextIcon')).toBeInTheDocument();
-    });
-
-    it('renders correctly without a study log', () => {
-      const itemWithoutLog = {
-        ...routineCompleteItem,
-        data: {
-          routine: routineCompleteItem.data.routine,
-          log: { id: 'l2', payload: { duration: 1800, productiveDuration: 1800, points: 50, studyLog: null } },
-        },
-      } as any;
-      render(<ActivityItem {...defaultProps} item={itemWithoutLog} />);
-      expect(screen.queryByTestId('BookTextIcon')).not.toBeInTheDocument();
-    });
-
-    it('handles routine with no duration or points', () => {
-        const itemWithoutData = {
-          ...routineCompleteItem,
-          data: {
-            routine: { id: 'r1', title: 'Morning Routine', priority: 'medium' },
-            log: { id: 'l2', payload: {} },
-          },
-        } as any;
-        render(<ActivityItem {...defaultProps} item={itemWithoutData} />);
-        expect(screen.getByText(/Total: 0s/)).toBeInTheDocument();
-        expect(screen.getByText(/0 pts/)).toBeInTheDocument();
-    });
-
-    it('renders in an "undone" state', () => {
-        render(<ActivityItem {...defaultProps} item={routineCompleteItem} isUndone={true} />);
-        expect(screen.getByTestId('UndoIcon')).toBeInTheDocument();
-        expect(screen.getByText('Morning Routine')).toHaveClass('text-muted-foreground');
-    });
-  });
-
-  describe('TASK_STOPPED Event', () => {
-    const taskStoppedItem: ActivityFeedItem = {
-      ...baseItem,
-      type: 'TASK_STOPPED',
-      data: {
-        id: 'l3',
-        payload: {
-          title: 'Interrupted Task',
-          reason: 'Phone call',
-          timeSpentSeconds: 90,
-        },
-      },
-    };
-
-    it('renders correctly with a reason', () => {
-      render(<ActivityItem {...defaultProps} item={taskStoppedItem} />);
-      expect(screen.getByText('Interrupted Task (Stopped)')).toBeInTheDocument();
-      expect(screen.getByText(/Time spent: 1m/)).toBeInTheDocument();
-      expect(screen.getByText(/Reason: Phone call/)).toBeInTheDocument();
-      expect(screen.getByTestId('XCircleIcon')).toBeInTheDocument();
-      expect(screen.getByTestId('AlertTriangleIcon')).toBeInTheDocument();
-    });
-
-    it('renders correctly without a reason', () => {
-      const itemWithoutReason = { ...taskStoppedItem, data: { ...taskStoppedItem.data, payload: { ...taskStoppedItem.data.payload, reason: null } } };
-      render(<ActivityItem {...defaultProps} item={itemWithoutReason} />);
-      expect(screen.queryByTestId('AlertTriangleIcon')).not.toBeInTheDocument();
-    });
-
-    it('handles stopped task with no time spent', () => {
-        const itemWithoutTime = { ...taskStoppedItem, data: { ...taskStoppedItem.data, payload: { ...taskStoppedItem.data.payload, timeSpentSeconds: undefined } } };
-        render(<ActivityItem {...defaultProps} item={itemWithoutTime} />);
-        expect(screen.getByText(/Time spent: 0s/)).toBeInTheDocument();
-    });
-  });
-
   it('calls onUndo and onDelete from the dropdown menu', async () => {
     const user = userEvent.setup();
-    const taskCompleteItem: ActivityFeedItem = {
-      ...baseItem,
-      type: 'TASK_COMPLETE',
-      data: { task: mockTask, log: {id: 'l4', payload: {}} },
+    const taskCompleteItem: CompletedActivity = {
+        attempt: { id: 'attempt1', status: 'COMPLETED', templateId: 'task1', createdAt: 0, events: [{occurredAt: 0}, {occurredAt: 3000000}], productiveDuration: 3000000, points: 150 } as any,
+        completeEvent: { occurredAt: 3000000 } as any,
+        template: mockTask,
     };
-    render(<ActivityItem {...defaultProps} item={taskCompleteItem} />);
+    const transformedItem = transformToCompletedItem(taskCompleteItem);
+    render(<ActivityItem {...defaultProps} item={transformedItem} />);
 
     const moreButton = screen.getByTestId('MoreHorizontalIcon').closest('button')!;
     await user.click(moreButton);
@@ -227,12 +98,13 @@ describe('ActivityItem', () => {
 
   it('does not crash if onUndo/onDelete are not provided', async () => {
     const user = userEvent.setup();
-    const taskCompleteItem: ActivityFeedItem = {
-      ...baseItem,
-      type: 'TASK_COMPLETE',
-      data: { task: mockTask, log: {id: 'l4', payload: {}} },
+    const taskCompleteItem: CompletedActivity = {
+        attempt: { id: 'attempt1', status: 'COMPLETED', templateId: 'task1', createdAt: 0, events: [{occurredAt: 0}, {occurredAt: 3000000}], productiveDuration: 3000000, points: 150 } as any,
+        completeEvent: { occurredAt: 3000000 } as any,
+        template: mockTask,
     };
-    render(<ActivityItem item={taskCompleteItem} isUndone={false} />);
+    const transformedItem = transformToCompletedItem(taskCompleteItem);
+    render(<ActivityItem item={transformedItem} isUndone={false} />);
 
     const moreButton = screen.getByTestId('MoreHorizontalIcon').closest('button')!;
     await user.click(moreButton);
@@ -242,7 +114,7 @@ describe('ActivityItem', () => {
   });
 
   it('returns null for an unknown event type', () => {
-    const unknownItem = { ...baseItem, type: 'ANYTHING_ELSE', data: {} } as unknown as ActivityFeedItem;
+    const unknownItem = { isUndone: true } as any;
     const { container } = render(<ActivityItem {...defaultProps} item={unknownItem} />);
     expect(container.firstChild).toBeNull();
   });

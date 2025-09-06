@@ -13,13 +13,9 @@ interface SettingsProviderProps {
 
 export function SettingsProvider({ children, initialState }: SettingsProviderProps) {
   const [state, setState] = useState<SettingsState>(() => {
-    // Load sound settings from localStorage if available
-    const savedSoundSettings = loadSoundSettingsFromStorage();
-    
     return {
       ...defaultSettingsState,
       ...initialState,
-      soundSettings: savedSoundSettings || initialState?.soundSettings || defaultSettingsState.soundSettings
     };
   });
 

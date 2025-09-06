@@ -256,13 +256,13 @@ function getAllCompletedWork(
             const completeEvent = a.events.find(e => e.type === 'COMPLETE');
             const duration = completeEvent?.payload?.duration ?? 0;
             const points = completeEvent?.payload?.points ?? 0;
-            const task = tasks.find(t => t.id === a.templateId);
+            const task = tasks.find(t => t.id === a.entityId);
 
             return {
                 date: format(new Date(a.createdAt), 'yyyy-MM-dd'),
                 duration: Math.round(duration / 60), // convert to minutes
                 type: task ? 'task' : 'routine',
-                subjectId: a.templateId,
+                subjectId: a.entityId,
                 points: points,
                 title: task?.title ?? 'Routine',
                 timestamp: new Date(a.createdAt).toISOString(),

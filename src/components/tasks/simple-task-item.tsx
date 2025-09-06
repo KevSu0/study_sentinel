@@ -49,7 +49,7 @@ export const SimpleTaskItem = React.memo(function SimpleTaskItem({
   const {state} = useGlobalState();
   const {activeAttempt} = state;
   const isTimerActive =
-    activeAttempt?.templateId === task.id;
+    activeAttempt?.entityId === task.id;
   const isCompleted = task.status === 'completed';
   const {fire} = useConfetti();
   const [isTimerOpen, setTimerOpen] = useState(false);

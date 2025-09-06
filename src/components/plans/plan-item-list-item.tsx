@@ -85,7 +85,7 @@ export const PlanListItem = React.memo(function PlanListItem({
   const data = item.type === 'completed_item' ? item.data.template : item.data;
   const { time, startTime, title, shortId, id } = data as any;
 
-  const isTimerActiveForThis = activeAttempt?.templateId === id;
+  const isTimerActiveForThis = activeAttempt?.entityId === id;
 
   const handleDeleteConfirm = () => {
     if (item.type === 'routine' && onDeleteRoutine) {

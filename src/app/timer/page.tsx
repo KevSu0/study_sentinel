@@ -89,7 +89,7 @@ export default function TimerPage() {
   }
 
   const progress = timerProgress ?? 0;
-  const item = [...tasks, ...routines].find(t => t.id === activeAttempt.templateId);
+  const item = [...tasks, ...routines].find(t => t.id === activeAttempt.entityId);
   const title = item?.title ?? 'Studying';
 
   return (

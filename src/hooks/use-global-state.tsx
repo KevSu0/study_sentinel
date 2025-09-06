@@ -446,21 +446,37 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
   }, [state.isLoaded]);
 
   const loadInitialData = useCallback(async () => {
-    // Ensure getSessionDate works with either a Date or string mock
-    const rawSessionDate: any = getSessionDate();
-    const sessionDate = typeof rawSessionDate === 'string' ? parseISO(rawSessionDate) : rawSessionDate;
-    const prevDate = subDays(sessionDate, 1);
-    const [
-      savedTasksRaw,
-      savedProfile,
-      savedRoutinesRaw,
-      allBadgesRaw,
-    ] = await Promise.all([
-      taskRepo.getAll().catch(() => []),
-      profileRepo.getById('user-profile').catch(() => null),
-      routineRepo.getAll().catch(() => []),
-      badgeRepo.getAll().catch(() => []),
-    ]);
+    try {
+      // Ensure getSessionDate works with either a Date or string mock
+      const rawSessionDate: any = getSessionDate();
+      const sessionDate = typeof rawSessionDate === 'string' ? parseISO(rawSessionDate) : rawSessionDate;
+      const prevDate = subDays(sessionDate, 1);
+      
+      console.log('🔄 [DEBUG] loadInitialData - Starting data load...');
+      
+      const [
+        savedTasksRaw,
+        savedProfile,
+        savedRoutinesRaw,
+        allBadgesRaw,
+      ] = await Promise.all([
+        taskRepo.getAll().catch((err) => {
+          console.error('❌ Failed to load tasks:', err);
+          return [];
+        }),
+        profileRepo.getById('user_profile').catch((err) => {
+          console.error('❌ Failed to load profile:', err);
+          return null;
+        }),
+        routineRepo.getAll().catch((err) => {
+          console.error('❌ Failed to load routines:', err);
+          return [];
+        }),
+        badgeRepo.getAll().catch((err) => {
+          console.error('❌ Failed to load badges:', err);
+          return [];
+        }),
+      ]);
 
     const savedTasks = Array.isArray(savedTasksRaw) ? savedTasksRaw : [];
     const savedRoutines = Array.isArray(savedRoutinesRaw) ? savedRoutinesRaw : [];
@@ -481,10 +497,31 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
         [EARNED_BADGES_KEY, SOUND_SETTINGS_KEY].forEach(k => localStorage.removeItem(k));
       }
       
-      const activeAttempt = await activityRepository.getActiveAttempt();
+      let activeAttempt = null;
+      try {
+        activeAttempt = await activityRepository.getActiveAttempt();
+        console.log('✅ [DEBUG] loadInitialData - Active attempt loaded:', activeAttempt?.id || 'none');
+      } catch (err) {
+        console.error('❌ Failed to load active attempt:', err);
+        console.error('Error details:', {
+          name: err?.name,
+          message: err?.message,
+          stack: err?.stack
+        });
+        // Ensure activeAttempt remains null on failure
+        activeAttempt = null;
+      }
+      
       const baseState = { tasks: savedTasks, routines: savedRoutines, profile: userProfile, allBadges, earnedBadges: savedEarnedBadges, soundSettings: savedSoundSettings };
       
-    setState({ ...initialAppState, ...baseState, isLoaded: true, activeAttempt: activeAttempt || null, isPaused: true, starCount: 0 });
+      setState({ ...initialAppState, ...baseState, isLoaded: true, activeAttempt: activeAttempt || null, isPaused: true, starCount: 0 });
+      console.log('✅ [DEBUG] loadInitialData - Data load completed successfully');
+    } catch (error) {
+      console.error('💥 [ERROR] loadInitialData - Critical failure:', error);
+      // Ensure we still set isLoaded to true to prevent infinite loading
+      setState(prev => ({ ...prev, isLoaded: true }));
+      throw error; // Re-throw to be caught by the useEffect
+    }
   }, []);
 
   useEffect(() => {
@@ -493,7 +530,13 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
       // Ensure we always flip isLoaded even if something unexpected throws
       loadInitialData()
         .catch((err) => {
-          console.error('loadInitialData failed', err);
+          console.error('💥 [CRITICAL] loadInitialData failed - Application may not function properly:', err);
+          console.error('Error details:', {
+            name: err?.name,
+            message: err?.message,
+            stack: err?.stack,
+            cause: err?.cause
+          });
         })
         .finally(() => {
           setState(prev => ({ ...prev, isLoaded: true }));
@@ -611,7 +654,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
     for (const badge of allBadges) {
       if (!earnedBadges.has(badge.id) && badge.isEnabled) {
         if (typeof checkBadge === 'function') {
-          if (checkBadge(badge, {tasks, logs: allCompletedWork as any})) {
+          if (checkBadge(badge, {tasks, attempts: allHydratedAttempts, allCompletedWork})) {
             newlyEarnedBadges.push(badge);
           }
         }
@@ -673,13 +716,13 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
         const attemptDate = format(new Date(completeEvent.occurredAt), 'yyyy-MM-dd');
         return attemptDate === todayStr;
     }).map(attempt => {
-        const template = [...state.tasks, ...state.routines].find(t => t.id === attempt.templateId);
+        const template = [...state.tasks, ...state.routines].find(t => t.id === attempt.entityId);
         return {
             attempt,
             completeEvent: attempt.events.find(e => e.type === 'COMPLETE')!,
             template: template!
         }
-    }).filter((item): item is CompletedActivity => !!item.template);
+    }).filter((item): item is Omit<CompletedActivity, 'attempt'> & { attempt: HydratedActivityAttempt } => !!item.template);
   }, [allHydratedAttempts, state.tasks, state.routines]);
 
   useEffect(() => {
@@ -863,16 +906,16 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
 
   const startTimer = useCallback(async (item: StudyTask | Routine) => {
     if (state.activeAttempt) {
-      const task = state.tasks.find(t => t.id === state.activeAttempt?.templateId);
+      const task = state.tasks.find(t => t.id === state.activeAttempt?.entityId);
       toast.error(`Please stop or complete the timer for "${task?.title ?? ''}" first.`);
       return;
     }
 
-    const templateId = item.id;
+    const entityId = item.id;
     const userId = state.profile.id;
 
     try {
-      const newAttempt = await activityRepository.createAttempt({ templateId, userId });
+      const newAttempt = await activityRepository.createAttempt({ entityId, userId });
       await activityRepository.startAttempt({ attemptId: newAttempt.id });
 
       if ('timerType' in item) {
@@ -919,7 +962,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
     try {
       await activityRepository.stopAttempt({ attemptId: state.activeAttempt.id, reason });
 
-      const task = state.tasks.find(t => t.id === state.activeAttempt?.templateId);
+      const task = state.tasks.find(t => t.id === state.activeAttempt?.entityId);
       if (task) {
         updateTask({ ...task, status: 'todo' });
       }
@@ -945,13 +988,9 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
     try {
       await activityRepository.completeAttempt({
         attemptId: state.activeAttempt.id,
-        duration,
-        productiveDuration,
-        pausedDuration,
-        points,
       });
 
-      const task = state.tasks.find(t => t.id === state.activeAttempt?.templateId);
+      const task = state.tasks.find(t => t.id === state.activeAttempt?.entityId);
       if (task) {
         updateTask({ ...task, status: 'completed' });
       }
@@ -997,7 +1036,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
 
     try {
       await activityRepository.manualLog({
-        templateId: item.id,
+        entityId: item.id,
         duration: totalDurationSeconds,
         productiveDuration: productiveDurationSeconds,
         pausedDuration: pausedDurationSeconds,
@@ -1128,7 +1167,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
   const updateProfile = useCallback((newProfileData: Partial<UserProfile>) => {
     setStateAndDerive(prev => {
       const newProfile = {...prev.profile, ...newProfileData, id: 'user_profile'};
-      profileRepo.update('user-profile', newProfile as Partial<UserProfile>);
+      profileRepo.update('user_profile', newProfile as Partial<UserProfile>);
       return {profile: newProfile};
     });
   }, [setStateAndDerive]);
@@ -1150,8 +1189,9 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
 
     try {
       const newAttempt = await activityRepository.normalUndoOrRetry({
-        attemptIdToUndo,
+        fromAttemptId: attemptIdToUndo,
         userId: state.profile.id,
+        type: 'RETRY',
       });
       setState(prev => ({ ...prev, activeAttempt: newAttempt }));
       toast.success('The item is now available to retry.');

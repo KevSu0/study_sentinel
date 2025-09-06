@@ -18,8 +18,8 @@ export const getBadgeAwardingCriteria = (attempts: ActivityAttempt[], events: Ac
     return attemptDate >= todayStart;
   });
 
-  const todaysTaskAttempts = todaysAttempts.filter(a => a.templateId.startsWith('task-'));
-  const todaysRoutineAttempts = todaysAttempts.filter(a => !a.templateId.startsWith('task-'));
+  const todaysTaskAttempts = todaysAttempts.filter(a => a.entityId.startsWith('task-'));
+  const todaysRoutineAttempts = todaysAttempts.filter(a => !a.entityId.startsWith('task-'));
 
   const eventMap = new Map(events.map(e => [e.id, e]));
   const todaysCompleteEvents = todaysAttempts

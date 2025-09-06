@@ -40,7 +40,7 @@ export function TimerDialog({
   const [isStopDialogOpen, setStopDialogOpen] = useState(false);
 
   const isTimerForThisTask =
-    activeAttempt?.templateId === task.id;
+    activeAttempt?.entityId === task.id;
 
   const handleStart = () => {
     startTimer(task);
@@ -65,7 +65,7 @@ export function TimerDialog({
   };
 
   if (isOpen && activeAttempt && !isTimerForThisTask) {
-    const activeItem = [...tasks, ...routines].find(t => t.id === activeAttempt.templateId);
+    const activeItem = [...tasks, ...routines].find(t => t.id === activeAttempt.entityId);
     const activeTitle = activeItem?.title ?? 'another task';
 
     return (

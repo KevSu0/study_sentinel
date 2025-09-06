@@ -3,17 +3,28 @@ import 'fake-indexeddb/auto';
 import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useStats } from '@/hooks/use-stats';
-import { activityRepository } from '@/lib/repositories';
-import { MOCK_ACTIVITY_ATTEMPT_1 } from '@/lib/repositories/activity-repository.test';
+import { activityRepository } from '@/lib/repositories/activity-repository';
+import { ActivityAttempt } from '@/lib/types';
+
+const MOCK_ACTIVITY_ATTEMPT_1: ActivityAttempt = {
+    id: 'attempt-1',
+    entityId: 'task-1',
+    entityType: 'task',
+    status: 'COMPLETED',
+    events: [],
+    productiveDuration: 0,
+    points: 0,
+    ordinal: 1,
+    isActive: false,
+    activeKey: null,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+};
 
 const addLog = async (id: string, iso: string, durationSec = 600) => {
   await activityRepository.createAttempt({
-    ...MOCK_ACTIVITY_ATTEMPT_1,
-    id,
-    events: [
-      { type: 'START', timestamp: new Date(iso).getTime() },
-      { type: 'COMPLETE', timestamp: new Date(iso).getTime() + durationSec * 1000 },
-    ],
+    entityId: MOCK_ACTIVITY_ATTEMPT_1.entityId,
+    userId: 'user-1',
   });
 };
 

@@ -1,5 +1,6 @@
 import Dexie, { Table } from 'dexie';
 import { db, type Session } from '../db';
+import type { ActivityEvent as LogEvent } from '@/lib/types';
 import { format } from 'date-fns';
 import { getStudyDateForTimestamp } from '../utils';
 
@@ -12,17 +13,17 @@ function toStudyDateStr(ts: string): string {
 }
 
 export function buildSessionFromLog(log: LogEvent): Session | null {
-  if (log.type !== 'TIMER_SESSION_COMPLETE' && log.type !== 'ROUTINE_SESSION_COMPLETE') return null;
+  if ((log.type as any) !== 'TIMER_SESSION_COMPLETE' && (log.type as any) !== 'ROUTINE_SESSION_COMPLETE') return null;
   const id = `session-${log.id}`;
-  const date = toStudyDateStr(log.timestamp);
-  const type = log.type === 'TIMER_SESSION_COMPLETE' ? 'task' : 'routine';
+  const date = toStudyDateStr(String(log.occurredAt));
+  const type = (log.type as any) === 'TIMER_SESSION_COMPLETE' ? 'task' : 'routine';
   const duration = Number((log.payload?.duration ?? (Number(log.payload?.productiveDuration ?? 0) + Number(log.payload?.pausedDuration ?? 0))) ?? 0);
   const pausedDuration = Number(log.payload?.pausedDuration ?? 0);
   const points = Number(log.payload?.points ?? 0);
   const title = String(log.payload?.title ?? '');
   const isUndone = !!(log as any).isUndone;
   const subject = (log as any).payload?.subject as string | undefined;
-  return { id, userId: 'user_profile', timestamp: log.timestamp, duration, pausedDuration, points, date, type, title, subject, isUndone } as Session;
+  return { id, userId: 'user_profile', timestamp: String(log.occurredAt), duration, pausedDuration, points, date, type, title, subject, isUndone } as Session;
 }
 
 type BackfillParams = {
@@ -33,12 +34,12 @@ type BackfillParams = {
 
 export async function backfillSessions(params: BackfillParams = {}): Promise<{ created: number; already: number }>
 {
-  const logsTable = params.logsTable ?? db.logs as Table<LogEvent, string>;
+  const logsTable = params.logsTable ?? db.activityEvents as Table<LogEvent, string>;
   const sessionsTable = params.sessionsTable ?? db.sessions as Table<Session, string>;
   const chunkSize = params.chunkSize ?? 200;
 
   const allLogs = await logsTable.toArray();
-  const completionLogs = allLogs.filter(l => l.type === 'TIMER_SESSION_COMPLETE' || l.type === 'ROUTINE_SESSION_COMPLETE');
+  const completionLogs = allLogs.filter(l => (l.type as any) === 'TIMER_SESSION_COMPLETE' || (l.type as any) === 'ROUTINE_SESSION_COMPLETE');
   if (completionLogs.length === 0) return { created: 0, already: 0 };
 
   const wantedIds = completionLogs.map(l => `session-${l.id}`);

@@ -5,18 +5,18 @@ import {Skeleton} from '@/components/ui/skeleton';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Lightbulb, Sparkles} from 'lucide-react';
 import {getDailySummary} from '@/lib/actions';
-import {UserProfile, StudyTask, Routine} from '@/lib/types';
+import {UserProfile, StudyTask, Routine, CompletedActivity} from '@/lib/types';
 import {MotivationalQuote} from '@/components/shared/motivational-quote';
 
 interface DailyBriefingWidgetProps {
-  previousDayLogs: LogEvent[];
+  previousDayActivities: CompletedActivity[];
   profile: UserProfile;
   tasks: StudyTask[];
   routines: Routine[];
 }
 
 export const DailyBriefingWidget = ({
-  previousDayLogs,
+  previousDayActivities,
   profile,
   tasks,
   routines,
@@ -42,9 +42,9 @@ export const DailyBriefingWidget = ({
         return;
       }
 
-      if (previousDayLogs.length > 0) {
+      if (previousDayActivities.length > 0) {
         const summary = await getDailySummary({
-          logs: previousDayLogs,
+          logs: previousDayActivities,
           profile: {
             name: profile.name,
             dream: profile.dream || 'Not specified',
@@ -60,7 +60,7 @@ export const DailyBriefingWidget = ({
       setIsSummaryLoading(false);
     };
     fetchDailySummary();
-  }, [previousDayLogs, profile, tasks, routines]);
+  }, [previousDayActivities, profile, tasks, routines]);
 
 
   if (isSummaryLoading) {

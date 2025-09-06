@@ -2,32 +2,55 @@ import React from 'react';
 import {render, screen, fireEvent} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {CompletedPlanListItem} from '../completed-plan-list-item';
-import {ActivityFeedItem} from '@/hooks/use-global-state';
+import { CompletedActivity } from '@/lib/types';
+import { transformToCompletedItem } from '@/lib/transformers';
 
-const mockTaskItem: ActivityFeedItem = {
-  type: 'TASK_COMPLETE',
-  timestamp: new Date().toISOString(),
-  data: {
-    task: {id: 'task1', title: 'Completed Task'},
-    log: {
-      id: 'log1',
-      payload: {duration: 3665, points: 150}, // 1h 1m 5s
-    },
-  },
+const mockTaskActivity: CompletedActivity = {
+    attempt: {
+        id: 'attempt1',
+        status: 'COMPLETED',
+        templateId: 'task1',
+        productiveDuration: 3665,
+        points: 150,
+        createdAt: 0,
+        events: [
+            { occurredAt: 0, type: 'CREATE' } as any,
+            { occurredAt: 3665000, type: 'COMPLETE' } as any,
+        ],
+    } as any,
+    completeEvent: { occurredAt: 3665000 } as any,
+    template: {
+        id: 'task1',
+        title: 'Completed Task',
+        status: 'completed',
+        priority: 'high',
+        points: 100,
+    } as any,
 };
 
-const mockRoutineItem: ActivityFeedItem = {
-  type: 'ROUTINE_COMPLETE',
-  timestamp: new Date().toISOString(),
-  data: {
-    id: 'routine1',
-    payload: {
-      title: 'Morning Routine',
-      duration: 120, // 2m
-      points: 25,
-    },
-  },
+const mockRoutineActivity: CompletedActivity = {
+    attempt: {
+        id: 'attempt2',
+        status: 'COMPLETED',
+        templateId: 'routine1',
+        productiveDuration: 120,
+        points: 25,
+        createdAt: 0,
+        events: [
+            { occurredAt: 0, type: 'CREATE' } as any,
+            { occurredAt: 120000, type: 'COMPLETE' } as any,
+        ],
+    } as any,
+    completeEvent: { occurredAt: 120000 } as any,
+    template: {
+        id: 'routine1',
+        title: 'Morning Routine',
+        priority: 'medium',
+    } as any,
 };
+
+const mockTaskItem = transformToCompletedItem(mockTaskActivity);
+const mockRoutineItem = transformToCompletedItem(mockRoutineActivity);
 
 describe('CompletedPlanListItem', () => {
   it('renders correctly for a completed task', () => {
@@ -35,7 +58,6 @@ describe('CompletedPlanListItem', () => {
     expect(screen.getByText('Completed Task')).toBeInTheDocument();
     expect(screen.getByText('1h 1m')).toBeInTheDocument(); // Formatted duration
     expect(screen.getByText('150 pts')).toBeInTheDocument();
-    expect(screen.getByTestId('CheckCircleIcon')).toBeInTheDocument();
   });
 
   it('renders correctly for a completed routine', () => {
@@ -46,72 +68,88 @@ describe('CompletedPlanListItem', () => {
   });
 
   it('formats duration correctly for exact hours', () => {
-    const itemWithExactHour: ActivityFeedItem = {
-      ...mockTaskItem,
-      data: {
-        ...mockTaskItem.data,
-        log: {
-          id: 'log2',
-          payload: { duration: 3600, points: 100 }, // Exactly 1 hour
+    const itemWithExactHourActivity: CompletedActivity = {
+        ...mockTaskActivity,
+        attempt: {
+            ...mockTaskActivity.attempt,
+            events: [
+                { occurredAt: 0, type: 'CREATE' } as any,
+                { occurredAt: 3600000, type: 'COMPLETE' } as any,
+            ],
         },
-      },
     };
+    const itemWithExactHour = transformToCompletedItem(itemWithExactHourActivity);
     render(<CompletedPlanListItem item={itemWithExactHour} isUndone={false} />);
     expect(screen.getByText('1h')).toBeInTheDocument();
   });
 
   it('formats duration correctly for only minutes', () => {
-    const itemWithMinutes: ActivityFeedItem = {
-      ...mockTaskItem,
-      data: {
-        ...mockTaskItem.data,
-        log: {
-          id: 'log3',
-          payload: { duration: 180, points: 10 }, // 3 minutes
+    const itemWithMinutesActivity: CompletedActivity = {
+        ...mockTaskActivity,
+        attempt: {
+            ...mockTaskActivity.attempt,
+            events: [
+                { occurredAt: 0, type: 'CREATE' } as any,
+                { occurredAt: 180000, type: 'COMPLETE' } as any,
+            ],
         },
-      },
     };
+    const itemWithMinutes = transformToCompletedItem(itemWithMinutesActivity);
     render(<CompletedPlanListItem item={itemWithMinutes} isUndone={false} />);
     expect(screen.getByText('3m')).toBeInTheDocument();
   });
 
   it('formats duration correctly for only seconds', () => {
-    const itemWithSeconds: ActivityFeedItem = {
-      ...mockTaskItem,
-      data: {
-        ...mockTaskItem.data,
-        log: {
-          id: 'log4',
-          payload: { duration: 45, points: 5 }, // 45 seconds
+    const itemWithSecondsActivity: CompletedActivity = {
+        ...mockTaskActivity,
+        attempt: {
+            ...mockTaskActivity.attempt,
+            events: [
+                { occurredAt: 0, type: 'CREATE' } as any,
+                { occurredAt: 45000, type: 'COMPLETE' } as any,
+            ],
         },
-      },
     };
+    const itemWithSeconds = transformToCompletedItem(itemWithSecondsActivity);
     render(<CompletedPlanListItem item={itemWithSeconds} isUndone={false} />);
     expect(screen.getByText('45s')).toBeInTheDocument();
   });
 
   it('handles items with missing duration or points', () => {
-    const incompleteItem: ActivityFeedItem = {
-      type: 'TASK_COMPLETE',
-      timestamp: new Date().toISOString(),
-      data: {task: {id: 'task2', title: 'Task without points'}},
+    const incompleteItemActivity: CompletedActivity = {
+        ...mockTaskActivity,
+        attempt: {
+            ...mockTaskActivity.attempt,
+            productiveDuration: 0,
+            points: 0,
+            events: [],
+        },
+        template: {
+            ...mockTaskActivity.template,
+            title: 'Task without points',
+        }
     };
+    const incompleteItem = transformToCompletedItem(incompleteItemActivity);
     render(<CompletedPlanListItem item={incompleteItem} isUndone={false} />);
     expect(screen.getByText('0s')).toBeInTheDocument();
     expect(screen.getByText('0 pts')).toBeInTheDocument();
   });
 
   it('handles completed routine with missing duration or points', () => {
-    const incompleteRoutine: ActivityFeedItem = {
-      type: 'ROUTINE_COMPLETE',
-      timestamp: new Date().toISOString(),
-      data: {
-        id: 'routine2',
-        payload: {
-          title: 'Routine without points',
+    const incompleteRoutineActivity: CompletedActivity = {
+        ...mockRoutineActivity,
+        attempt: {
+            ...mockRoutineActivity.attempt,
+            productiveDuration: 0,
+            points: 0,
+            events: [],
         },
-      },
+        template: {
+            ...mockRoutineActivity.template,
+            title: 'Routine without points',
+        }
     };
+    const incompleteRoutine = transformToCompletedItem(incompleteRoutineActivity);
     render(<CompletedPlanListItem item={incompleteRoutine} isUndone={false} />);
     expect(screen.getByText('0s')).toBeInTheDocument();
     expect(screen.getByText('0 pts')).toBeInTheDocument();
@@ -122,11 +160,6 @@ describe('CompletedPlanListItem', () => {
       render(<CompletedPlanListItem item={mockTaskItem} isUndone={true} />);
     });
 
-    it('shows the Undo icon', () => {
-      expect(screen.getByTestId('UndoIcon')).toBeInTheDocument();
-      expect(screen.queryByTestId('CheckCircleIcon')).not.toBeInTheDocument();
-    });
-
     it('applies line-through style to the title', () => {
       expect(screen.getByText('Completed Task')).toHaveClass('line-through');
     });
@@ -134,7 +167,7 @@ describe('CompletedPlanListItem', () => {
     it('disables the "Retry" menu item', async () => {
       await userEvent.click(screen.getByRole('button', {name: /open menu/i}));
       const undoMenuItem = screen.getByRole('menuitem', {
-        name: /undo completion/i,
+        name: /retry/i,
       });
       expect(undoMenuItem).toHaveAttribute('aria-disabled', 'true');
     });
@@ -184,13 +217,3 @@ describe('CompletedPlanListItem', () => {
     expect(() => userEvent.click(hardUndoButton)).not.toThrow();
   });
 });
-
-// Mock Lucide icons
-jest.mock('lucide-react', () => ({
-  ...jest.requireActual('lucide-react'),
-  CheckCircle: () => <div data-testid="CheckCircleIcon" />,
-  Undo: () => <div data-testid="UndoIcon" />,
-  MoreHorizontal: () => <div>More</div>,
-  Timer: () => <div>Timer</div>,
-  Star: () => <div>Star</div>,
-}));

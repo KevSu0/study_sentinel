@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import {format} from 'date-fns';
 import {Button} from '@/components/ui/button';
 import {PlusCircle, Settings} from 'lucide-react';
-import {useGlobalState, type ActivityFeedItem} from '@/hooks/use-global-state';
+import {useGlobalState} from '@/hooks/use-global-state';
 import {
   useDashboardLayout,
   type DashboardWidgetType,
@@ -101,11 +101,11 @@ export default function DashboardPage() {
     [setLayout]
   );
 
-  const handleUndoComplete = (item: ActivityFeedItem) => {
+  const handleUndoComplete = (item: any) => {
     retryItem(item);
   };
 
-  const handleHardUndo = (item: ActivityFeedItem) => {
+  const handleHardUndo = (item: any) => {
     // if (item.type === 'ROUTINE_COMPLETE') {
     //   removeLog(item.data.log.id);
     //   toast.error('Routine completion permanently removed.');
@@ -157,7 +157,7 @@ export default function DashboardPage() {
         todaysBadges: state.todaysBadges
     },
     completed_today: {
-        todaysActivity: state.todaysActivity.filter(activity => activity.timestamp.startsWith(format(new Date(), 'yyyy-MM-dd'))),
+        todaysCompletedActivities: state.todaysCompletedActivities,
         onUndoComplete: handleUndoComplete,
         onHardUndoComplete: handleHardUndo,
     },
@@ -178,7 +178,7 @@ export default function DashboardPage() {
     }
   };
   
-  const hasContent = state.tasks.length > 0 || state.routines.length > 0 || state.todaysActivity.length > 0;
+  const hasContent = state.tasks.length > 0 || state.routines.length > 0 || state.todaysCompletedActivities.length > 0;
 
   return (
     <div className="flex flex-col h-full">

@@ -1,36 +1,50 @@
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db';
-import { ActivityAttempt, ActivityEvent } from '../types';
+import { ActivityAttempt, ActivityEvent, HydratedActivityAttempt, Routine, StudyTask } from '../types';
+import { reduceEventsToState } from '../core/reducer';
 
 export const activityRepository = {
   async getActiveAttempt(): Promise<ActivityAttempt | null> {
-    const attempt = await db.activityAttempts.where({ isActive: 1 }).first();
-    return attempt || null;
+    try {
+      const attempt = await db.activityAttempts.where({ isActive: 1 }).first();
+      return attempt || null;
+    } catch (error) {
+      console.error('Failed to get active attempt:', error);
+      return null;
+    }
   },
 
   async createAttempt(params: {
-    templateId: string;
+    entityId: string;
     userId: string;
   }): Promise<ActivityAttempt> {
-    const { templateId, userId } = params;
+    const { entityId, userId } = params;
 
     return db.transaction(
       'rw',
       db.activityAttempts,
       db.activityEvents,
       async () => {
+        const activeKey = `${userId}|${entityId}`;
         const existingActiveAttempt = await db.activityAttempts
-          .where({ templateId, isActive: 1 })
+          .where({ activeKey })
           .first();
 
         if (existingActiveAttempt) {
-          throw new Error(
-            `An active attempt already exists for templateId: ${templateId}`,
-          );
+          throw new Error('DUPLICATE_ACTIVE_ATTEMPT');
         }
 
+        const task = await db.plans.get(entityId);
+        const routine = await db.routines.get(entityId);
+
+        if (!task && !routine) {
+          throw new Error(`Entity with id ${entityId} not found.`);
+        }
+
+        const entityType = task ? 'task' : 'routine';
+
         const lastAttempt = await db.activityAttempts
-          .where({ templateId })
+          .where({ entityId: entityId })
           .reverse()
           .sortBy('ordinal');
         
@@ -40,20 +54,22 @@ export const activityRepository = {
         const now = Date.now();
         const newAttempt: ActivityAttempt = {
           id: uuidv4(),
-          templateId,
+          entityId: entityId,
+          entityType,
           ordinal: newOrdinal,
           status: 'NOT_STARTED',
           isActive: true,
-          activeKey: `${userId}|${templateId}`,
+          activeKey,
           createdAt: now,
           updatedAt: now,
+          date: new Date(now).toISOString().slice(0, 10),
         };
 
         const createEvent: ActivityEvent = {
           id: uuidv4(),
           attemptId: newAttempt.id,
           type: 'CREATE',
-          payload: { templateId },
+          payload: { entityId: entityId },
           source: 'timer',
           occurredAt: now,
           createdAt: now,
@@ -74,19 +90,6 @@ export const activityRepository = {
       db.activityAttempts,
       db.activityEvents,
       async () => {
-        const attempt = await db.activityAttempts.get(attemptId);
-        if (!attempt) {
-          throw new Error(`ActivityAttempt with id ${attemptId} not found.`);
-        }
-        if (!attempt.isActive) {
-          throw new Error(`ActivityAttempt with id ${attemptId} is not active.`);
-        }
-        if (attempt.status !== 'NOT_STARTED') {
-          throw new Error(
-            `ActivityAttempt with id ${attemptId} has already started.`,
-          );
-        }
-
         const now = Date.now();
         const startEvent: ActivityEvent = {
           id: uuidv4(),
@@ -99,6 +102,16 @@ export const activityRepository = {
         };
 
         await db.activityEvents.add(startEvent);
+
+        const allEvents = await db.activityEvents
+          .where({ attemptId })
+          .sortBy('occurredAt');
+        const newState = reduceEventsToState(allEvents);
+
+        await db.activityAttempts.update(attemptId, {
+          ...newState,
+          updatedAt: now,
+        });
       },
     );
   },
@@ -110,14 +123,6 @@ export const activityRepository = {
       db.activityAttempts,
       db.activityEvents,
       async () => {
-        const attempt = await db.activityAttempts.get(attemptId);
-        if (!attempt) {
-          throw new Error(`ActivityAttempt with id ${attemptId} not found.`);
-        }
-        if (!attempt.isActive) {
-          throw new Error(`ActivityAttempt with id ${attemptId} is not active.`);
-        }
-
         const now = Date.now();
         const pauseEvent: ActivityEvent = {
           id: uuidv4(),
@@ -130,6 +135,16 @@ export const activityRepository = {
         };
 
         await db.activityEvents.add(pauseEvent);
+
+        const allEvents = await db.activityEvents
+          .where({ attemptId })
+          .sortBy('occurredAt');
+        const newState = reduceEventsToState(allEvents);
+
+        await db.activityAttempts.update(attemptId, {
+          ...newState,
+          updatedAt: now,
+        });
       },
     );
   },
@@ -141,14 +156,6 @@ export const activityRepository = {
       db.activityAttempts,
       db.activityEvents,
       async () => {
-        const attempt = await db.activityAttempts.get(attemptId);
-        if (!attempt) {
-          throw new Error(`ActivityAttempt with id ${attemptId} not found.`);
-        }
-        if (!attempt.isActive) {
-          throw new Error(`ActivityAttempt with id ${attemptId} is not active.`);
-        }
-
         const now = Date.now();
         const resumeEvent: ActivityEvent = {
           id: uuidv4(),
@@ -161,6 +168,16 @@ export const activityRepository = {
         };
 
         await db.activityEvents.add(resumeEvent);
+
+        const allEvents = await db.activityEvents
+          .where({ attemptId })
+          .sortBy('occurredAt');
+        const newState = reduceEventsToState(allEvents);
+
+        await db.activityAttempts.update(attemptId, {
+          ...newState,
+          updatedAt: now,
+        });
       },
     );
   },
@@ -203,44 +220,19 @@ export const activityRepository = {
     );
   },
 
-  async completeAttempt(params: {
-    attemptId: string;
-    duration: number;
-    productiveDuration: number;
-    pausedDuration: number;
-    points: number;
-  }): Promise<void> {
-    const {
-      attemptId,
-      duration,
-      productiveDuration,
-      pausedDuration,
-      points,
-    } = params;
+  async completeAttempt(params: { attemptId: string }): Promise<void> {
+    const { attemptId } = params;
     return db.transaction(
       'rw',
       db.activityAttempts,
       db.activityEvents,
       async () => {
-        const attempt = await db.activityAttempts.get(attemptId);
-        if (!attempt) {
-          throw new Error(`ActivityAttempt with id ${attemptId} not found.`);
-        }
-        if (!attempt.isActive) {
-          throw new Error(`ActivityAttempt with id ${attemptId} is not active.`);
-        }
-
         const now = Date.now();
         const completeEvent: ActivityEvent = {
           id: uuidv4(),
           attemptId: attemptId,
           type: 'COMPLETE',
-          payload: {
-            duration,
-            productiveDuration,
-            pausedDuration,
-            points,
-          },
+          payload: {},
           source: 'timer',
           occurredAt: now,
           createdAt: now,
@@ -248,7 +240,13 @@ export const activityRepository = {
 
         await db.activityEvents.add(completeEvent);
 
+        const allEvents = await db.activityEvents
+          .where({ attemptId })
+          .sortBy('occurredAt');
+        const finalState = reduceEventsToState(allEvents);
+
         await db.activityAttempts.update(attemptId, {
+          ...finalState,
           status: 'COMPLETED',
           isActive: false,
           activeKey: null,
@@ -259,90 +257,52 @@ export const activityRepository = {
   },
 
   async normalUndoOrRetry(params: {
-    attemptIdToUndo: string;
+    fromAttemptId: string;
     userId: string;
+    type: 'UNDO_NORMAL' | 'RETRY';
   }): Promise<ActivityAttempt> {
-    const { attemptIdToUndo, userId } = params;
+    const { fromAttemptId, userId, type } = params;
 
     return db.transaction(
       'rw',
       db.activityAttempts,
       db.activityEvents,
       async () => {
-        const attemptToUndo = await db.activityAttempts.get(attemptIdToUndo);
-
-        if (!attemptToUndo) {
-          throw new Error(`ActivityAttempt with id ${attemptIdToUndo} not found.`);
-        }
-        if (attemptToUndo.status !== 'COMPLETED') {
-          throw new Error(
-            `ActivityAttempt with id ${attemptIdToUndo} is not completed.`,
-          );
-        }
-        if (attemptToUndo.isActive) {
-          throw new Error(
-            `ActivityAttempt with id ${attemptIdToUndo} is still active.`,
-          );
+        const fromAttempt = await db.activityAttempts.get(fromAttemptId);
+        if (!fromAttempt) {
+          throw new Error(`ActivityAttempt with id ${fromAttemptId} not found.`);
         }
 
         const now = Date.now();
-        await db.activityAttempts.update(attemptIdToUndo, {
-          status: 'INVALIDATED',
-          deletedAt: now,
-          updatedAt: now,
+        const event: ActivityEvent = {
+          id: uuidv4(),
+          attemptId: fromAttemptId,
+          type: type,
+          payload: { reason: 'User initiated' },
+          source: 'timer',
+          occurredAt: now,
+          createdAt: now,
+        };
+        await db.activityEvents.add(event);
+
+        return this.createAttempt({
+          entityId: fromAttempt.entityId,
+          userId,
         });
-
-        const undoEvent: ActivityEvent = {
-          id: uuidv4(),
-          attemptId: attemptIdToUndo,
-          type: 'UNDO_NORMAL',
-          payload: { reason: 'User initiated undo/retry' },
-          source: 'timer',
-          occurredAt: now,
-          createdAt: now,
-        };
-
-        const newOrdinal = attemptToUndo.ordinal + 1;
-        const newAttempt: ActivityAttempt = {
-          id: uuidv4(),
-          templateId: attemptToUndo.templateId,
-          ordinal: newOrdinal,
-          status: 'NOT_STARTED',
-          isActive: true,
-          activeKey: `${userId}|${attemptToUndo.templateId}`,
-          createdAt: now,
-          updatedAt: now,
-        };
-
-        const retryEvent: ActivityEvent = {
-          id: uuidv4(),
-          attemptId: newAttempt.id,
-          type: 'RETRY',
-          payload: { fromAttemptId: attemptIdToUndo },
-          source: 'timer',
-          occurredAt: now,
-          createdAt: now,
-        };
-
-        await db.activityEvents.add(undoEvent);
-        await db.activityAttempts.add(newAttempt);
-        await db.activityEvents.add(retryEvent);
-
-        return newAttempt;
       },
     );
   },
 
   async manualLog(params: {
-    templateId: string;
+    entityId: string;
     duration: number;
     productiveDuration: number;
     pausedDuration: number;
     points: number;
-    completedAt: number; // Timestamp for when the activity was completed
-  }): Promise<ActivityAttempt> {
+    completedAt: number;
+  }): Promise<void> {
     const {
-      templateId,
+      entityId,
       duration,
       productiveDuration,
       pausedDuration,
@@ -355,56 +315,25 @@ export const activityRepository = {
       db.activityAttempts,
       db.activityEvents,
       async () => {
-        const lastAttempt = await db.activityAttempts
-          .where({ templateId })
-          .reverse()
-          .sortBy('ordinal');
-
-        const lastOrdinal = lastAttempt[0] ? lastAttempt[0].ordinal : 0;
-        const newOrdinal = (lastOrdinal || 0) + 1;
-
-        const completedAtDate = completedAt;
-
-        const newAttempt: ActivityAttempt = {
+        const now = Date.now();
+        const manualLogEvent: ActivityEvent = {
           id: uuidv4(),
-          templateId,
-          ordinal: newOrdinal,
-          status: 'COMPLETED',
-          isActive: false,
-          activeKey: null,
-          createdAt: completedAtDate,
-          updatedAt: completedAtDate,
-        };
-
-        const createEvent: ActivityEvent = {
-          id: uuidv4(),
-          attemptId: newAttempt.id,
-          type: 'CREATE',
-          payload: { templateId },
-          source: 'manual',
-          occurredAt: completedAt - duration,
-          createdAt: completedAtDate,
-        };
-
-        const completeEvent: ActivityEvent = {
-          id: uuidv4(),
-          attemptId: newAttempt.id,
-          type: 'COMPLETE',
-          source: 'manual',
+          attemptId: uuidv4(), // This is a new attempt
+          type: 'MANUAL_LOG',
           payload: {
+            entityId,
             duration,
             productiveDuration,
             pausedDuration,
             points,
+            completedAt,
           },
-          occurredAt: completedAtDate,
-          createdAt: completedAtDate,
+          source: 'manual',
+          occurredAt: now,
+          createdAt: now,
         };
 
-        await db.activityAttempts.add(newAttempt);
-        await db.activityEvents.bulkAdd([createEvent, completeEvent]);
-
-        return newAttempt;
+        await db.activityEvents.add(manualLogEvent);
       },
     );
   },
@@ -417,17 +346,6 @@ export const activityRepository = {
       db.activityAttempts,
       db.activityEvents,
       async () => {
-        const attemptToUndo = await db.activityAttempts.get(attemptId);
-
-        if (!attemptToUndo) {
-          throw new Error(`ActivityAttempt with id ${attemptId} not found.`);
-        }
-        if (attemptToUndo.status !== 'COMPLETED') {
-          throw new Error(
-            `ActivityAttempt with id ${attemptId} is not completed.`,
-          );
-        }
-
         const now = Date.now();
         await db.activityAttempts.update(attemptId, {
           status: 'INVALIDATED',
@@ -435,17 +353,93 @@ export const activityRepository = {
           updatedAt: now,
         });
 
-        const invalidateEvent: ActivityEvent = {
-          id: uuidv4(),
-          attemptId: attemptId,
-          type: 'INVALIDATE',
-          payload: { reason: 'User initiated hard undo/delete' },
-          source: 'timer',
-          occurredAt: now,
-          createdAt: now,
-        };
+        await db.activityEvents.where({ attemptId }).delete();
+      },
+    );
+  },
 
-        await db.activityEvents.add(invalidateEvent);
+  async getHydratedAttempts(): Promise<any[]> {
+    const attempts = await db.activityAttempts.toArray();
+    const attemptIds = attempts.map(a => a.id);
+    const events = await db.activityEvents.where('attemptId').anyOf(attemptIds).toArray();
+    
+    const eventsByAttemptId = events.reduce((acc, event) => {
+      if (!acc[event.attemptId]) {
+        acc[event.attemptId] = [];
+      }
+      acc[event.attemptId].push(event);
+      return acc;
+    }, {} as Record<string, ActivityEvent[]>);
+
+    return attempts.map(attempt => ({
+      ...attempt,
+      events: eventsByAttemptId[attempt.id] || [],
+    }));
+  },
+
+  async getHydratedAttemptsByDate(date: string): Promise<HydratedActivityAttempt[]> {
+    const attempts = await db.activityAttempts.where('date').equals(date).toArray();
+    if (attempts.length === 0) {
+      return [];
+    }
+
+    const attemptIds = attempts.map(a => a.id);
+    const events = await db.activityEvents.where('attemptId').anyOf(attemptIds).toArray();
+    
+    const eventsByAttemptId = events.reduce((acc, event) => {
+      if (!acc[event.attemptId]) {
+        acc[event.attemptId] = [];
+      }
+      acc[event.attemptId].push(event);
+      return acc;
+    }, {} as Record<string, ActivityEvent[]>);
+
+    const templateIds = attempts.map(a => a.entityId);
+    const tasks = await db.plans.where('id').anyOf(templateIds).toArray();
+    const routines = await db.routines.where('id').anyOf(templateIds).toArray();
+
+    const templatesById = [...tasks, ...routines].reduce((acc, template) => {
+      acc[template.id] = template;
+      return acc;
+    }, {} as Record<string, StudyTask | Routine>);
+
+    return attempts.map(attempt => ({
+      ...attempt,
+      events: eventsByAttemptId[attempt.id] || [],
+      template: templatesById[attempt.entityId],
+    }));
+  },
+  async applyEvents(attemptId: string, newEvents: ActivityEvent[]): Promise<void> {
+    return db.transaction(
+      'rw',
+      db.activityAttempts,
+      db.activityEvents,
+      async () => {
+        const attempt = await db.activityAttempts.get(attemptId);
+        if (!attempt) {
+          // If the attempt doesn't exist locally, it means this is a new
+          // attempt from a different device. We should create it.
+          // This logic can be enhanced later.
+          console.warn(`ActivityAttempt with id ${attemptId} not found locally. This may be a new attempt from another device.`);
+          return;
+        }
+
+        // Add the new events to the database
+        await db.activityEvents.bulkAdd(newEvents);
+
+        // Get all events for the attempt, including the new ones
+        const allEvents = await db.activityEvents
+          .where({ attemptId })
+          .sortBy('occurredAt');
+
+        // Re-run the reducer to calculate the new state of the attempt
+        const newState = reduceEventsToState(allEvents);
+
+        // Update the attempt with the new state
+        await db.activityAttempts.update(attemptId, {
+          ...newState,
+          updatedAt: Date.now(),
+        });
       },
     );
   },

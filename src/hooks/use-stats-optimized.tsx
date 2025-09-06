@@ -92,8 +92,8 @@ const calculateTodaysStats = (tasks: StudyTask[], attempts: ActivityAttempt[], e
   
   const totalBreakTime = 0; // Placeholder
   
-  const routineAttempts = todaysAttempts.filter(attempt => !attempt.templateId.startsWith('task-'));
-  const totalRoutines = new Set(routineAttempts.map(attempt => attempt.templateId)).size;
+  const routineAttempts = todaysAttempts.filter(attempt => !attempt.entityId.startsWith('task-'));
+  const totalRoutines = new Set(routineAttempts.map(attempt => attempt.entityId)).size;
   const completedRoutines = routineAttempts.length;
   
   const productivity = todaysTasks.length > 0 ? (completedTasks.length / todaysTasks.length) * 100 : 0;

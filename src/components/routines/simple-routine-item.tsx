@@ -22,7 +22,7 @@ export const SimpleRoutineItem = React.memo(function SimpleRoutineItem({ routine
   } = useGlobalState();
 
   const isTimerActiveForThis =
-    activeAttempt?.templateId === routine.id;
+    activeAttempt?.entityId === routine.id;
   const isAnyTimerActive = !!activeAttempt;
 
   const handleStartTimer = () => {

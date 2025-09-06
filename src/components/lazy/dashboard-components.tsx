@@ -122,11 +122,3 @@ export const LazyRoutineLogDialog = dynamic(
     ssr: false,
   }
 );
-
-export const LazyCompletedRoutineCard = dynamic(
-  () => import('@/components/dashboard/completed-routine-card').then(m => ({ default: m.CardCompletedRoutineItem })),
-  {
-    ssr: false,
-    loading: () => <Skeleton className="h-24 w-full" />,
-  }
-);

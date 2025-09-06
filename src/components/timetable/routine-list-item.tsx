@@ -67,7 +67,7 @@ export const RoutineListItem = memo(function RoutineListItem({
   const [isAlertOpen, setAlertOpen] = useState(false);
 
   const isTimerActiveForThis =
-    activeAttempt?.templateId === routine.id;
+    activeAttempt?.entityId === routine.id;
   const isAnyTimerActive = !!activeAttempt;
 
   const handleStartTimer = () => {

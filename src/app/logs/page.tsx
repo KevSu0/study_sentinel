@@ -31,7 +31,7 @@ const getIconForLogType = (type: string) => {
 
 export default function LogPage() {
   const {state} = useGlobalState();
-  const {todaysActivity, isLoaded} = state;
+  const {todaysCompletedActivities, isLoaded} = state;
 
   return (
     <div className="flex flex-col h-full">
@@ -49,25 +49,25 @@ export default function LogPage() {
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-20 w-full" />
           </div>
-        ) : todaysActivity.length > 0 ? (
+        ) : todaysCompletedActivities.length > 0 ? (
           <div className="space-y-4">
-            {todaysActivity.map((item, index) => (
-                <Card key={`${item.timestamp}-${index}`} className="bg-card/70" data-testid="log-item">
+            {todaysCompletedActivities.map((item, index) => (
+                <Card key={`${item.attempt.id}-${index}`} className="bg-card/70" data-testid="log-item">
                   <CardContent className="p-4 flex items-start gap-4">
                     <span className="text-xl mt-1">
-                      {getIconForLogType(item.type)}
+                      {getIconForLogType(item.attempt.status)}
                     </span>
                     <div className="flex-grow">
                       <div className="flex justify-between items-center">
                         <p className="font-semibold text-primary/90">
-                          {item.type.replace(/_/g, ' ')}
+                          {item.template.title}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {format(parseISO(item.timestamp), 'h:mm:ss a')}
+                          {format(new Date(item.attempt.events[0].occurredAt), 'h:mm:ss a')}
                         </p>
                       </div>
                       <pre className="text-xs text-muted-foreground mt-1 bg-muted/50 p-2 rounded-md overflow-x-auto">
-                        <code>{JSON.stringify(item.data, null, 2)}</code>
+                        <code>{JSON.stringify(item.attempt, null, 2)}</code>
                       </pre>
                     </div>
                   </CardContent>

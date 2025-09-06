@@ -29,11 +29,10 @@ import { PlanListItem } from '@/components/plans/plan-item-list-item';
 import { EmptyState } from '@/components/tasks/empty-state';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import type { StudyTask, Routine } from '@/lib/types';
+import type { StudyTask, Routine, CompletedWork } from '@/lib/types';
 import toast from 'react-hot-toast';
 import { CompletedTodayWidget } from '@/components/dashboard/widgets/completed-today-widget';
 import { cn } from '@/lib/utils';
-import { ActivityFeedItem } from '@/hooks/use-global-state';
 
 const AddItemDialog = dynamic(
   () => import('@/components/tasks/add-task-dialog').then((m) => m.AddItemDialog),
@@ -142,7 +141,6 @@ export default function PlansPage() {
                         <PlanComponent
                         key={`${item.type}-${item.data.id}-${index}`}
                         item={item}
-                        subjectDate={selectedDate}
                         onEditTask={(task) => openAddItemDialog('task', task)}
                         onEditRoutine={(routine) => openAddItemDialog('routine', routine)}
                         onDeleteRoutine={deleteRoutine}
@@ -189,7 +187,7 @@ export default function PlansPage() {
             <Separator />
 
             <CompletedTodayWidget
-              todaysActivity={completedForDay}
+              todaysCompletedActivities={completedForDay}
               viewMode={viewMode}
               onUndoComplete={(item) => {
                 retryItem(item);

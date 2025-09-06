@@ -26,7 +26,7 @@ export const StatsOverviewWidget = ({
   todaysBadges = [],
 }: StatsOverviewWidgetProps) => {
   const { state } = useGlobalState();
-  const { tasks, allCompletedWork, todaysLogs, allBadges, earnedBadges, profile } =
+  const { tasks, allCompletedWork, allBadges, earnedBadges, profile } =
     state;
 
   const { dailyPieChartData, timeRangeStats } = useStats({

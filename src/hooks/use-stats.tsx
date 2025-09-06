@@ -11,6 +11,7 @@ import {
   statsDailyRepository,
   badgeRepository,
 } from '@/lib/repositories';
+import { activityRepository } from '@/lib/repositories/activity-repository';
 import { buildSessionFromLog } from '@/lib/data/backfill-sessions';
 import type {
   StudyTask,
@@ -18,13 +19,14 @@ import type {
   Badge,
   BadgeCategory,
   UserProfile,
+  HydratedActivityAttempt,
 } from '@/lib/types';
 import { RoutineStat } from '@/components/stats/routine-stats-list';
 import type { Activity } from '@/components/stats/daily-activity-timeline';
 import {
   selectDailyPieData,
   selectSubjectTrends,
-  selectBadgeEligibility,
+  selectNewlyEarnedBadges,
   selectAiBriefingData,
   selectAchievementProgress,
 } from '@/lib/stats/selectors';
@@ -88,13 +90,50 @@ export function useStats({
           days.push(format(cursor, 'yyyy-MM-dd'));
           cursor = addDays(cursor, 1);
         }
-        const logsByDay = await Promise.all(days.map(d => logRepository.getLogsByDate(d)));
-        const combined = logsByDay.flat().filter(Boolean) as any[];
-        const sessions = combined
-          .filter(l => l.type === 'TIMER_SESSION_COMPLETE' || l.type === 'ROUTINE_SESSION_COMPLETE')
-          .map(buildSessionFromLog)
-          .filter(Boolean) as any[];
-        return sessions;
+        const attemptsByDay = await Promise.all(days.map(d => activityRepository.getHydratedAttemptsByDate(d)));
+        const completedAttempts = attemptsByDay.flat().filter(attempt => attempt.status === 'COMPLETED') as HydratedActivityAttempt[];
+
+        const completedWork: CompletedWork[] = completedAttempts.map(attempt => {
+          let duration = 0;
+          let pausedDuration = 0;
+          let lastEventTime = attempt.createdAt;
+          let isPaused = false;
+
+          for (const event of attempt.events) {
+            const eventTime = event.occurredAt;
+            const delta = (new Date(eventTime).getTime() - new Date(lastEventTime).getTime()) / 1000;
+
+            if (!isPaused) {
+              duration += delta;
+            } else {
+              pausedDuration += delta;
+            }
+
+            if (event.type === 'PAUSE') isPaused = true;
+            if (event.type === 'RESUME') isPaused = false;
+
+            lastEventTime = eventTime;
+          }
+
+          const isRoutine = 'days' in attempt.template;
+          const title = attempt.template.title;
+          
+          return {
+            id: attempt.id,
+            date: format(getStudyDateForTimestamp(new Date(attempt.createdAt).toISOString()), 'yyyy-MM-dd'),
+            timestamp: new Date(attempt.createdAt).toISOString(),
+            type: isRoutine ? 'routine' : 'task',
+            title: title,
+            duration: Math.round(duration),
+            pausedDuration: Math.round(pausedDuration),
+            points: attempt.points || 0,
+            isUndone: false,
+            taskId: !isRoutine ? attempt.template.id : undefined,
+            routineId: isRoutine ? attempt.template.id : undefined,
+          };
+        });
+
+        return completedWork;
       } catch {
         return [] as any[];
       }
@@ -609,10 +648,24 @@ export function useStats({
     subjectPerformanceTrends: selectSubjectTrends(filteredWork as any),
     newlyUnlockedBadges: (() => {
       try {
-        const logs = [] as any[]; // Optional: provide combined logs if needed
-        // If logsDerivedSessions source exists above, we can reuse its combined logs list if retained
-        return selectBadgeEligibility((allBadges as any) || [], { tasks: (tasks as any) || [], logs: (logs as any) });
-      } catch { return []; }
+        const attempts = logsDerivedSessions ? logsDerivedSessions.map(session => ({
+          ...session,
+          events: [],
+          template: {
+            id: session.taskId || session.routineId || '',
+            title: session.title,
+            //'days' in template
+            ...(session.type === 'routine' ? { days: [] } : {})
+          }
+        })) as HydratedActivityAttempt[] : [];
+        return selectNewlyEarnedBadges((allBadges as any) || [], {
+          tasks: (tasks as any) || [],
+          attempts: attempts,
+          allCompletedWork: (allCompletedWork as any) || [],
+        });
+      } catch {
+        return [];
+      }
     })(),
     achievementProgress: (() => {
       const totalStudyMinutes = (timeRangeStats.totalHours ? parseFloat(timeRangeStats.totalHours) * 60 : 0);

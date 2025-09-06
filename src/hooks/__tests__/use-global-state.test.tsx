@@ -810,10 +810,10 @@ describe('useGlobalState', () => {
       // For tasks, retry should unarchive the task (change status back to todo)
       expect(result.current.state.tasks.length).toBe(1); // Same task, status changed
       expect(result.current.state.tasks[0].status).toBe('todo');
-      const retry = result.current.state.todaysActivity.find(
+      const undoneItem = result.current.state.todaysCompletedActivities.find(
         (a: any) => a.attempt.status === 'COMPLETED' && a.attempt.events.some((e: any) => e.type === 'RETRY')
       );
-      expect(retry).toBeDefined();
+      expect(undoneItem).toBeDefined();
     });
 
   });

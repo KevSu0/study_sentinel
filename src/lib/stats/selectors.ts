@@ -1,5 +1,5 @@
 import { format, parseISO, subDays, isSameDay, set, startOfDay } from 'date-fns';
-import type { CompletedWork, StudyTask, UserProfile, Badge } from '@/lib/types';
+import type { CompletedWork, StudyTask, UserProfile, Badge, HydratedActivityAttempt } from '@/lib/types';
 import { getStudyDateForTimestamp, getStudyDay, getTimeSinceStudyDayStart } from '@/lib/utils';
 import { checkBadge } from '@/lib/badges';
 
@@ -217,14 +217,20 @@ export function selectSubjectTrends(work: CompletedWork[] | undefined) {
   return Object.entries(bySubject).map(([subject, v]) => ({ subject, totalSeconds: v.totalSeconds, points: v.points }));
 }
 
-export function selectBadgeEligibility(
+export function selectNewlyEarnedBadges(
   badges: Badge[],
-  data: { tasks: StudyTask[]; logs: LogEvent[] }
+  data: {
+    tasks: StudyTask[];
+    attempts: HydratedActivityAttempt[];
+    allCompletedWork: CompletedWork[];
+  }
 ) {
   const newly: Badge[] = [];
   for (const b of badges) {
     try {
-      if (checkBadge(b, { tasks: data.tasks, logs: data.logs })) newly.push(b);
+      if (checkBadge(b, { tasks: data.tasks, attempts: data.attempts, allCompletedWork: data.allCompletedWork })) {
+        newly.push(b);
+      }
     } catch {}
   }
   return newly;

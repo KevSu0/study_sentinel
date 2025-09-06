@@ -30,7 +30,7 @@ export function RoutineLogDialog() {
     return null;
   }
   
-  const routine = routines.find(r => r.id === activeAttempt.templateId);
+  const routine = routines.find(r => r.id === activeAttempt.entityId);
   if (!routine) return null;
 
   const handleConfirm = () => {

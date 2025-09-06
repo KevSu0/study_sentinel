@@ -4,22 +4,24 @@ import React from 'react';
 import { CompletedPlanListItem } from '@/components/plans/completed-plan-list-item';
 import { TaskViewMode } from '@/hooks/use-view-mode';
 import { cn } from '@/lib/utils';
-import type {ActivityFeedItem} from '@/hooks/use-global-state.tsx';
+import type { CompletedWork, CompletedActivity } from '@/lib/types';
+import { transformToCompletedItem, CompletedItem } from '@/lib/transformers';
 import {CheckCircle2} from 'lucide-react';
 import {ActivityItem} from '@/components/dashboard/activity/activity-item';
 
 export const CompletedTodayWidget = ({
-  todaysActivity,
+  todaysCompletedActivities,
   onUndoComplete,
   onDeleteComplete,
   viewMode = 'card',
 }: {
-  todaysActivity: ActivityFeedItem[];
-  onUndoComplete?: (item: ActivityFeedItem) => void;
-  onDeleteComplete?: (item: ActivityFeedItem) => void;
+  todaysCompletedActivities: (CompletedWork | CompletedActivity)[];
+  onUndoComplete?: (item: CompletedWork | CompletedActivity) => void;
+  onDeleteComplete?: (item: CompletedWork | CompletedActivity) => void;
   viewMode?: TaskViewMode;
 }) => {
-  const hasItems = todaysActivity && todaysActivity.length > 0;
+  const hasItems = todaysCompletedActivities && todaysCompletedActivities.length > 0;
+  const transformedItems = todaysCompletedActivities.map(transformToCompletedItem);
 
   if (!hasItems) {
     return (
@@ -44,29 +46,29 @@ export const CompletedTodayWidget = ({
         </h2>
       </div>
       <div className={cn("space-y-3", viewMode === 'list' && "space-y-1")}>
-          {todaysActivity.map((activityItem) => {
-            const itemId = (activityItem.data.log?.id || activityItem.data.task?.id || activityItem.data?.id || crypto.randomUUID());
-            const isUndone = (activityItem.type === 'TASK_COMPLETE' && activityItem.data.task?.status !== 'completed') || (activityItem.type === 'ROUTINE_COMPLETE' && !!activityItem.data.isUndone);
-            
+          {transformedItems.map((item) => {
+            const handleUndo = onUndoComplete ? () => onUndoComplete(item.originalItem) : undefined;
+            const handleDelete = onDeleteComplete ? () => onDeleteComplete(item.originalItem) : undefined;
+
             if (viewMode === 'list') {
               return (
                 <CompletedPlanListItem
-                  key={`${activityItem.type}-${itemId}`}
-                  item={activityItem}
-                  onUndo={onUndoComplete ? () => onUndoComplete(activityItem) : undefined}
-                  onDelete={onDeleteComplete ? () => onDeleteComplete(activityItem) : undefined}
-                  isUndone={isUndone}
+                  key={item.id}
+                  item={item}
+                  onUndo={handleUndo}
+                  onDelete={handleDelete}
+                  isUndone={item.isUndone}
                 />
               );
             }
             
             return (
               <ActivityItem
-                key={`${activityItem.type}-${itemId}`}
-                item={activityItem}
-                onUndo={onUndoComplete ? () => onUndoComplete(activityItem) : undefined}
-                onDelete={onDeleteComplete ? () => onDeleteComplete(activityItem) : undefined}
-                isUndone={isUndone}
+                key={item.id}
+                item={item}
+                onUndo={handleUndo}
+                onDelete={handleDelete}
+                isUndone={item.isUndone}
               />
             );
           })}

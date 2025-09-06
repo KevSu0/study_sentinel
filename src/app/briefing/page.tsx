@@ -39,15 +39,15 @@ export default function DailyBriefingPage() {
         }
       }
 
-      if (todaysCompletedWork.length > 0) {
+      if (todaysCompletedWork && todaysCompletedWork.length > 0) {
         const summary = await getDailySummary({
           logs: todaysCompletedWork,
           profile: {
-            name: profile.name || 'User',
-            dream: profile.dream || 'achieving their goals',
+            name: profile?.name || 'User',
+            dream: profile?.dream || 'achieving their goals',
           },
-          tasks,
-          routines,
+          tasks: tasks || [],
+          routines: routines || [],
         });
         if (summary && !('error' in summary)) {
           const summaryData = summary as any;

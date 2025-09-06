@@ -108,7 +108,7 @@ export class MyDatabase extends Dexie {
 
   constructor(name: string = 'MyDatabase') {
     super(name);
-    this.version(7).stores({
+    this.version(8).stores({
       plans: 'id, date, status', // Added indexes for date and status
       users: 'id',
       sessions: 'id, date',
@@ -117,8 +117,8 @@ export class MyDatabase extends Dexie {
       outbox: '++id, timestamp, retries',
       routines: 'id',
       badges: 'id',
-      activityAttempts: '++id, templateId, isActive, activeKey, status',
-      activityEvents: '++id, attemptId, type, occurredAt',
+      activityAttempts: 'id, [entityId+ordinal], activeKey, status',
+      activityEvents: '++id, [attemptId+occurredAt], type',
       
       // New tables for offline-first functionality
       syncConflicts: 'id, tableName, recordId, createdAt',

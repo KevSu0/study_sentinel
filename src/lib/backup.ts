@@ -21,7 +21,8 @@ type BackupPayload = {
   sessions: any[];
   stats_daily: any[];
   routines: any[];
-  logs: any[];
+  activityAttempts: any[];
+  activityEvents: any[];
   badges: any[];
   meta: any[];
   userPreferences: any[];
@@ -41,7 +42,8 @@ async function collectAllDataTxn(): Promise<BackupPayload & { _counts: Record<st
       sessions: await db.sessions.toArray(),
       stats_daily: await db.stats_daily.toArray(),
       routines: await db.routines.toArray(),
-      logs: await db.logs.toArray(),
+      activityAttempts: await db.activityAttempts.toArray(),
+      activityEvents: await db.activityEvents.toArray(),
       badges: await db.badges.toArray(),
       meta: await db.meta.toArray(),
       userPreferences: await db.userPreferences.toArray(),
@@ -289,7 +291,8 @@ const PK: Record<string, string> = {
   sessions: 'id',
   stats_daily: 'id',
   routines: 'id',
-  logs: 'id',
+  activityAttempts: 'id',
+  activityEvents: 'id',
   badges: 'id',
   meta: 'key',
   userPreferences: 'key',

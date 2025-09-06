@@ -7,7 +7,7 @@ import {
   selectPeakProductivity,
   selectProductivitySeries,
   selectSubjectTrends,
-  selectBadgeEligibility,
+  selectNewlyEarnedBadges,
   selectAiBriefingData,
   selectAchievementProgress,
 } from '@/lib/stats/selectors';
@@ -153,13 +153,14 @@ describe('selectors (Phase 1)', () => {
     expect(math.points).toBe(3);
   });
 
-  test('selectBadgeEligibility delegates to badge checker', () => {
+  test('selectNewlyEarnedBadges delegates to badge checker', () => {
     const badges: Badge[] = [
       { id: 'b1', name: 'One Task', description: '', category: 'overall', icon: 'Star', isCustom: false, isEnabled: true, requiredCount: 0, conditions: [ { type: 'TASKS_COMPLETED', target: 1, timeframe: 'TOTAL' } ] },
     ];
     const tasks: any[] = [ { id: 't1', date: '2025-01-01', status: 'completed' } ];
-    const logs: any[] = [] as any;
-    const result = selectBadgeEligibility(badges, { tasks: tasks as any, logs });
+    const attempts: any[] = [];
+    const allCompletedWork: any[] = [];
+    const result = selectNewlyEarnedBadges(badges, { tasks: tasks as any, attempts, allCompletedWork });
     expect(result.map(b => b.id)).toContain('b1');
   });
 

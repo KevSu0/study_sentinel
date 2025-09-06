@@ -21,8 +21,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import type { ActivityFeedItem } from '@/hooks/use-global-state';
-import type { StudyTask } from '@/lib/types';
+import type { CompletedItem } from '@/lib/transformers';
 
 const formatDuration = (seconds: number) => {
   if (seconds < 60) return `${Math.round(seconds)}s`;
@@ -37,7 +36,7 @@ const formatDuration = (seconds: number) => {
 };
 
 interface CompletedPlanListItemProps {
-  item: ActivityFeedItem;
+  item: CompletedItem;
   onUndo?: () => void;
   onDelete?: () => void;
   isUndone: boolean;
@@ -49,45 +48,7 @@ export const CompletedPlanListItem = ({
   onDelete,
   isUndone,
 }: CompletedPlanListItemProps) => {
-  
-  const extractMetrics = () => {
-    if (item.type === 'TASK_COMPLETE') {
-      const {task, log} = item.data as {task: StudyTask; log: any | null};
-      const totalDuration = log?.payload.duration ?? (task.duration || 0) * 60;
-      const productiveDuration = log?.payload.productiveDuration ?? totalDuration;
-      const pausedDuration = log?.payload.pausedDuration ?? 0;
-      const pauseCount = log?.payload.pauseCount ?? 0;
-      const points = log?.payload.points ?? task.points;
-      const focusPercentage = totalDuration > 0 ? (productiveDuration / totalDuration) * 100 : 100;
-      
-      return { title: task.title, totalDuration, productiveDuration, pausedDuration, pauseCount, points, focusPercentage };
-    }
-    if (item.type === 'ROUTINE_COMPLETE') {
-      const {routine, log} = item.data as {routine: any; log: any | null};
-      if (!routine) {
-        // Handle case where routine is undefined - use fallback values
-        const title = item.data.name || item.data.title || 'Unknown Routine';
-        return { title, totalDuration: 0, productiveDuration: 0, pausedDuration: 0, pauseCount: 0, points: 0, focusPercentage: 100 };
-      }
-      const totalDuration = log?.payload?.duration ?? 0;
-      const productiveDuration = log?.payload?.productiveDuration ?? totalDuration;
-      const pausedDuration = log?.payload?.pausedDuration ?? 0;
-      const pauseCount = log?.payload?.pauseCount ?? 0;
-      const points = log?.payload?.points ?? 0;
-      const focusPercentage = totalDuration > 0 ? (productiveDuration / totalDuration) * 100 : 100;
-
-      return { title: routine.title, totalDuration, productiveDuration, pausedDuration, pauseCount, points, focusPercentage };
-    }
-    return null;
-  };
-
-  const metrics = extractMetrics();
-
-  if (!metrics) return null;
-
-  const { title, productiveDuration, points, pausedDuration, pauseCount, focusPercentage, totalDuration } = metrics;
-  const subject = (item as any)?.data?.log?.payload?.subject || (item as any)?.data?.task?.subject || (item as any)?.data?.routine?.subject;
-  const isRoutine = item.type === 'ROUTINE_COMPLETE';
+  const { title, productiveDuration, points, pausedDuration, pauseCount, focusPercentage, totalDuration, subject } = item;
 
   return (
     <div

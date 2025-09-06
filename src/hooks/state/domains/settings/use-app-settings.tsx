@@ -55,6 +55,9 @@ export function useAppSettings({ state, setState }: UseAppSettingsProps): Settin
 
 // Utility function to load sound settings from localStorage
 export function loadSoundSettingsFromStorage(): SoundSettings | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
   try {
     const stored = localStorage.getItem(SOUND_SETTINGS_KEY) || localStorage.getItem(LEGACY_SOUND_SETTINGS_KEY);
     return stored ? JSON.parse(stored) : null;
