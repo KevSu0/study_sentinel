@@ -75,7 +75,7 @@ type RoutineFormData = z.infer<typeof routineSchema>;
 interface AddItemDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onAddTask: (task: Omit<StudyTask, 'id' | 'status'>) => void;
+  onAddTask: (task: Omit<StudyTask, 'id' | 'status'>) => void | Promise<void>;
   onUpdateTask: (task: StudyTask) => void;
   onAddRoutine: (routine: Omit<Routine, 'id' | 'shortId' | 'status' | 'createdAt'> & Partial<Pick<Routine, 'id'>>) => Promise<string>;
   onUpdateRoutine: (routine: Routine) => void;
@@ -403,7 +403,7 @@ export function AddItemDialog({ isOpen, onOpenChange, onAddTask, onUpdateTask, o
     onOpenChange(newOpenState);
   };
   
-  const onTaskSubmit = (data: TaskFormData) => {
+  const onTaskSubmit = async (data: TaskFormData) => {
     const points = calculatePoints(data.duration, data.priority);
     const finalData = { ...data, points, duration: data.timerType === 'infinity' ? undefined : data.duration };
     if (editingTask) {
@@ -420,7 +420,7 @@ export function AddItemDialog({ isOpen, onOpenChange, onAddTask, onUpdateTask, o
         priority: data.priority || 'medium',
         timerType: data.timerType || 'countdown'
       };
-      onAddTask(newTask);
+      await Promise.resolve(onAddTask(newTask));
     }
     handleOpenChange(false);
   };

@@ -15,7 +15,8 @@ export function GlobalTimerBar() {
     state,
     togglePause,
     completeTimer,
-    openRoutineLogDialog
+    openRoutineLogDialog,
+    stopTimer,
   } = useGlobalState();
   const {activeAttempt, timeDisplay, isPaused, isOvertime, tasks, routines} = state;
 
@@ -58,11 +59,22 @@ export function GlobalTimerBar() {
   }
 
   const handleConfirmStopTask = (reason: string) => {
+    // Stop the task timer with the provided reason and close dialog
+    stopTimer(reason);
     setStopTaskDialogOpen(false);
   };
   
   const handleExpand = () => {
-    router.push('/timer');
+    // Guard against race where attempt stops right before navigation
+    if (!state.activeAttempt) {
+      try { (window as any)?.toast?.error?.('No active timer to expand.'); } catch {}
+      return;
+    }
+    try {
+      router.push('/timer');
+    } catch {
+      // Ignore transient navigation aborts in dev
+    }
   };
 
   return (

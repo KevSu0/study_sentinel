@@ -53,6 +53,7 @@ export default function PlansPage() {
     addRoutine,
     deleteRoutine,
     retryItem,
+    hardUndoAttempt,
   } = useGlobalState();
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -193,13 +194,7 @@ export default function PlansPage() {
                 retryItem(item);
               }}
               onDeleteComplete={(item) => {
-                // Delete Log: Only delete the record, item reappears in upcoming
-                // if (item.data.log?.id) {
-                //   removeLog(item.data.log.id);
-                //   if (item.type === 'TASK_COMPLETE') {
-                //     handleUpdateTask({ ...item.data.task, status: 'todo' });
-                //   }
-                // }
+                hardUndoAttempt(item);
               }}
             />
 

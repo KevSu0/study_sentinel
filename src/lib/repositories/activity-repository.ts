@@ -1,15 +1,29 @@
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../db';
+import { format } from 'date-fns';
+import { getStudyDateForTimestamp } from '../utils';
 import { ActivityAttempt, ActivityEvent, HydratedActivityAttempt, Routine, StudyTask } from '../types';
 import { reduceEventsToState } from '../core/reducer';
 
 export const activityRepository = {
+  async __ensureDbOpen() {
+    if (!db.isOpen()) {
+      try {
+        await db.open();
+      } catch (e) {
+        // Swallow here; downstream calls still handle errors
+      }
+    }
+  },
   async getActiveAttempt(): Promise<ActivityAttempt | null> {
     try {
-      const attempt = await db.activityAttempts.where({ isActive: 1 }).first();
-      return attempt || null;
+      await this.__ensureDbOpen();
+      // Use a scan to avoid requiring an index on `isActive` across browsers
+      const all = await db.activityAttempts.toArray();
+      const attempt = all.find((a: any) => a && (a.isActive === true || a.isActive === 1));
+      return attempt ?? null;
     } catch (error) {
-      console.error('Failed to get active attempt:', error);
+      console.warn('Failed to get active attempt:', error);
       return null;
     }
   },
@@ -20,10 +34,14 @@ export const activityRepository = {
   }): Promise<ActivityAttempt> {
     const { entityId, userId } = params;
 
+    await this.__ensureDbOpen();
     return db.transaction(
       'rw',
+      // Include all tables we touch inside the transaction scope.
       db.activityAttempts,
       db.activityEvents,
+      db.plans,
+      db.routines,
       async () => {
         const activeKey = `${userId}|${entityId}`;
         const existingActiveAttempt = await db.activityAttempts
@@ -36,12 +54,8 @@ export const activityRepository = {
 
         const task = await db.plans.get(entityId);
         const routine = await db.routines.get(entityId);
-
-        if (!task && !routine) {
-          throw new Error(`Entity with id ${entityId} not found.`);
-        }
-
-        const entityType = task ? 'task' : 'routine';
+        // Be lenient: if neither exists (e.g., offline out-of-order sync), default to 'task'.
+        const entityType = task ? 'task' : (routine ? 'routine' : 'task');
 
         const lastAttempt = await db.activityAttempts
           .where({ entityId: entityId })
@@ -52,6 +66,7 @@ export const activityRepository = {
         const newOrdinal = (lastOrdinal || 0) + 1;
 
         const now = Date.now();
+        const dateStr = format(getStudyDateForTimestamp(new Date(now).toISOString()), 'yyyy-MM-dd');
         const newAttempt: ActivityAttempt = {
           id: uuidv4(),
           entityId: entityId,
@@ -62,7 +77,7 @@ export const activityRepository = {
           activeKey,
           createdAt: now,
           updatedAt: now,
-          date: new Date(now).toISOString().slice(0, 10),
+          date: dateStr,
         };
 
         const createEvent: ActivityEvent = {
@@ -85,6 +100,7 @@ export const activityRepository = {
 
   async startAttempt(params: { attemptId: string }): Promise<void> {
     const { attemptId } = params;
+    await this.__ensureDbOpen();
     return db.transaction(
       'rw',
       db.activityAttempts,
@@ -118,6 +134,7 @@ export const activityRepository = {
 
   async pauseAttempt(params: { attemptId: string }): Promise<void> {
     const { attemptId } = params;
+    await this.__ensureDbOpen();
     return db.transaction(
       'rw',
       db.activityAttempts,
@@ -151,6 +168,7 @@ export const activityRepository = {
 
   async resumeAttempt(params: { attemptId: string }): Promise<void> {
     const { attemptId } = params;
+    await this.__ensureDbOpen();
     return db.transaction(
       'rw',
       db.activityAttempts,
@@ -184,6 +202,7 @@ export const activityRepository = {
 
   async stopAttempt(params: { attemptId: string; reason: string }): Promise<void> {
     const { attemptId, reason } = params;
+    await this.__ensureDbOpen();
     return db.transaction(
       'rw',
       db.activityAttempts,
@@ -222,6 +241,7 @@ export const activityRepository = {
 
   async completeAttempt(params: { attemptId: string }): Promise<void> {
     const { attemptId } = params;
+    await this.__ensureDbOpen();
     return db.transaction(
       'rw',
       db.activityAttempts,
@@ -262,35 +282,73 @@ export const activityRepository = {
     type: 'UNDO_NORMAL' | 'RETRY';
   }): Promise<ActivityAttempt> {
     const { fromAttemptId, userId, type } = params;
+    await this.__ensureDbOpen();
+    // Important: perform all steps in a single transaction to avoid nested transactions
+    // when creating a new attempt.
+    return db.transaction('rw', db.activityAttempts, db.activityEvents, db.plans, db.routines, async () => {
+      const fromAttempt = await db.activityAttempts.get(fromAttemptId);
+      if (!fromAttempt) {
+        throw new Error(`ActivityAttempt with id ${fromAttemptId} not found.`);
+      }
 
-    return db.transaction(
-      'rw',
-      db.activityAttempts,
-      db.activityEvents,
-      async () => {
-        const fromAttempt = await db.activityAttempts.get(fromAttemptId);
-        if (!fromAttempt) {
-          throw new Error(`ActivityAttempt with id ${fromAttemptId} not found.`);
-        }
+      const now = Date.now();
+      const dateStr = format(getStudyDateForTimestamp(new Date(now).toISOString()), 'yyyy-MM-dd');
+      const undoEvent: ActivityEvent = {
+        id: uuidv4(),
+        attemptId: fromAttemptId,
+        type: type,
+        payload: { reason: 'User initiated' },
+        source: 'timer',
+        occurredAt: now,
+        createdAt: now,
+      };
+      await db.activityEvents.add(undoEvent);
 
-        const now = Date.now();
-        const event: ActivityEvent = {
-          id: uuidv4(),
-          attemptId: fromAttemptId,
-          type: type,
-          payload: { reason: 'User initiated' },
-          source: 'timer',
-          occurredAt: now,
-          createdAt: now,
-        };
-        await db.activityEvents.add(event);
-
-        return this.createAttempt({
-          entityId: fromAttempt.entityId,
-          userId,
+      // Create a fresh attempt for the same entity
+      const entityId = fromAttempt.entityId;
+      const activeKey = `${userId}|${entityId}`;
+      const existingActiveAttempt = await db.activityAttempts.where({ activeKey }).first();
+      if (existingActiveAttempt) {
+        // Cancel any dangling active attempt to maintain the uniqueness of activeKey
+        await db.activityAttempts.update(existingActiveAttempt.id, {
+          status: 'CANCELLED',
+          isActive: false,
+          activeKey: null,
+          updatedAt: now,
         });
-      },
-    );
+      }
+
+      const lastAttempt = await db.activityAttempts.where({ entityId }).reverse().sortBy('ordinal');
+      const lastOrdinal = lastAttempt[0] ? lastAttempt[0].ordinal : 0;
+      const newOrdinal = (lastOrdinal || 0) + 1;
+
+      const newAttempt: ActivityAttempt = {
+        id: uuidv4(),
+        entityId,
+        entityType: fromAttempt.entityType,
+        ordinal: newOrdinal,
+        status: 'NOT_STARTED',
+        isActive: true,
+        activeKey,
+        createdAt: now,
+        updatedAt: now,
+        date: dateStr,
+      };
+
+      const createEvent: ActivityEvent = {
+        id: uuidv4(),
+        attemptId: newAttempt.id,
+        type: 'CREATE',
+        payload: { entityId },
+        source: 'timer',
+        occurredAt: now,
+        createdAt: now,
+      };
+
+      await db.activityAttempts.add(newAttempt);
+      await db.activityEvents.add(createEvent);
+      return newAttempt;
+    });
   },
 
   async manualLog(params: {
@@ -309,38 +367,109 @@ export const activityRepository = {
       points,
       completedAt,
     } = params;
-
+    await this.__ensureDbOpen();
     return db.transaction(
       'rw',
       db.activityAttempts,
       db.activityEvents,
+      db.plans,
+      db.routines,
       async () => {
-        const now = Date.now();
-        const manualLogEvent: ActivityEvent = {
-          id: uuidv4(),
-          attemptId: uuidv4(), // This is a new attempt
-          type: 'MANUAL_LOG',
-          payload: {
-            entityId,
-            duration,
-            productiveDuration,
-            pausedDuration,
-            points,
-            completedAt,
-          },
-          source: 'manual',
-          occurredAt: now,
-          createdAt: now,
-        };
+        const totalMs = Math.max(0, Math.round(duration) * 1000);
+        const prodMs = Math.max(0, Math.round(productiveDuration) * 1000);
+        const pauseMs = Math.max(0, Math.round(pausedDuration) * 1000);
+        const end = completedAt;
+        const start = end - totalMs;
 
-        await db.activityEvents.add(manualLogEvent);
-      },
+        // Determine entity type for consistency
+        const task = await db.plans.get(entityId);
+        const routine = await db.routines.get(entityId);
+        const entityType = task ? 'task' : (routine ? 'routine' : 'task');
+
+        const dateStr = format(getStudyDateForTimestamp(new Date(end).toISOString()), 'yyyy-MM-dd');
+
+        const attemptId = uuidv4();
+        const createEvent: ActivityEvent = {
+          id: uuidv4(),
+          attemptId,
+          type: 'CREATE',
+          payload: { entityId },
+          source: 'manual',
+          occurredAt: start,
+          createdAt: start,
+        };
+        const startEvent: ActivityEvent = {
+          id: uuidv4(),
+          attemptId,
+          type: 'START',
+          payload: {},
+          source: 'manual',
+          occurredAt: start,
+          createdAt: start,
+        };
+        const events: ActivityEvent[] = [createEvent, startEvent];
+
+        if (pauseMs > 0) {
+          const pauseEvent: ActivityEvent = {
+            id: uuidv4(),
+            attemptId,
+            type: 'PAUSE',
+            payload: {},
+            source: 'manual',
+            occurredAt: start + prodMs,
+            createdAt: start + prodMs,
+          };
+          const resumeEvent: ActivityEvent = {
+            id: uuidv4(),
+            attemptId,
+            type: 'RESUME',
+            payload: {},
+            source: 'manual',
+            occurredAt: start + prodMs + pauseMs,
+            createdAt: start + prodMs + pauseMs,
+          };
+          events.push(pauseEvent, resumeEvent);
+        }
+
+        const completeEvent: ActivityEvent = {
+          id: uuidv4(),
+          attemptId,
+          type: 'COMPLETE',
+          payload: {},
+          source: 'manual',
+          occurredAt: end,
+          createdAt: end,
+        };
+        events.push(completeEvent);
+
+        const newAttempt: ActivityAttempt = {
+          id: attemptId,
+          entityId,
+          entityType,
+          ordinal: (await db.activityAttempts.where({ entityId }).count()) + 1,
+          status: 'COMPLETED',
+          isActive: false,
+          activeKey: null,
+          createdAt: start,
+          updatedAt: end,
+          startTime: start,
+          endTime: end,
+          duration: prodMs,
+          pausedDuration: pauseMs,
+          pointsEarned: points,
+          points: points,
+          date: dateStr,
+        } as any;
+
+        await db.activityAttempts.add(newAttempt);
+        await db.activityEvents.bulkAdd(events);
+      }
     );
   },
 
   async hardUndo(params: { attemptId: string }): Promise<void> {
     const { attemptId } = params;
-
+    await this.__ensureDbOpen();
     return db.transaction(
       'rw',
       db.activityAttempts,

@@ -21,12 +21,12 @@ export function generateShortId(prefix: 'T' | 'R'): string {
  * @returns {Date} The current session date object.
  */
 export function getSessionDate(): Date {
+  // Use local time for 4 AM rollover to match user expectation across widgets
   const now = new Date();
-  const hour = now.getUTCHours();
-  // Create a UTC midnight date without using Date.UTC (which may be mocked in tests)
-  const midnightUTC = new Date(now.getTime());
-  midnightUTC.setUTCHours(0, 0, 0, 0);
-  return hour < 4 ? subDays(midnightUTC, 1) : now;
+  const hour = now.getHours();
+  const midnightLocal = new Date(now.getTime());
+  midnightLocal.setHours(0, 0, 0, 0);
+  return hour < 4 ? subDays(midnightLocal, 1) : now;
 }
 
 /**
@@ -36,12 +36,13 @@ export function getSessionDate(): Date {
  * @returns {Date} The date object representing the study day.
  */
 export function getStudyDateForTimestamp(timestamp: string): Date {
+  // Parse as local time; apply 4 AM local rollover
   const date = parseISO(timestamp);
-  const hour = date.getUTCHours();
-  const midnightUTC = new Date(date.getTime());
-  midnightUTC.setUTCHours(0, 0, 0, 0);
+  const hour = date.getHours();
+  const midnightLocal = new Date(date.getTime());
+  midnightLocal.setHours(0, 0, 0, 0);
   if (hour < 4) {
-    return subDays(midnightUTC, 1);
+    return subDays(midnightLocal, 1);
   }
   return date;
 };
@@ -53,11 +54,11 @@ export function getStudyDateForTimestamp(timestamp: string): Date {
  * @returns {Date} The date object representing the study day.
  */
 export function getStudyDay(date: Date): Date {
-  const hour = date.getUTCHours();
-  const midnightUTC = new Date(date.getTime());
-  midnightUTC.setUTCHours(0, 0, 0, 0);
+  const hour = date.getHours();
+  const midnightLocal = new Date(date.getTime());
+  midnightLocal.setHours(0, 0, 0, 0);
   if (hour < 4) {
-    return subDays(midnightUTC, 1);
+    return subDays(midnightLocal, 1);
   }
   return date;
 }
@@ -65,12 +66,12 @@ export function getStudyDay(date: Date): Date {
 export function getTimeSinceStudyDayStart(timestamp: number | null): number | null {
   if (timestamp === null) return null;
   const date = new Date(timestamp);
-  const y = date.getUTCFullYear();
-  const m = date.getUTCMonth();
-  const d = date.getUTCDate();
-  const hour = date.getUTCHours();
-  // 4 AM UTC for the study day start
-  let studyDayStart = new Date(Date.UTC(y, m, d, 4, 0, 0, 0));
+  const y = date.getFullYear();
+  const m = date.getMonth();
+  const d = date.getDate();
+  const hour = date.getHours();
+  // 4 AM local for the study day start
+  let studyDayStart = new Date(y, m, d, 4, 0, 0, 0);
   if (hour < 4) {
     studyDayStart = subDays(studyDayStart, 1);
   }

@@ -113,8 +113,7 @@ const {
       } catch {
         f.__singleton = fallback;
       }
-      // Mutate the mocked module so subsequent calls return the same instance
-      anyRepos[factoryName] = () => f.__singleton;
+      // Avoid mutating ESM export bindings; just cache locally
     }
     return f.__singleton;
   };
@@ -271,6 +270,7 @@ interface GlobalStateContextType {
   setSoundSettings: (newSettings: Partial<SoundSettings>) => void;
   toggleMute: () => void;
   retryItem: (item: any) => void;
+  hardUndoAttempt: (item: any) => void;
   openQuickStart: () => void;
   closeQuickStart: () => void;
 }
@@ -378,6 +378,7 @@ const DEFAULT_CONTEXT: GlobalStateContextType & { __isDefault: true } = {
   setSoundSettings: () => {},
   toggleMute: () => {},
   retryItem: () => {},
+  hardUndoAttempt: () => {},
   openQuickStart: () => {},
   closeQuickStart: () => {},
 };
@@ -633,13 +634,67 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
   }, []);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-        if (!state.activeAttempt || state.isPaused) {
-            stopSound(soundSettingsRef.current.tick);
-            return;
-        };
+    const interval = setInterval(async () => {
+      if (!state.activeAttempt) {
+        return;
+      }
+      if (state.isPaused) {
+        stopSound(soundSettingsRef.current.tick);
+        return;
+      }
+      try {
+        // Poll latest events for the active attempt and derive time
+        const attemptId = state.activeAttempt.id;
+        const events = await (await import('@/lib/db')).db.activityEvents.where({ attemptId }).sortBy('occurredAt');
+        const { reduceEventsToState } = await import('@/lib/core/reducer');
+        const s: any = reduceEventsToState(events as any);
 
+        // Base times from reducer (ms -> s)
+        let productive = Math.max(0, Math.round((s.duration || 0) / 1000));
+        let paused = Math.max(0, Math.round((s.pausedDuration || 0) / 1000));
+
+        // Live accrual: add time since the last event depending on state (running vs paused)
+        const lastEvent = events[events.length - 1];
+        const lastType = lastEvent?.type as string | undefined;
+        const attemptCreatedAt = state.activeAttempt.createdAt;
+        const lastAt = (lastEvent?.occurredAt ?? attemptCreatedAt) as number;
+        const now = Date.now();
+        const sinceLast = Math.max(0, Math.round((now - lastAt) / 1000));
+        const ended = lastType === 'COMPLETE' || lastType === 'CANCEL' || lastType === 'HARD_UNDO' || lastType === 'INVALIDATE';
+        if (!ended) {
+          if (lastType === 'PAUSE') {
+            paused += sinceLast;
+          } else {
+            // START or RESUME or no events yet: treat as running
+            productive += sinceLast;
+          }
+        }
+
+        const totalSeconds = productive + paused; // still used for other purposes if needed
+
+        // Display only productive time (requested behavior)
+        const displaySeconds = productive;
+
+        // Format time as MM:SS or HH:MM:SS for long durations
+        const h = Math.floor(displaySeconds / 3600);
+        const m = Math.floor((displaySeconds % 3600) / 60);
+        const sec = displaySeconds % 60;
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const timeDisplay = h > 0 ? `${pad(h)}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`;
+
+        // Compute task progress if applicable
+        let timerProgress: number | null = null;
+        const task = state.tasks.find(t => t.id === state.activeAttempt?.entityId);
+        if (task && typeof task.duration === 'number' && task.timerType === 'countdown') {
+          const taskTotal = Math.max(1, (task.duration || 0) * 60);
+          timerProgress = Math.min(100, Math.round((productive / taskTotal) * 100));
+        }
+
+        setState(prev => ({ ...prev, timeDisplay, timerProgress }));
         playSound(soundSettingsRef.current.tick);
+      } catch {
+        // ignore transient read errors
+      }
     }, 1000);
     return () => clearInterval(interval);
   }, [state.activeAttempt, state.isPaused, playSound, stopSound, showNewQuote]);
@@ -709,20 +764,27 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
 
   const todaysCompletedActivities = useMemo((): CompletedActivity[] => {
     const todayStr = format(getSessionDate(), 'yyyy-MM-dd');
-    return allHydratedAttempts.filter(attempt => {
+    const items = allHydratedAttempts
+      .filter(attempt => {
         if (attempt.status !== 'COMPLETED') return false;
         const completeEvent = attempt.events.find(e => e.type === 'COMPLETE');
         if (!completeEvent) return false;
         const attemptDate = format(new Date(completeEvent.occurredAt), 'yyyy-MM-dd');
         return attemptDate === todayStr;
-    }).map(attempt => {
+      })
+      .map(attempt => {
         const template = [...state.tasks, ...state.routines].find(t => t.id === attempt.entityId);
         return {
-            attempt,
-            completeEvent: attempt.events.find(e => e.type === 'COMPLETE')!,
-            template: template!
+          attempt,
+          completeEvent: attempt.events.find(e => e.type === 'COMPLETE')!,
+          template: template!
         }
-    }).filter((item): item is Omit<CompletedActivity, 'attempt'> & { attempt: HydratedActivityAttempt } => !!item.template);
+      })
+      .filter((item): item is Omit<CompletedActivity, 'attempt'> & { attempt: HydratedActivityAttempt } => !!item.template);
+
+    // Sort by recency: most recent complete first
+    items.sort((a, b) => (b.completeEvent.occurredAt || 0) - (a.completeEvent.occurredAt || 0));
+    return items;
   }, [allHydratedAttempts, state.tasks, state.routines]);
 
   useEffect(() => {
@@ -979,16 +1041,28 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
 
     stopSound(state.soundSettings.tick);
 
-    // These values will be calculated based on the events in a separate query layer
-    const duration = 0;
-    const productiveDuration = 0;
-    const pausedDuration = 0;
-    const points = 0;
-
     try {
       await activityRepository.completeAttempt({
         attemptId: state.activeAttempt.id,
       });
+
+      // Compute final durations and points from events
+      let points = 0;
+      try {
+        const attemptId = state.activeAttempt.id;
+        const events = await (await import('@/lib/db')).db.activityEvents.where({ attemptId }).sortBy('occurredAt');
+        const { reduceEventsToState } = await import('@/lib/core/reducer');
+        const s: any = reduceEventsToState(events as any);
+        const productiveSeconds = Math.max(0, Math.round((s.duration || 0) / 1000));
+        const multipliers: Record<TaskPriority, number> = { low: 1, medium: 2, high: 3 } as any;
+        const task = state.tasks.find(t => t.id === state.activeAttempt?.entityId);
+        const mult = task ? multipliers[task.priority] : 1;
+        points = Math.floor((productiveSeconds / 60) * mult);
+        try {
+          const { db } = await import('@/lib/db');
+          await db.activityAttempts.update(attemptId, { points, pointsEarned: points } as any);
+        } catch {}
+      } catch {}
 
       const task = state.tasks.find(t => t.id === state.activeAttempt?.entityId);
       if (task) {
@@ -1049,6 +1123,11 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
       }
 
       toast.success(`"${item.title}" completed. Logged ${data.productiveDuration}m. You earned ${points} pts!`);
+      // Refresh hydrated attempts so Today's Activity reflects the manual log immediately
+      try {
+        const attempts = await activityRepository.getHydratedAttempts();
+        setAllHydratedAttempts(attempts as any);
+      } catch {}
       fire();
     } catch (error) {
       console.error('Failed to manually complete item:', error);
@@ -1175,31 +1254,66 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
   const toggleMute = useCallback(() => setState(prev => ({...prev, isMuted: !prev.isMuted})), []);
 
   const retryItem = useCallback(async (item: any) => {
-    const { log } = item.data;
-    if (!log) {
-      toast.error('Log data not found.');
-      return;
-    }
+    // Accept multiple shapes (CompletedActivity, CompletedPlan item, legacy log, or string attemptId)
+    let fromAttemptId: string | undefined;
+    try {
+      if (typeof item === 'string') {
+        fromAttemptId = item;
+      } else if (item?.attempt?.id) {
+        fromAttemptId = item.attempt.id;
+      } else if (item?.data?.attempt?.id) {
+        fromAttemptId = item.data.attempt.id;
+      } else if (item?.data?.log?.payload?.attemptId) {
+        fromAttemptId = item.data.log.payload.attemptId;
+      }
+    } catch {}
 
-    const attemptIdToUndo = log.payload.attemptId;
-    if (!attemptIdToUndo) {
-      toast.error('Attempt ID not found.');
+    if (!fromAttemptId) {
+      toast.error('Unable to determine attempt to retry.');
       return;
     }
 
     try {
       const newAttempt = await activityRepository.normalUndoOrRetry({
-        fromAttemptId: attemptIdToUndo,
+        fromAttemptId,
         userId: state.profile.id,
         type: 'RETRY',
       });
+      // Immediately start the new attempt so it becomes a real active timer
+      try { await activityRepository.startAttempt({ attemptId: newAttempt.id }); } catch {}
       setState(prev => ({ ...prev, activeAttempt: newAttempt }));
-      toast.success('The item is now available to retry.');
+      toast.success('Retry started. Timer is running.');
     } catch (error) {
       console.error('Failed to retry item:', error);
       toast.error('Failed to retry item. Please try again.');
     }
   }, [state.profile.id]);
+
+  const hardUndoAttempt = useCallback(async (item: any) => {
+    let attemptId: string | undefined;
+    try {
+      if (typeof item === 'string') attemptId = item;
+      else if (item?.attempt?.id) attemptId = item.attempt.id;
+      else if (item?.data?.attempt?.id) attemptId = item.data.attempt.id;
+      else if (item?.data?.log?.payload?.attemptId) attemptId = item.data.log.payload.attemptId;
+    } catch {}
+    if (!attemptId) {
+      toast.error('Unable to determine attempt to delete.');
+      return;
+    }
+    try {
+      await activityRepository.hardUndo({ attemptId });
+      // Refresh hydrated attempts so UI reflects removal
+      try {
+        const attempts = await activityRepository.getHydratedAttempts();
+        setAllHydratedAttempts(attempts as any);
+      } catch {}
+      toast.success('Log deleted.');
+    } catch (error) {
+      console.error('Failed to delete log:', error);
+      toast.error('Failed to delete log. Please try again.');
+    }
+  }, []);
 
   const contextValue = useMemo(
     () => ({
@@ -1226,6 +1340,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
       setSoundSettings,
       toggleMute,
       retryItem,
+      hardUndoAttempt,
       openQuickStart,
       closeQuickStart,
     }),
@@ -1253,6 +1368,7 @@ export function GlobalStateProvider(props: GlobalStateProviderProps) {
       setSoundSettings,
       toggleMute,
       retryItem,
+      hardUndoAttempt,
       openQuickStart,
       closeQuickStart
     ]

@@ -9,17 +9,17 @@ import {UserProfile, StudyTask, Routine, CompletedActivity} from '@/lib/types';
 import {MotivationalQuote} from '@/components/shared/motivational-quote';
 
 interface DailyBriefingWidgetProps {
-  previousDayActivities: CompletedActivity[];
+  previousDayActivities?: CompletedActivity[];
   profile: UserProfile;
-  tasks: StudyTask[];
-  routines: Routine[];
+  tasks?: StudyTask[];
+  routines?: Routine[];
 }
 
 export const DailyBriefingWidget = ({
-  previousDayActivities,
+  previousDayActivities = [],
   profile,
-  tasks,
-  routines,
+  tasks = [],
+  routines = [],
 }: DailyBriefingWidgetProps) => {
   const [dailySummary, setDailySummary] = useState<{
     evaluation: string;
@@ -42,7 +42,7 @@ export const DailyBriefingWidget = ({
         return;
       }
 
-      if (previousDayActivities.length > 0) {
+      if (Array.isArray(previousDayActivities) && previousDayActivities.length > 0) {
         const summary = await getDailySummary({
           logs: previousDayActivities,
           profile: {

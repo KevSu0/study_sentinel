@@ -13,6 +13,7 @@ import {
 } from '@/lib/repositories';
 import { activityRepository } from '@/lib/repositories/activity-repository';
 import { buildSessionFromLog } from '@/lib/data/backfill-sessions';
+import { useGlobalState } from '@/hooks/use-global-state';
 import type {
   StudyTask,
   CompletedWork,
@@ -53,6 +54,7 @@ export function useStats({
   timeRange,
   selectedDate,
 }: UseStatsProps) {
+  const { state } = useGlobalState();
   const { timeRange: timeRangeDep, selectedDate: selectedDateDep } = { timeRange, selectedDate };
 
   const dateRange = useMemo(() => {
@@ -90,8 +92,19 @@ export function useStats({
           days.push(format(cursor, 'yyyy-MM-dd'));
           cursor = addDays(cursor, 1);
         }
-        const attemptsByDay = await Promise.all(days.map(d => activityRepository.getHydratedAttemptsByDate(d)));
-        const completedAttempts = attemptsByDay.flat().filter(attempt => attempt.status === 'COMPLETED') as HydratedActivityAttempt[];
+        // Also include the previous study day to capture attempts that started yesterday but completed today
+        const prevOfStart = format(addDays(start, -1), 'yyyy-MM-dd');
+        const queryDays = [prevOfStart, ...days];
+        const attemptsByDay = await Promise.all(queryDays.map(d => activityRepository.getHydratedAttemptsByDate(d)));
+        // Flatten and dedupe by attempt id
+        const seen = new Set<string>();
+        const allAttempts = attemptsByDay.flat().filter(a => {
+          if (!a?.id) return false;
+          if (seen.has(a.id)) return false;
+          seen.add(a.id);
+          return true;
+        });
+        const completedAttempts = allAttempts.filter(attempt => attempt.status === 'COMPLETED') as HydratedActivityAttempt[];
 
         const completedWork: CompletedWork[] = completedAttempts.map(attempt => {
           let duration = 0;
@@ -115,32 +128,99 @@ export function useStats({
             lastEventTime = eventTime;
           }
 
-          const isRoutine = 'days' in attempt.template;
-          const title = attempt.template.title;
+          const isRoutine = attempt.template && 'days' in (attempt.template as any);
+          const title = attempt.template ? attempt.template.title : 'Study';
+          // Points: prefer attempt.points, then pointsEarned, else compute from productive minutes and priority
+          const productiveSeconds = Math.max(0, Math.round(duration));
+          let points = 0;
+          if (typeof (attempt as any).points === 'number') points = (attempt as any).points as number;
+          else if (typeof (attempt as any).pointsEarned === 'number') points = (attempt as any).pointsEarned as number;
+          else {
+            try {
+              const multipliers: Record<'low'|'medium'|'high', number> = { low: 1, medium: 2, high: 3 } as const;
+              const taskMaybe: any = attempt.template;
+              const mult = taskMaybe && taskMaybe.priority ? multipliers[taskMaybe.priority as 'low'|'medium'|'high'] : 1;
+              points = Math.floor((productiveSeconds / 60) * mult);
+            } catch {}
+          }
+          if (!Number.isFinite(points)) points = 0;
           
+          const completeEvt = attempt.events.find(e => e.type === 'COMPLETE');
+          const completedAtMs = completeEvt ? new Date(completeEvt.occurredAt).getTime() : new Date(attempt.updatedAt || attempt.createdAt).getTime();
+          const completedIso = new Date(completedAtMs).toISOString();
           return {
             id: attempt.id,
-            date: format(getStudyDateForTimestamp(new Date(attempt.createdAt).toISOString()), 'yyyy-MM-dd'),
-            timestamp: new Date(attempt.createdAt).toISOString(),
+            date: format(getStudyDateForTimestamp(completedIso), 'yyyy-MM-dd'),
+            timestamp: completedIso,
             type: isRoutine ? 'routine' : 'task',
             title: title,
-            duration: Math.round(duration),
+            // duration must be TOTAL (productive + paused) in seconds to keep charts consistent
+            duration: Math.round(duration + pausedDuration),
             pausedDuration: Math.round(pausedDuration),
-            points: attempt.points || 0,
+            points,
             isUndone: false,
             taskId: !isRoutine ? attempt.template.id : undefined,
             routineId: isRoutine ? attempt.template.id : undefined,
           };
         });
 
-        return completedWork;
+        // Keep only items whose completed study-day falls within the selected range (inclusive)
+        const startStr = format(start, 'yyyy-MM-dd');
+        const endStr = format(end, 'yyyy-MM-dd');
+        const inRange = completedWork.filter(w => w.date >= startStr && w.date <= endStr);
+        return inRange;
       } catch {
         return [] as any[];
       }
     },
     [dateRange]
   );
-  const allCompletedWork = sessionsForRange && sessionsForRange.length > 0 ? sessionsForRange : logsDerivedSessions;
+  const repoCompletedWork = sessionsForRange && sessionsForRange.length > 0 ? sessionsForRange : logsDerivedSessions;
+
+  // Daily override: when looking at "today", prefer hydrated attempts already present in global state.
+  const allCompletedWork = useMemo(() => {
+    if (timeRange === 'daily') {
+      const today = format(getStudyDay(new Date()), 'yyyy-MM-dd');
+      const selected = format(getStudyDay(selectedDate), 'yyyy-MM-dd');
+      if (today === selected && Array.isArray(state.todaysCompletedActivities) && state.todaysCompletedActivities.length > 0) {
+        const mapFromCompletedActivity = state.todaysCompletedActivities.map((ca) => {
+          const attempt: any = ca.attempt as any;
+          const template: any = ca.template as any;
+          const completeEvt = ca.completeEvent;
+          const timestamp = new Date(completeEvt.occurredAt).toISOString();
+          const date = format(getStudyDateForTimestamp(timestamp), 'yyyy-MM-dd');
+          const prodSec = Math.max(0, Math.round(((attempt.duration || 0) as number) / 1000));
+          const pausedSec = Math.max(0, Math.round(((attempt.pausedDuration || 0) as number) / 1000));
+          const isRoutine = !('timerType' in template);
+          let points = 0;
+          if (typeof attempt.points === 'number') points = attempt.points;
+          else if (typeof attempt.pointsEarned === 'number') points = attempt.pointsEarned;
+          else {
+            try {
+              const mult: Record<'low'|'medium'|'high', number> = { low: 1, medium: 2, high: 3 } as const;
+              const pr = template?.priority ?? 'low';
+              points = Math.floor((prodSec / 60) * (mult[pr as 'low'|'medium'|'high'] || 1));
+            } catch {}
+          }
+          return {
+            id: attempt.id,
+            date,
+            timestamp,
+            type: isRoutine ? 'routine' : 'task',
+            title: template?.title ?? 'Study',
+            duration: prodSec + pausedSec,
+            pausedDuration: pausedSec,
+            points,
+            isUndone: false,
+            taskId: !isRoutine ? template?.id : undefined,
+            routineId: isRoutine ? template?.id : undefined,
+          } as CompletedWork;
+        });
+        return mapFromCompletedActivity;
+      }
+    }
+    return repoCompletedWork || [];
+  }, [timeRange, selectedDate, state.todaysCompletedActivities, repoCompletedWork]);
   const profile = useLiveQuery(() => profileRepository.getById('user-profile'), []);
   const allBadges = useLiveQuery(() => badgeRepository.getAll(), []);
   const earnedBadges = useLiveQuery(() => profileRepository.getById('user-profile').then(p => p?.earnedBadges), []);
@@ -182,10 +262,7 @@ export function useStats({
     const totalProductiveSeconds = totalSeconds - totalPausedSeconds;
 
     const totalHours = (totalProductiveSeconds / 3600).toFixed(1);
-    const totalPoints = filteredWork.reduce(
-      (sum, work) => sum + work.points,
-      0
-    );
+    const totalPoints = filteredWork.reduce((sum, work) => sum + (Number.isFinite(work.points) ? work.points : 0), 0);
 
     const completionRate =
       filteredTasks.length > 0
@@ -200,12 +277,12 @@ export function useStats({
     const focusScore = totalSeconds > 0 ? (totalProductiveSeconds / totalSeconds) * 100 : 100;
 
     return {
-      totalHours,
-      totalPoints,
+      totalHours: !isNaN(Number(totalHours)) ? totalHours : '0.0',
+      totalPoints: Number.isFinite(totalPoints) ? totalPoints : 0,
       completedCount: filteredWork.length,
-      completionRate,
-      avgSessionDuration,
-      focusScore,
+      completionRate: Number.isFinite(completionRate) ? completionRate : 0,
+      avgSessionDuration: isNaN(Number(avgSessionDuration)) ? '0' : avgSessionDuration,
+      focusScore: Number.isFinite(focusScore) ? focusScore : 100,
     };
   }, [filteredWork, filteredTasks, filteredCompletedTasks]);
 

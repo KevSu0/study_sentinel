@@ -78,14 +78,25 @@ export default function TimerPage() {
     router.back();
   };
 
+  // Soft-redirect: avoid immediate navigation aborts in dev
+  const [noAttempt, setNoAttempt] = useState(false);
   useEffect(() => {
     if (!activeAttempt) {
-      router.replace('/');
+      const t = setTimeout(() => setNoAttempt(true), 200);
+      return () => clearTimeout(t);
     }
-  }, [activeAttempt, router]);
+    setNoAttempt(false);
+  }, [activeAttempt]);
 
   if (!activeAttempt) {
-    return null;
+    return (
+      <div className="h-screen w-full flex items-center justify-center p-6 text-center">
+        <div>
+          <p className="text-lg text-muted-foreground mb-4">No active timer.</p>
+          <Button variant="outline" onClick={() => router.push('/')}>Go to Dashboard</Button>
+        </div>
+      </div>
+    );
   }
 
   const progress = timerProgress ?? 0;

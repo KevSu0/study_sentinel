@@ -289,7 +289,8 @@ const PK: Record<string, string> = {
   plans: 'id',
   users: 'id',
   sessions: 'id',
-  stats_daily: 'id',
+  // Primary key in Dexie schema is 'date' for stats_daily
+  stats_daily: 'date',
   routines: 'id',
   activityAttempts: 'id',
   activityEvents: 'id',

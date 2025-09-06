@@ -21,21 +21,24 @@ export function transformToCompletedItem(item: CompletedActivity | CompletedWork
   if ('attempt' in item) {
     // It's a CompletedActivity
     const { attempt, template, completeEvent } = item;
-    const totalDuration = completeEvent.occurredAt - attempt.createdAt;
-    const productiveDuration = attempt.productiveDuration || 0;
-    const pausedDuration = totalDuration - productiveDuration;
+    // ReduceEventsToState projects ms durations on attempts: duration (productive) and pausedDuration.
+    // Convert ms => seconds for UI and derive totals consistently.
+    const productiveDuration = Math.max(0, Math.round(((attempt as any).duration || 0) / 1000));
+    const pausedDuration = Math.max(0, Math.round(((attempt as any).pausedDuration || 0) / 1000));
+    const totalDuration = productiveDuration + pausedDuration;
     const focusPercentage = totalDuration > 0 ? (productiveDuration / totalDuration) * 100 : 100;
     const pauseCount = attempt.events?.filter(e => e.type === 'PAUSE').length || 0;
 
     return {
       id: attempt.id,
       title: template.title,
-      type: 'templateId' in template ? 'task' : 'routine',
+      // Detect template type reliably
+      type: ('timerType' in (template as any)) ? 'task' : 'routine',
       isUndone: attempt.status !== 'COMPLETED',
       productiveDuration,
       pausedDuration,
       totalDuration,
-      points: attempt.points || 0,
+      points: (attempt.points as any) ?? (attempt as any).pointsEarned ?? 0,
       focusPercentage,
       pauseCount,
       subject: 'subject' in template ? template.subject : undefined,

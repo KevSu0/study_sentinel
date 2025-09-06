@@ -173,7 +173,7 @@ export default function ProductivityPieChart({
           Hover over a slice to see detailed info.
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex-grow flex items-center justify-center p-0 pb-2 relative" style={{ height: 360 }}>
+      <CardContent className="flex-grow flex items-center justify-center p-0 pb-2 relative">
         {activeIndex === null && (
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
             <p className="text-4xl font-bold tracking-tighter">
@@ -192,8 +192,9 @@ export default function ProductivityPieChart({
           const PieAny = Pie as unknown as React.ComponentType<any>;
           const CellAny = Cell as unknown as React.ComponentType<any>;
           return (
-            <ResponsiveContainerAny width="100%" height="100%">
-              <PieChartAny>
+            <div style={{ width: '100%', height: 360 }}>
+              <ResponsiveContainerAny width="100%" height="100%">
+                <PieChartAny>
                 {/** Subtle background track to make the ring visible in dark mode */}
                 <PieAny
                   {...{
@@ -225,6 +226,7 @@ export default function ProductivityPieChart({
                     strokeWidth: 2,
                     onMouseEnter: onPieEnter,
                     onMouseLeave: onPieLeave,
+                    isAnimationActive: false,
                   } as any}
                 >
                 {data.map((entry, index) => (
@@ -236,8 +238,9 @@ export default function ProductivityPieChart({
                   />
                 ))}
                 </PieAny>
-              </PieChartAny>
-            </ResponsiveContainerAny>
+                </PieChartAny>
+              </ResponsiveContainerAny>
+            </div>
           );
         })()}
       </CardContent>
