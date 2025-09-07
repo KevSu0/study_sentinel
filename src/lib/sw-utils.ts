@@ -1,10 +1,20 @@
 export const registerServiceWorker = () => {
+  // Only register in production to avoid conflicts with Next dev server
+  if (process.env.NODE_ENV !== 'production') return;
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
       try {
-        // Register our custom service worker
-        const registration = await navigator.serviceWorker.register('/custom-sw.js');
-        console.log('Custom SW registered: ', registration);
+        // Prefer next-pwa generated sw.js; fallback to custom-sw.js if not found
+        const swUrl = '/sw.js';
+        let registration: ServiceWorkerRegistration | undefined;
+        try {
+          registration = await navigator.serviceWorker.register(swUrl);
+          console.log('SW registered: ', registration);
+        } catch (e) {
+          console.warn('Failed to register sw.js, trying custom-sw.js', e);
+          registration = await navigator.serviceWorker.register('/custom-sw.js');
+          console.log('Custom SW registered: ', registration);
+        }
         
         // Listen for updates
         registration.addEventListener('updatefound', () => {

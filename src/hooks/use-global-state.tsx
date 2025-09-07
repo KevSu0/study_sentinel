@@ -291,6 +291,9 @@ const defaultProfile: UserProfile = {
   level: 1,
   studyStreak: 0,
   totalPoints: 0,
+  timezone: (typeof Intl !== 'undefined' && (Intl as any).DateTimeFormat)
+    ? Intl.DateTimeFormat().resolvedOptions().timeZone
+    : 'UTC',
 };
 
 const defaultSoundSettings: SoundSettings = {

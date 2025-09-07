@@ -15,7 +15,7 @@ import {Skeleton} from '@/components/ui/skeleton';
 // New Component Imports
 import {StatCardGrid} from '@/components/stats/stat-card-grid';
 import {BadgeCollection} from '@/components/stats/badge-collection';
-import ProductivityPieChart from '@/components/dashboard/productivity-pie-chart';
+const ProductivityPieChart = dynamic(() => import('@/components/dashboard/productivity-pie-chart'), { ssr: false });
 import { StatComparison } from '@/components/stats/stat-comparison';
 import { PerformanceCoach } from '@/components/stats/performance-coach';
 import { getSessionDate } from '@/lib/utils';
@@ -26,7 +26,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { format, isSameDay, addDays } from 'date-fns';
 import { RoutineStatsList } from '@/components/stats/routine-stats-list';
 import { PeakProductivityCard } from '@/components/stats/peak-productivity-card';
-import DailyActivityChart from '@/components/stats/daily-activity-chart';
+const DailyActivityChart = dynamic(() => import('@/components/stats/daily-activity-chart'), { ssr: false });
 import { RealProductivityWidget } from '@/components/dashboard/widgets/real-productivity-widget';
 import { ActiveProductivityWidget } from '@/components/dashboard/widgets/active-productivity-widget';
 import { sessionsToPolarActivities } from '@/lib/stats/polarAdapters';
@@ -38,7 +38,7 @@ import { DailyActiveProductivityWidget } from '@/components/dashboard/widgets/da
 const StudyActivityChart = React.lazy(
   () => import('@/components/stats/weekly-chart')
 );
-import DailyActivityCard from '@/components/stats/daily-activity-card';
+const DailyActivityCard = dynamic(() => import('@/components/stats/daily-activity-card'), { ssr: false });
 const DailyActivitySkeleton = dynamic(
   () => import('@/components/stats/daily-activity-skeleton'),
   { ssr: false }

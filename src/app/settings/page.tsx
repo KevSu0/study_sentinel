@@ -2,7 +2,7 @@
 // This is a new file for the settings page
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useGlobalState } from '@/hooks/use-global-state';
 import {
   Card,
@@ -25,13 +25,39 @@ import { Switch } from '@/components/ui/switch';
 import { OfflineStatusIndicator, SyncStatusIndicator } from '@/components/ui/offline-status-indicator';
 import { UserPreferencesRepository } from '@/lib/repositories/user-preferences.repository';
 import { toast } from 'sonner';
+import Dexie from 'dexie';
 
 export default function SettingsPage() {
-  const { state, setSoundSettings } = useGlobalState();
-  const { isLoaded, soundSettings } = state;
+  const { state, setSoundSettings, updateProfile } = useGlobalState();
+  const { isLoaded, soundSettings, profile } = state;
   const [preferences, setPreferences] = useState<Record<string, any>>({});
   const [isLoading, setIsLoading] = useState(true);
   const userPrefsRepo = new UserPreferencesRepository();
+  const supportedTimeZones = useMemo(() => {
+    try {
+      // Modern environments
+      // @ts-ignore
+      if (typeof Intl !== 'undefined' && Intl.supportedValuesOf) {
+        // @ts-ignore
+        return Intl.supportedValuesOf('timeZone') as string[];
+      }
+    } catch {}
+    // Fallback: a small common set
+    return [
+      'UTC',
+      'Europe/London',
+      'Europe/Berlin',
+      'Africa/Lagos',
+      'Asia/Kolkata',
+      'Asia/Dubai',
+      'Asia/Tokyo',
+      'Australia/Sydney',
+      'America/New_York',
+      'America/Chicago',
+      'America/Denver',
+      'America/Los_Angeles',
+    ];
+  }, []);
 
   useEffect(() => {
     loadPreferences();
@@ -64,6 +90,17 @@ export default function SettingsPage() {
       toast.error('Failed to save preference');
     }
   };
+  const handleTimezoneChange = async (tz: string) => {
+    try {
+      updateProfile({ timezone: tz });
+      await userPrefsRepo.setPreference('region.timezone', tz);
+      try { localStorage.setItem('region.timezone', tz); } catch {}
+      toast.success('Timezone updated');
+    } catch (e) {
+      console.error('Failed to update timezone', e);
+      toast.error('Failed to update timezone');
+    }
+  };
 
   const migrateFromLocalStorage = async () => {
     try {
@@ -84,6 +121,34 @@ export default function SettingsPage() {
     } catch (error) {
       console.error('Failed to clear preferences:', error);
       toast.error('Failed to clear preferences');
+    }
+  };
+  const wipeAllData = async () => {
+    const confirmed = typeof window !== 'undefined'
+      ? window.confirm('This will delete all local data (tasks, routines, logs, preferences). Continue?')
+      : true;
+    if (!confirmed) return;
+    try {
+      try { (await import('@/lib/db')).db.close(); } catch {}
+      try { await Dexie.delete('MyDatabase'); } catch {}
+      try { localStorage.clear(); sessionStorage.clear(); } catch {}
+      try {
+        if ('caches' in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+        }
+      } catch {}
+      try {
+        if ('serviceWorker' in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(r => r.unregister()));
+        }
+      } catch {}
+      toast.success('All local data wiped. Reloading...');
+      setTimeout(() => window.location.reload(), 400);
+    } catch (e) {
+      console.error('Wipe failed', e);
+      toast.error('Failed to wipe data');
     }
   };
 
@@ -218,6 +283,30 @@ export default function SettingsPage() {
             </div>
           </CardContent>
           </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Time & Region</CardTitle>
+              <CardDescription>Set your preferred timezone</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="timezoneSelect">Timezone</Label>
+                <Select
+                  value={profile.timezone || 'UTC'}
+                  onValueChange={handleTimezoneChange}
+                >
+                  <SelectTrigger id="timezoneSelect">
+                    <SelectValue placeholder="Select your timezone" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {supportedTimeZones.map((tz) => (
+                      <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>
@@ -235,12 +324,15 @@ export default function SettingsPage() {
                   </p>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button variant="outline" onClick={migrateFromLocalStorage}>
                   Migrate from localStorage
                 </Button>
                 <Button variant="destructive" onClick={clearAllPreferences}>
                   Clear All Preferences
+                </Button>
+                <Button variant="destructive" onClick={wipeAllData}>
+                  Wipe All Data (Factory Reset)
                 </Button>
               </div>
             </CardContent>

@@ -66,12 +66,16 @@ class NetworkStatusService {
 
   private startPeriodicChecks() {
     this.pingInterval = interval(this.PING_INTERVAL).subscribe(async () => {
-      if (navigator.onLine) {
-        const isOnline = await this.pingServer();
-        if (isOnline !== this.onlineStatus.getValue()) {
-          this.onlineStatus.next(isOnline);
-          this.updateNetworkStatus();
+      try {
+        if (navigator.onLine) {
+          const isOnline = await this.pingServer();
+          if (isOnline !== this.onlineStatus.getValue()) {
+            this.onlineStatus.next(isOnline);
+            this.updateNetworkStatus();
+          }
         }
+      } catch {
+        // Swallow errors from aborted/failed pings to avoid console noise
       }
     });
   }
@@ -84,6 +88,8 @@ class NetworkStatusService {
       const response = await fetch('/api/ping', {
         method: 'HEAD',
         cache: 'no-cache',
+        credentials: 'same-origin',
+        keepalive: true,
         signal: controller.signal
       });
       

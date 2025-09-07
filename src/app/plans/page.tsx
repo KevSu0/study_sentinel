@@ -30,7 +30,7 @@ import { PlanListItem } from '@/components/plans/plan-item-list-item';
 import { EmptyState } from '@/components/tasks/empty-state';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import type { StudyTask, Routine, CompletedWork } from '@/lib/types';
+import type { StudyTask, Routine } from '@/lib/types';
 import toast from 'react-hot-toast';
 import { CompletedTodayWidget } from '@/components/dashboard/widgets/completed-today-widget';
 import { cn } from '@/lib/utils';
@@ -52,6 +52,7 @@ export default function PlansPage() {
     deleteRoutine,
     retryItem,
     hardUndoAttempt,
+    manuallyCompleteItem,
   } = useGlobalState();
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -61,17 +62,23 @@ export default function PlansPage() {
 
   const { viewMode, setViewMode } = useViewMode();
   const { tasks, routines, dateInfo } = useOptimizedPlanData(selectedDate);
-  const { isLoaded } = useGlobalState(s => s.state);
-  console.log('isLoaded in PlansPage:', isLoaded);
+  const { isLoaded, todaysCompletedActivities } = state;
 
   const upcomingItems: PlanItem[] = useMemo(() => {
-    const upcomingTasks = tasks.scheduled.map((task) => ({ type: 'task', data: task as StudyTask }));
-    const upcomingRoutines = routines.scheduled.map((routine) => ({ type: 'routine', data: routine as Routine }));
-    return [...upcomingTasks, ...upcomingRoutines].sort((a, b) => (a.data.displayOrder ?? 0) - (b.data.displayOrder ?? 0));
+    const upcomingTasks: PlanItem[] = tasks.scheduled.map((task) => ({ type: 'task' as const, data: task }));
+    const upcomingRoutines: PlanItem[] = routines.scheduled.map((routine) => ({ type: 'routine' as const, data: routine }));
+    const getSortKey = (item: PlanItem) => {
+      const timeStr = item.type === 'task' ? item.data.time : item.data.startTime;
+      if (!timeStr) return 0;
+      const [hh, mm] = timeStr.split(':').map((x) => parseInt(x, 10));
+      if (Number.isNaN(hh) || Number.isNaN(mm)) return 0;
+      return hh * 60 + mm;
+    };
+    return [...upcomingTasks, ...upcomingRoutines].sort((a, b) => getSortKey(a) - getSortKey(b));
   }, [tasks.scheduled, routines.scheduled]);
 
   const overdueTasks = tasks.overdue;
-  const completedForDay = tasks.completed.map(task => ({ type: 'task', data: task as StudyTask, completed_at: new Date().toISOString() }));
+  const completedForDay = todaysCompletedActivities;
 
   const openAddItemDialog = (type: 'task' | 'routine', item: StudyTask | Routine | null) => {
     setEditingItem(item);
@@ -88,12 +95,17 @@ export default function PlansPage() {
   };
 
   const handleCompleteRoutine = (routine: Routine) => {
-    const { addLog } = useGlobalState();
-    addLog('ROUTINE_SESSION_COMPLETE', {
-      routineId: routine.id,
-      title: routine.title,
-      duration: 0, // duration is not tracked in this simplified completion
-      points: 0, // points are calculated by the global state reducer
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    manuallyCompleteItem(routine, {
+      logDate: dateStr,
+      startTime: `${hh}:${mm}`,
+      endTime: `${hh}:${mm}`,
+      productiveDuration: 0,
+      breaks: 0,
+      notes: 'Marked complete from Plans page',
     });
     toast.success(`Routine "${routine.title}" marked as complete.`);
   };

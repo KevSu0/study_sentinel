@@ -1,6 +1,6 @@
 'use client';
 
-import {useMemo, useCallback} from 'react';
+import {useMemo, useCallback, useEffect} from 'react';
 import {format, subDays, startOfDay, parseISO, isSameDay, set, parse, addDays} from 'date-fns';
 import { getStudyDateForTimestamp, getTimeSinceStudyDayStart, getStudyDay } from '@/lib/utils';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -682,7 +682,33 @@ export function useStats({
     const dailyGoalSeconds = ((profile?.dailyStudyGoal ?? 8)) * 3600;
     const activeProductivity = (productiveSeconds / dailyGoalSeconds) * 100;
 
-    return { real: realProductivity, active: activeProductivity };
+  
+  // Backfill per-day aggregates for range views (weekly/monthly/overall)
+  useEffect(() => {
+    if (timeRange === 'daily') return;
+    if (!Array.isArray(filteredWork) || filteredWork.length === 0) return;
+    try {
+      const byDay = new Map<string, { total: number; paused: number; points: number; count: number }>();
+      for (const w of filteredWork) {
+        const date = w.date;
+        const acc = byDay.get(date) || { total: 0, paused: 0, points: 0, count: 0 };
+        acc.total += (w.duration || 0);
+        acc.paused += (w.pausedDuration || 0);
+        acc.points += (Number.isFinite(w.points) ? (w.points as number) : 0);
+        acc.count += 1;
+        byDay.set(date, acc);
+      }
+      const promises: Promise<any>[] = [];
+      byDay.forEach((v, date) => {
+        const productive = Math.max(0, v.total - v.paused);
+        const focusScore = v.total > 0 ? (productive / v.total) * 100 : 100;
+        promises.push(
+          statsDailyRepository.upsert({ id: date, date, totalSeconds: v.total, pausedSeconds: v.paused, points: v.points, sessionsCount: v.count, focusScore })
+        );
+      });
+      Promise.all(promises).catch(() => {});
+    } catch {}
+  }, [timeRange, filteredWork]);  return { real: realProductivity, active: activeProductivity };
   }, [filteredWork, profile]);
 
 
@@ -707,7 +733,28 @@ export function useStats({
     return calculateProductivityForDay(selectedDate);
   }, [selectedDate, calculateProductivityForDay]);
 
-  return {
+  
+  // Cache daily aggregates in IndexedDB for faster reloads
+  useEffect(() => {
+    if (timeRange !== 'daily') return;
+    if (!Array.isArray(filteredWork)) return;
+    const dateStr = format(getStudyDay(selectedDate), 'yyyy-MM-dd');
+    const totalSeconds = filteredWork.reduce((sum, w) => sum + (w.duration || 0), 0);
+    const pausedSeconds = filteredWork.reduce((sum, w) => sum + (w.pausedDuration || 0), 0);
+    const productive = Math.max(0, totalSeconds - pausedSeconds);
+    const points = filteredWork.reduce((sum, w) => sum + (Number.isFinite(w.points) ? (w.points as number) : 0), 0);
+    const sessionsCount = filteredWork.length;
+    const focusScore = totalSeconds > 0 ? (productive / totalSeconds) * 100 : 100;
+    statsDailyRepository.upsert({
+      id: dateStr,
+      date: dateStr,
+      totalSeconds,
+      pausedSeconds,
+      points,
+      sessionsCount,
+      focusScore,
+    }).catch(() => {});
+  }, [timeRange, selectedDate, filteredWork]);return {
     timeRangeStats,
     studyStreak,
     badgeStats,

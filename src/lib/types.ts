@@ -89,6 +89,7 @@ export type UserProfile = {
   level?: number;
   studyStreak?: number;
   totalPoints?: number;
+  timezone?: string; // IANA timezone identifier, e.g., 'America/New_York'
 };
 
 export type SoundSettings = {
