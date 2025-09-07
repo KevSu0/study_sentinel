@@ -29,5 +29,3 @@ export function useProfileState(props?: UseProfileStateProps): any {
   return { loadProfile, updateProfile };
 }
 
-// Re-export provider for backward-compat with tests that import from this module
-export { ProfileProvider } from './ProfileProvider';

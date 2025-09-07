@@ -1,10 +1,10 @@
 'use client';
 
 import { useMemo, useCallback } from 'react';
-import { format, parseISO, isToday, isTomorrow, isYesterday, startOfWeek, endOfWeek, addDays, subDays } from 'date-fns';
+import { format, parseISO, isSameDay, startOfWeek, endOfWeek, addDays, subDays } from 'date-fns';
 import { useGlobalState } from './use-global-state';
 import type { StudyTask, Routine } from '@/lib/types';
-import { getSessionDate } from '@/lib/utils';
+import { getStudyDay } from '@/lib/utils';
 
 // Performance optimized types
 interface OptimizedPlanData {
@@ -53,18 +53,19 @@ const filterTasksByDate = (tasks: StudyTask[], selectedDate: Date): StudyTask[] 
 const categorizeTasksByStatus = (tasks: StudyTask[]) => {
   const completed = tasks.filter(task => task.status === 'completed');
   const pending = tasks.filter(task => task.status === 'todo' || task.status === 'in_progress');
+  const today = getStudyDay(new Date());
   const overdue = tasks.filter(task => {
     if (task.status === 'completed' || task.status === 'archived') return false;
     if (!task.date) return false;
     const taskDate = parseISO(task.date);
-    return taskDate < getSessionDate();
+    return taskDate < today;
   });
   const scheduled = tasks.filter(task => {
     if (!task.date) return false;
     const taskDate = parseISO(task.date);
-    return taskDate >= getSessionDate();
+    return taskDate >= today;
   });
-  
+
   return { completed, pending, overdue, scheduled };
 };
 
@@ -103,52 +104,36 @@ const calculateTaskStats = (tasks: StudyTask[], routines: Routine[]) => {
 };
 
 const getDateInfo = (selectedDate: Date) => {
-  try {
-    const today = getSessionDate();
-    console.log('getDateInfo - selectedDate:', selectedDate);
-    console.log('getDateInfo - today from getSessionDate:', today);
-    
-    const dayOfWeek = format(selectedDate, 'EEEE');
-    console.log('getDateInfo - dayOfWeek:', dayOfWeek);
-    
-    const formattedDate = format(selectedDate, 'MMM dd, yyyy');
-    console.log('getDateInfo - formattedDate:', formattedDate);
-    
-    let relativeDate = formattedDate;
-    if (isToday(selectedDate)) {
-      relativeDate = 'Today';
-    } else if (isTomorrow(selectedDate)) {
-      relativeDate = 'Tomorrow';
-    } else if (isYesterday(selectedDate)) {
-      relativeDate = 'Yesterday';
-    }
-    
-    const isWeekend = selectedDate.getDay() === 0 || selectedDate.getDay() === 6;
-    
-    const result = {
-      isToday: isToday(selectedDate),
-      isTomorrow: isTomorrow(selectedDate),
-      isYesterday: isYesterday(selectedDate),
-      isWeekend,
-      dayOfWeek,
-      formattedDate,
-      relativeDate,
-    };
-    
-    console.log('getDateInfo - result:', result);
-    return result;
-  } catch (error) {
-    console.error('getDateInfo error:', error);
-    return {
-      isToday: false,
-      isTomorrow: false,
-      isYesterday: false,
-      isWeekend: false,
-      dayOfWeek: '',
-      formattedDate: '',
-      relativeDate: '',
-    };
+  const currentStudyDay = getStudyDay(new Date());
+  const selectedStudyDay = getStudyDay(selectedDate);
+
+  const isCurrentStudyDay = isSameDay(selectedStudyDay, currentStudyDay);
+  const isTomorrowStudyDay = isSameDay(selectedStudyDay, addDays(currentStudyDay, 1));
+  const isYesterdayStudyDay = isSameDay(selectedStudyDay, subDays(currentStudyDay, 1));
+
+  const dayOfWeek = format(selectedDate, 'EEEE');
+  const formattedDate = format(selectedDate, 'MMM dd, yyyy');
+
+  let relativeDate = formattedDate;
+  if (isCurrentStudyDay) {
+    relativeDate = 'Today';
+  } else if (isTomorrowStudyDay) {
+    relativeDate = 'Tomorrow';
+  } else if (isYesterdayStudyDay) {
+    relativeDate = 'Yesterday';
   }
+
+  const isWeekend = selectedDate.getDay() === 0 || selectedDate.getDay() === 6;
+
+  return {
+    isToday: isCurrentStudyDay,
+    isTomorrow: isTomorrowStudyDay,
+    isYesterday: isYesterdayStudyDay,
+    isWeekend,
+    dayOfWeek,
+    formattedDate,
+    relativeDate,
+  };
 };
 
 // Main optimized hook
@@ -255,7 +240,7 @@ export function useWeeklyPlanData(selectedDate: Date) {
         date: currentDate,
         dateStr,
         dayName: format(currentDate, 'EEE'),
-        isToday: isToday(currentDate),
+        isToday: isSameDay(getStudyDay(currentDate), getStudyDay(new Date())),
         tasks: dayTasks,
         completedTasks,
         pendingTasks,

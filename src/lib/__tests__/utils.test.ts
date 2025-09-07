@@ -26,9 +26,10 @@ describe('generateShortId', () => {
 });
 
 describe('Date-based Utility Functions', () => {
-  // Mock Date
-  const mockDate = (date: Date) => {
-    jest.spyOn(global, 'Date').mockImplementation(() => date);
+  // Mock Date using a specific timezone for consistency
+  const mockDate = (dateString: string) => {
+    const mock = new Date(dateString);
+    jest.spyOn(global, 'Date').mockImplementation(() => mock);
   };
 
   afterEach(() => {
@@ -36,44 +37,44 @@ describe('Date-based Utility Functions', () => {
   });
 
   describe('getSessionDate', () => {
-    it('should return the same day if the time is 4 AM or later', () => {
-      mockDate(new Date('2023-01-01T04:00:00.000Z'));
+    it('should return the start of the study day (4 AM) if the time is 4 AM or later', () => {
+      mockDate('2023-01-01T10:00:00.000Z');
       const sessionDate = getSessionDate();
-      expect(sessionDate.toISOString().split('T')[0]).toBe('2023-01-01');
+      expect(sessionDate.toISOString()).toBe('2023-01-01T04:00:00.000Z');
     });
 
-    it('should return the previous day if the time is before 4 AM', () => {
-      mockDate(new Date('2023-01-01T03:59:59.000Z'));
+    it('should return the start of the previous study day (4 AM) if the time is before 4 AM', () => {
+      mockDate('2023-01-01T03:59:59.000Z');
       const sessionDate = getSessionDate();
-      expect(sessionDate.toISOString().split('T')[0]).toBe('2022-12-31');
+      expect(sessionDate.toISOString()).toBe('2022-12-31T04:00:00.000Z');
     });
   });
 
   describe('getStudyDateForTimestamp', () => {
-    it('should return the same day for a timestamp at 4 AM or later', () => {
+    it('should return the start of the study day for a timestamp at 4 AM or later', () => {
       const timestamp = '2023-01-01T04:00:00.000Z';
       const studyDate = getStudyDateForTimestamp(timestamp);
-      expect(studyDate.toISOString().split('T')[0]).toBe('2023-01-01');
+      expect(studyDate.toISOString()).toBe('2023-01-01T04:00:00.000Z');
     });
 
-    it('should return the previous day for a timestamp before 4 AM', () => {
+    it('should return the start of the previous study day for a timestamp before 4 AM', () => {
       const timestamp = '2023-01-01T03:59:59.000Z';
       const studyDate = getStudyDateForTimestamp(timestamp);
-      expect(studyDate.toISOString().split('T')[0]).toBe('2022-12-31');
+      expect(studyDate.toISOString()).toBe('2022-12-31T04:00:00.000Z');
     });
   });
 
   describe('getStudyDay', () => {
-    it('should return the same day if the date is 4 AM or later', () => {
+    it('should return the start of the study day if the date is 4 AM or later', () => {
       const date = new Date('2023-01-01T04:00:00.000Z');
       const studyDay = getStudyDay(date);
-      expect(studyDay.toISOString().split('T')[0]).toBe('2023-01-01');
+      expect(studyDay.toISOString()).toBe('2023-01-01T04:00:00.000Z');
     });
 
-    it('should return the previous day if the date is before 4 AM', () => {
+    it('should return the start of the previous study day if the date is before 4 AM', () => {
       const date = new Date('2023-01-01T03:59:59.000Z');
       const studyDay = getStudyDay(date);
-      expect(studyDay.toISOString().split('T')[0]).toBe('2022-12-31');
+      expect(studyDay.toISOString()).toBe('2022-12-31T04:00:00.000Z');
     });
   });
 

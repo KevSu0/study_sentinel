@@ -8,7 +8,8 @@ import {
 } from '@/lib/repositories';
 import { Badge, UserProfile } from '@/lib/types';
 import { Session } from '@/lib/db';
-import { format, subDays, startOfDay } from 'date-fns';
+import { format, subDays } from 'date-fns';
+import { getStudyDay } from '@/lib/utils';
 
 jest.mock('@/lib/repositories');
 
@@ -55,19 +56,22 @@ const mockUserProfile: UserProfile = {
   },
 };
 
+const studyDate = getStudyDay(new Date());
+const studyDateStr = format(studyDate, 'yyyy-MM-dd');
+
 const mockCompletedWork: Session[] = [
-    {
-        id: '1',
-        userId: 'user-profile',
-        date: new Date().toISOString(),
-        duration: 1800,
-        pausedDuration: 300,
-        type: 'task',
-        title: 'Test Task',
-        points: 10,
-        timestamp: new Date().toISOString(),
-    }
-]
+  {
+    id: '1',
+    userId: 'user-profile',
+    date: studyDateStr,
+    duration: 1800,
+    pausedDuration: 300,
+    type: 'task',
+    title: 'Test Task',
+    points: 10,
+    timestamp: new Date().toISOString(),
+  },
+];
 
 describe('useStats', () => {
   beforeEach(() => {
@@ -129,7 +133,7 @@ describe('useStats', () => {
     );
 
     await waitFor(() => {
-        const expectedDate = format(selectedDate, 'yyyy-MM-dd');
+        const expectedDate = format(getStudyDay(selectedDate), 'yyyy-MM-dd');
         expect(mockTaskRepository.getByDateRange).toHaveBeenCalledWith(expectedDate, expectedDate);
         expect(mockSessionRepository.getByDateRange).toHaveBeenCalledWith(expectedDate, expectedDate);
     });
@@ -142,9 +146,9 @@ describe('useStats', () => {
     );
 
     await waitFor(() => {
-        const now = startOfDay(new Date());
-        const expectedStartDate = format(subDays(now, 7), 'yyyy-MM-dd');
-        const expectedEndDate = format(now, 'yyyy-MM-dd');
+        const base = getStudyDay(new Date());
+        const expectedStartDate = format(subDays(base, 7), 'yyyy-MM-dd');
+        const expectedEndDate = format(base, 'yyyy-MM-dd');
         expect(mockTaskRepository.getByDateRange).toHaveBeenCalledWith(expectedStartDate, expectedEndDate);
         expect(mockSessionRepository.getByDateRange).toHaveBeenCalledWith(expectedStartDate, expectedEndDate);
     });
@@ -157,9 +161,9 @@ describe('useStats', () => {
     );
 
     await waitFor(() => {
-        const now = startOfDay(new Date());
-        const expectedStartDate = format(subDays(now, 30), 'yyyy-MM-dd');
-        const expectedEndDate = format(now, 'yyyy-MM-dd');
+        const base = getStudyDay(new Date());
+        const expectedStartDate = format(subDays(base, 30), 'yyyy-MM-dd');
+        const expectedEndDate = format(base, 'yyyy-MM-dd');
         expect(mockTaskRepository.getByDateRange).toHaveBeenCalledWith(expectedStartDate, expectedEndDate);
         expect(mockSessionRepository.getByDateRange).toHaveBeenCalledWith(expectedStartDate, expectedEndDate);
     });

@@ -1,155 +1,110 @@
 import { renderHook } from '@testing-library/react';
 import React from 'react';
+import { useOptimizedPlanData } from '../use-plan-data-optimized';
 
-// Mock external dependencies
-jest.mock('@/lib/utils', () => ({
-  getSessionDate: jest.fn(() => new Date('2024-01-15T10:00:00.000Z')),
-  getStudyDateForTimestamp: jest.fn(),
-  getStudyDay: jest.fn(),
-  generateShortId: jest.fn(() => 'test-id'),
-}));
-
-// Mock date-fns with actual implementations for format
-jest.mock('date-fns', () => {
-  const actual = jest.requireActual('date-fns');
-  return {
-    ...actual,
-    format: actual.format, // Use actual format function
-    parseISO: actual.parseISO,
-    startOfWeek: actual.startOfWeek,
-    endOfWeek: actual.endOfWeek,
-    addDays: actual.addDays,
-    subDays: actual.subDays,
-    isToday: jest.fn((date) => {
-      const today = new Date('2024-01-15T10:00:00.000Z');
-      return date.toDateString() === today.toDateString();
-    }),
-    isTomorrow: jest.fn((date) => {
-      const tomorrow = new Date('2024-01-16T10:00:00.000Z');
-      return date.toDateString() === tomorrow.toDateString();
-    }),
-    isYesterday: jest.fn((date) => {
-      const yesterday = new Date('2024-01-14T10:00:00.000Z');
-      return date.toDateString() === yesterday.toDateString();
-    }),
-  };
-});
-
-// Mock the global state hook to return minimal data with correct structure
+// Mock the global state hook module with a factory function
 jest.mock('../use-global-state', () => ({
-  useGlobalState: jest.fn(() => ({
-    state: {
-      tasks: [
-        {
-          id: 'task-1',
-          title: 'Test Task',
-          date: '2024-01-15',
-          status: 'todo',
-          duration: 30,
-        },
-      ],
-      routines: [
-        {
-          id: 'routine-1',
-          title: 'Test Routine',
-          status: 'todo',
-        },
-      ],
-      logs: [],
-      completedWork: [],
-      todaysActivity: [],
-      todaysLogs: [],
-      allCompletedWork: [],
-      todaysCompletedWork: [],
-      todaysPoints: 0,
-      todaysBadges: [],
-    },
-    // Add any other properties that might be needed
-    actions: {},
-  })),
-  GlobalStateProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useGlobalState: jest.fn(), // Start with a plain mock function
 }));
 
-describe('use-plan-data-optimized', () => {
+// Import the mocked function after the mock is defined
+import { useGlobalState } from '../use-global-state';
+
+// Cast it to the right type
+const mockedUseGlobalState = useGlobalState as jest.Mock;
+
+// A wrapper to provide the hook with a basic context
+const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
+  return <>{children}</>;
+};
+
+describe('useOptimizedPlanData with Study Day Logic', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    // Reset mocks and timers before each test
+    mockedUseGlobalState.mockClear();
+    jest.useFakeTimers();
+
+    // Provide a default mock implementation for each test
+    mockedUseGlobalState.mockReturnValue({
+      state: {
+        tasks: [],
+        routines: [],
+        completedWork: [],
+        logs: [],
+        todaysActivity: [],
+        todaysLogs: [],
+        allCompletedWork: [],
+        todaysCompletedWork: [],
+        todaysPoints: 0,
+        todaysBadges: [],
+      },
+      actions: {},
+    });
   });
 
-  // Test date formatting directly
-  it('should format dates correctly', () => {
-    const { format } = require('date-fns');
-    const testDate = new Date('2024-01-15T10:00:00.000Z');
-    
-    const formattedDate = format(testDate, 'MMM dd, yyyy');
-    const dayOfWeek = format(testDate, 'EEEE');
-    
-    console.log('Direct format test - formattedDate:', formattedDate);
-    console.log('Direct format test - dayOfWeek:', dayOfWeek);
-    
-    expect(formattedDate).toBe('Jan 15, 2024');
-    expect(dayOfWeek).toBe('Monday');
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
-  // Test the getDateInfo function directly
-  it('should test getDateInfo function directly', () => {
-    // Import the getDateInfo function directly
-    const hookModule = require('../use-plan-data-optimized');
-    
-    // Access the getDateInfo function (it might be exported or we need to access it differently)
-    console.log('Hook module keys:', Object.keys(hookModule));
-    
-    // Test date info calculation manually
-    const { format, isToday, isTomorrow, isYesterday } = require('date-fns');
-    const selectedDate = new Date('2024-01-15T10:00:00.000Z');
-    
-    const formattedDate = format(selectedDate, 'MMM dd, yyyy');
-    const dayOfWeek = format(selectedDate, 'EEEE');
-    const isWeekend = selectedDate.getDay() === 0 || selectedDate.getDay() === 6;
-    
-    console.log('Manual dateInfo calculation:');
-    console.log('- formattedDate:', formattedDate);
-    console.log('- dayOfWeek:', dayOfWeek);
-    console.log('- isToday:', isToday(selectedDate));
-    console.log('- isWeekend:', isWeekend);
-    
-    expect(formattedDate).toBe('Jan 15, 2024');
-    expect(dayOfWeek).toBe('Monday');
-    expect(isToday(selectedDate)).toBe(true);
-    expect(isWeekend).toBe(false); // Monday is not weekend
+  describe('dateInfo calculation', () => {
+    it('should identify "Today" correctly when time is after 4 AM', () => {
+      jest.setSystemTime(new Date('2024-01-15T10:00:00.000Z')); // Monday 10 AM
+      const selectedDate = new Date('2024-01-15T14:00:00.000Z'); // Monday 2 PM
+      const { result } = renderHook(() => useOptimizedPlanData(selectedDate), { wrapper: AllTheProviders });
+      expect(result.current.dateInfo.isToday).toBe(true);
+      expect(result.current.dateInfo.relativeDate).toBe('Today');
+    });
+
+    it('should identify "Today" correctly when time is before 4 AM (part of previous study day)', () => {
+      jest.setSystemTime(new Date('2024-01-16T03:00:00.000Z')); // Tuesday 3 AM
+      const selectedDate = new Date('2024-01-15T23:00:00.000Z'); // Monday 11 PM
+      const { result } = renderHook(() => useOptimizedPlanData(selectedDate), { wrapper: AllTheProviders });
+      expect(result.current.dateInfo.isToday).toBe(true);
+      expect(result.current.dateInfo.relativeDate).toBe('Today');
+    });
+
+    it('should identify "Yesterday" correctly', () => {
+      jest.setSystemTime(new Date('2024-01-16T05:00:00.000Z')); // Tuesday 5 AM
+      const selectedDate = new Date('2024-01-15T10:00:00.000Z'); // Monday 10 AM
+      const { result } = renderHook(() => useOptimizedPlanData(selectedDate), { wrapper: AllTheProviders });
+      expect(result.current.dateInfo.isYesterday).toBe(true);
+      expect(result.current.dateInfo.relativeDate).toBe('Yesterday');
+    });
+
+    it('should identify "Tomorrow" correctly', () => {
+      jest.setSystemTime(new Date('2024-01-15T05:00:00.000Z')); // Monday 5 AM
+      const selectedDate = new Date('2024-01-16T10:00:00.000Z'); // Tuesday 10 AM
+      const { result } = renderHook(() => useOptimizedPlanData(selectedDate), { wrapper: AllTheProviders });
+      expect(result.current.dateInfo.isTomorrow).toBe(true);
+      expect(result.current.dateInfo.relativeDate).toBe('Tomorrow');
+    });
   });
 
-  // Test the main hook with mocked global state - simplified version
-  it('should return optimized plan data structure', () => {
-    const { useOptimizedPlanData } = require('../use-plan-data-optimized');
-    const selectedDate = new Date('2024-01-15T10:00:00.000Z');
-    
-    // Wrap in try-catch to handle any React context issues
-    try {
-      const { result } = renderHook(() => useOptimizedPlanData(selectedDate));
+  describe('Task Filtering', () => {
+    it('should only return tasks for the selected study day', () => {
+      // Set "now" to Jan 16, 10 AM. The current study day is Jan 16.
+      jest.setSystemTime(new Date('2024-01-16T10:00:00.000Z'));
+      
+      mockedUseGlobalState.mockReturnValue({
+        state: {
+          // This task is for the study day of Jan 15
+          tasks: [
+            { id: 'task-1', title: 'Yesterday task', date: '2024-01-15', status: 'todo' },
+            // This task is for the study day of Jan 16
+            { id: 'task-2', title: 'Today task', date: '2024-01-16', status: 'todo' },
+          ],
+          routines: [],
+          completedWork: [],
+        },
+        actions: {},
+      });
 
-      console.log('useOptimizedPlanData result keys:', Object.keys(result.current));
+      // Select the study day of Jan 16
+      const selectedDate = new Date('2024-01-16T08:00:00.000Z');
+      const { result } = renderHook(() => useOptimizedPlanData(selectedDate), { wrapper: AllTheProviders });
       
-      expect(result.current).toHaveProperty('selectedDate');
-      expect(result.current).toHaveProperty('tasks');
-      expect(result.current).toHaveProperty('routines');
-      expect(result.current).toHaveProperty('stats');
-      expect(result.current).toHaveProperty('dateInfo');
-      
-      // Test dateInfo specifically
-      expect(result.current.dateInfo).toBeDefined();
-      console.log('dateInfo from hook:', result.current.dateInfo);
-      
-      if (result.current.dateInfo) {
-        expect(result.current.dateInfo.formattedDate).toBe('Jan 15, 2024');
-        expect(result.current.dateInfo.dayOfWeek).toBe('Monday');
-      }
-    } catch (error) {
-      console.log('Hook test failed with error:', error.message);
-      // For now, just test that the hook module exports the expected functions
-      const hookModule = require('../use-plan-data-optimized');
-      expect(hookModule.useOptimizedPlanData).toBeDefined();
-      expect(hookModule.useDateInfoSelector).toBeDefined();
-      expect(hookModule.useTasksForDateSelector).toBeDefined();
-    }
+      expect(result.current.tasks.filtered.length).toBe(1);
+      expect(result.current.tasks.filtered[0].id).toBe('task-2');
+    });
   });
 });
