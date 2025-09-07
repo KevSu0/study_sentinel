@@ -43,6 +43,7 @@ const customJestConfig = {
     '^react-markdown$': '<rootDir>/__mocks__/react-markdown.js',
     '^remark-gfm$': '<rootDir>/__mocks__/remark-gfm.js',
     '^lucide-react$': '<rootDir>/__mocks__/lucide-react.js',
+    '^@/components/dialogs/add-item-dialog-entry$': '<rootDir>/src/components/tasks/add-task-dialog.tsx',
   },
   transformIgnorePatterns: [
     'node_modules/(?!(lucide-react|nanoid)/)'

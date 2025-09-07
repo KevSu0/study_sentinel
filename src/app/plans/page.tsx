@@ -5,10 +5,11 @@ import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useGlobalState } from '@/hooks/use-global-state';
 import { useViewMode } from '@/hooks/use-view-mode';
-import { usePlanData } from '@/hooks/use-plan-data';
+import { useOptimizedPlanData } from '@/hooks/use-plan-data-optimized';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, parseISO } from 'date-fns';
+import { useMemo } from 'react';
 import {
   Plus,
   Calendar as CalendarIcon,
@@ -34,10 +35,7 @@ import toast from 'react-hot-toast';
 import { CompletedTodayWidget } from '@/components/dashboard/widgets/completed-today-widget';
 import { cn } from '@/lib/utils';
 
-const AddItemDialog = dynamic(
-  () => import('@/components/tasks/add-task-dialog').then((m) => m.AddItemDialog),
-  { ssr: false }
-);
+import { AddItemDialog } from '@/components/dialogs/add-item-dialog-entry';
 
 type PlanItem =
   | { type: 'task'; data: StudyTask }
@@ -62,7 +60,18 @@ export default function PlansPage() {
   const [editingItemType, setEditingItemType] = useState<'task' | 'routine' | undefined>(undefined);
 
   const { viewMode, setViewMode } = useViewMode();
-  const { upcomingItems, overdueTasks, completedForDay, isLoaded } = usePlanData(selectedDate);
+  const { tasks, routines, dateInfo } = useOptimizedPlanData(selectedDate);
+  const { isLoaded } = useGlobalState(s => s.state);
+  console.log('isLoaded in PlansPage:', isLoaded);
+
+  const upcomingItems: PlanItem[] = useMemo(() => {
+    const upcomingTasks = tasks.scheduled.map((task) => ({ type: 'task', data: task as StudyTask }));
+    const upcomingRoutines = routines.scheduled.map((routine) => ({ type: 'routine', data: routine as Routine }));
+    return [...upcomingTasks, ...upcomingRoutines].sort((a, b) => (a.data.displayOrder ?? 0) - (b.data.displayOrder ?? 0));
+  }, [tasks.scheduled, routines.scheduled]);
+
+  const overdueTasks = tasks.overdue;
+  const completedForDay = tasks.completed.map(task => ({ type: 'task', data: task as StudyTask, completed_at: new Date().toISOString() }));
 
   const openAddItemDialog = (type: 'task' | 'routine', item: StudyTask | Routine | null) => {
     setEditingItem(item);
@@ -79,7 +88,13 @@ export default function PlansPage() {
   };
 
   const handleCompleteRoutine = (routine: Routine) => {
-    // This needs to be updated to use the new manual completion flow
+    const { addLog } = useGlobalState();
+    addLog('ROUTINE_SESSION_COMPLETE', {
+      routineId: routine.id,
+      title: routine.title,
+      duration: 0, // duration is not tracked in this simplified completion
+      points: 0, // points are calculated by the global state reducer
+    });
     toast.success(`Routine "${routine.title}" marked as complete.`);
   };
 

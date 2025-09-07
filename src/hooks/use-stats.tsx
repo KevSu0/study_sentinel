@@ -374,8 +374,9 @@ export function useStats({
   
   const dailyActivityTimelineData: Activity[] = useMemo(() => {
     if (!filteredWork) return [];
+    const selectedStudyDay = getStudyDay(selectedDate);
     const logsForSelectedDay = filteredWork.filter(log =>
-        isSameDay(getStudyDateForTimestamp(log.timestamp), selectedDate)
+        isSameDay(getStudyDateForTimestamp(log.timestamp), selectedStudyDay)
     );
   
     return logsForSelectedDay.map(log => {
@@ -532,7 +533,7 @@ export function useStats({
         timeRange === 'weekly' ? format(date, 'eee') : format(date, 'd');
 
       const durationOnDay = filteredWork
-        .filter(work => isSameDay(getStudyDateForTimestamp(work.timestamp), date))
+        .filter(work => isSameDay(getStudyDateForTimestamp(work.timestamp), getStudyDay(date)))
         .reduce((sum, work) => sum + work.duration, 0);
 
       data.push({
@@ -585,7 +586,7 @@ export function useStats({
     };
 
     const workForSelectedDate = filteredWork.filter(w =>
-      isSameDay(getStudyDateForTimestamp(w.timestamp), selectedDate)
+      isSameDay(getStudyDateForTimestamp(w.timestamp), getStudyDay(selectedDate))
     );
     const selectedDateSession = getSessionTimes(workForSelectedDate);
 
@@ -667,11 +668,12 @@ export function useStats({
 
   const calculateProductivityForDay = useCallback((date: Date) => {
     if (!filteredWork) return { real: 0, active: 0 };
-    const workForDay = filteredWork.filter(w => isSameDay(getStudyDateForTimestamp(w.timestamp), date));
+    const studyDay = getStudyDay(date);
+    const workForDay = filteredWork.filter(w => isSameDay(getStudyDateForTimestamp(w.timestamp), studyDay));
     const productiveSeconds = workForDay.reduce((sum, work) => sum + (work.duration - (work.pausedDuration || 0)), 0);
 
     // Real Productivity
-    const startOfStudyDay = set(startOfDay(date), { hours: 4 });
+    const startOfStudyDay = getStudyDay(date);
     const nowForDay = isSameDay(date, new Date()) ? new Date() : set(addDays(startOfDay(date), 1), { hours: 3, minutes: 59, seconds: 59 });
     const totalSecondsInDay = Math.max(1, (nowForDay.getTime() - startOfStudyDay.getTime()) / 1000);
     const realProductivity = (productiveSeconds / totalSecondsInDay) * 100;
