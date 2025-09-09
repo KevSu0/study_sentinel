@@ -36,7 +36,7 @@ import {
 import {ConfettiProvider} from './providers/confetti-provider';
 import {SplashScreen} from '@/components/splash-screen';
 import {GlobalTimerBar} from './tasks/global-timer-bar';
-import { AppStateProvider } from '@/hooks/state/AppStateProvider';
+import { AppStateProvider } from '@/state/providers/AppStateProvider';
 import { useGlobalState } from '@/hooks/use-global-state';
 import {ViewModeProvider} from '@/hooks/use-view-mode';
 import {DashboardLayoutProvider} from '@/hooks/use-dashboard-layout';

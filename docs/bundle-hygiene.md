@@ -43,6 +43,18 @@ const LazyCalendar = dynamic(() => import('@/components/ui/calendar').then(m => 
 - Budget violation: defer module, code-split, or mark route as heavy (HEAVY_ROUTES)
 - Shared leak: move import inside lazy wrapper / conditional render
 
+## Before/After snapshot (local)
+- Budgets: 200 KB default, 300 KB heavy (/stats, /timer) — PASSED locally
+- Top client chunks (post-refactor):
+  - 8562-ef430eacb1a9d4f1.js ~535 KB
+  - 9094.faa6d2827596f3bc.js ~516 KB
+  - 2977.3573439232e495e3.js ~446 KB (react-day-picker — deferred)
+  - 9897-ecfcb5fee372677a.js ~341 KB
+  - 7005-422cfbd861bc68fa.js ~251 KB (recharts — deferred)
+- Per-route initial JS: within budgets (see CI artifact `bundle-budgets.txt` for precise bytes)
+- Analyzer HTMLs available at `.next/analyze/{client,edge,nodejs}.html`
+
 ## Artifacts
 - Analyzer HTML reports under `analyzer-artifacts/<timestamp>`
 - Logs: typecheck.txt, imports-check.txt, build-analyze.txt, bundle-budgets.txt
+- Optional appendix with metrics: see `docs/tmp_rovodev_bundle_metrics.md` (to be folded into PR notes)
