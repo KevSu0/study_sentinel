@@ -25,7 +25,7 @@ jest.mock('@/hooks/use-dashboard-layout', () => ({
 }));
 
 // ----- MOCK DATA REPOSITORIES -----
-jest.mock('@/lib/repositories/task.repository', () => {
+jest.mock('@/lib/repositories/event.repository', () => {
   const todayISO = new Date().toISOString().slice(0, 10);
   const msDay = 24 * 60 * 60 * 1000;
   const overdueTask = {
@@ -48,19 +48,23 @@ jest.mock('@/lib/repositories/task.repository', () => {
     priority: 'medium',
     done: false,
   };
-  const allTasks = [overdueTask, upcomingTask];
 
   return {
-    taskRepository: {
-      getAll: jest.fn().mockResolvedValue(allTasks),
-      getTasksForDay: jest.fn().mockImplementation(async (date: Date) => {
-        const dateStr = date.toISOString().slice(0, 10);
-        return allTasks.filter(t => t.date === dateStr);
-      }),
-      getOverdueTasks: jest.fn().mockResolvedValue([overdueTask]),
+    eventRepository: {
+      getAll: jest.fn().mockResolvedValue([
+        { type: 'TASK_ADD', payload: overdueTask },
+        { type: 'TASK_ADD', payload: upcomingTask },
+      ]),
     },
   };
 });
+
+jest.mock('@/lib/repositories/task.repository', () => ({
+  taskRepository: {
+    // Keep this for legacy queries if any part of the app still uses it.
+    getOverdueTasks: jest.fn().mockResolvedValue([]),
+  },
+}));
 
 jest.mock('@/lib/repositories/session.repository', () => ({
   sessionRepository: {

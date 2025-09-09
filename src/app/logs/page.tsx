@@ -1,10 +1,13 @@
 'use client';
-import React from 'react';
+// removed default React import
 import {useGlobalState} from '@/hooks/use-global-state';
-import {format, parseISO} from 'date-fns';
+import {format} from 'date-fns';
 import {Card, CardContent} from '@/components/ui/card';
 import {Skeleton} from '@/components/ui/skeleton';
 import {BookOpenCheck} from 'lucide-react';
+import { eventRepository } from '@/lib/repositories';
+import { getStudyDayBounds, getSessionDate } from '@/lib/utils';
+import React, { useEffect, useState } from 'react';
 
 const getIconForLogType = (type: string) => {
   switch (type) {
@@ -29,9 +32,28 @@ const getIconForLogType = (type: string) => {
   }
 };
 
+type AnyEvent = { id: string; type: string; timestamp: string; payload: any };
+
 export default function LogPage() {
   const {state} = useGlobalState();
-  const {logs, isLoaded} = state;
+  const { isLoaded } = state;
+  const [events, setEvents] = useState<AnyEvent[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const date = getSessionDate();
+        const { start, end } = getStudyDayBounds(date);
+        const repo: any = eventRepository as any;
+        const evts: AnyEvent[] = typeof repo.getByTimestampRange === 'function'
+          ? await repo.getByTimestampRange(start.toISOString(), end.toISOString())
+          : await (eventRepository as any).getEventsByDate(format(date, 'yyyy-MM-dd'));
+        setEvents(evts);
+      } catch {
+        setEvents([]);
+      }
+    })();
+  }, []);
 
   return (
     <div className="flex flex-col h-full">
@@ -49,28 +71,28 @@ export default function LogPage() {
             <Skeleton className="h-20 w-full" />
             <Skeleton className="h-20 w-full" />
           </div>
-        ) : logs.length > 0 ? (
+        ) : events.length > 0 ? (
           <div className="space-y-4">
-            {logs
+            {events
               .slice()
               .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-              .map(log => (
-                <Card key={log.id} className="bg-card/70" data-testid="log-item">
+              .map(ev => (
+                <Card key={ev.id} className="bg-card/70" data-testid="log-item">
                   <CardContent className="p-4 flex items-start gap-4">
                     <span className="text-xl mt-1">
-                      {getIconForLogType(log.type)}
+                      {getIconForLogType(ev.type)}
                     </span>
                     <div className="flex-grow">
                       <div className="flex justify-between items-center">
                         <p className="font-semibold text-primary/90">
-                          {log.type.replace(/_/g, ' ')}
+                          {ev.type.replace(/_/g, ' ')}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {format(parseISO(log.timestamp), 'h:mm:ss a')}
+                          {format(new Date(ev.timestamp), 'h:mm:ss a')}
                         </p>
                       </div>
                       <pre className="text-xs text-muted-foreground mt-1 bg-muted/50 p-2 rounded-md overflow-x-auto">
-                        <code>{JSON.stringify(log.payload, null, 2)}</code>
+                        <code>{JSON.stringify(ev.payload, null, 2)}</code>
                       </pre>
                     </div>
                   </CardContent>
@@ -90,3 +112,4 @@ export default function LogPage() {
     </div>
   );
 }
+

@@ -57,7 +57,7 @@ export const StatsOverviewWidget = ({
             <Star className="h-4 w-4 text-yellow-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{todaysPoints}</div>
+            <div className="text-2xl font-bold" data-testid="points-today-value">{todaysPoints}</div>
           </CardContent>
         </Card>
         <Card>
@@ -88,3 +88,4 @@ export const StatsOverviewWidget = ({
     </section>
   );
 };
+

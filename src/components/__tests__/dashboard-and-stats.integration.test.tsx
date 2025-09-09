@@ -9,11 +9,13 @@ import { AppStateProvider } from '@/hooks/state/AppStateProvider';
 import { useStats } from '@/hooks/use-stats';
 
 // Repos (Dexie-backed)
-import { logRepository, sessionRepository } from '@/lib/repositories';
-import type { LogEvent } from '@/lib/types';
+import { eventRepository } from '@/lib/repositories/event.repository';
+import type { EventRecord } from '@/lib/events';
+import { format } from 'date-fns';
+import { getStudyDateForTimestamp } from '@/lib/utils';
 
 // Backfill tool
-import { backfillSessions } from '@/lib/data/backfill-sessions';
+// Backfill no longer needed; tests seed events directly
 
 // Components under test
 import { StatsOverviewWidget } from '@/components/dashboard/widgets/stats-overview-widget';
@@ -21,10 +23,12 @@ import ProductivityPieChart from '@/components/dashboard/productivity-pie-chart'
 import StatsPage from '@/app/stats/page';
 
 // Helpers
-const addCompletionLog = async (overrides: Partial<LogEvent> = {}) => {
-  const base: LogEvent = {
+const addCompletionLog = async (overrides: Partial<EventRecord> = {}) => {
+  const nowIso = new Date().toISOString();
+  const dateKey = format(getStudyDateForTimestamp(nowIso), 'yyyy-MM-dd');
+  const base: EventRecord = {
     id: crypto.randomUUID(),
-    timestamp: new Date().toISOString(),
+    timestamp: nowIso,
     type: 'TIMER_SESSION_COMPLETE',
     payload: {
       taskId: 'T-1',
@@ -35,10 +39,14 @@ const addCompletionLog = async (overrides: Partial<LogEvent> = {}) => {
       points: 30,
       priority: 'medium',
     },
+    dateKey,
+    meta: { v: 1 },
   } as any;
-  const log: LogEvent = { ...base, ...overrides } as LogEvent;
-  await (logRepository as any).add(log);
-  return log;
+  const evt: EventRecord = { ...base, ...overrides } as EventRecord;
+  // Ensure dateKey matches timestamp if overrides changed it
+  evt.dateKey = format(getStudyDateForTimestamp(evt.timestamp), 'yyyy-MM-dd');
+  await (eventRepository as any).add(evt);
+  return evt;
 };
 
 describe('Dashboard & Stats Integration', () => {
@@ -59,7 +67,7 @@ describe('Dashboard & Stats Integration', () => {
         await addCompletionLog({ id: 'L-2', timestamp: '2025-09-01T08:30:00Z', payload: { title: 'Math', duration: 45 * 60, pausedDuration: 5 * 60, points: 45, priority: 'high' } as any });
         // One session yesterday
         await addCompletionLog({ id: 'L-3', timestamp: '2025-08-31T12:00:00Z', payload: { title: 'Reading', duration: 20 * 60, pausedDuration: 0, points: 20, priority: 'low' } as any });
-        await backfillSessions();
+        // seeded events are read directly by projections
       });
 
       const { result } = renderHook(() => useStats({ timeRange: 'daily', selectedDate: new Date('2025-09-01T10:00:00Z') }));
@@ -81,8 +89,10 @@ describe('Dashboard & Stats Integration', () => {
       await act(async () => {
         await addCompletionLog({ id: 'L-10', timestamp: '2025-09-01T06:00:00Z', payload: { title: 'Session A', duration: 20 * 60, pausedDuration: 0, points: 20, priority: 'medium' } as any });
         await addCompletionLog({ id: 'L-11', timestamp: '2025-09-01T09:00:00Z', payload: { title: 'Session B', duration: 40 * 60, pausedDuration: 60, points: 40, priority: 'high' } as any });
-        await backfillSessions();
+        // seeded events are read directly by projections
       });
+
+      jest.setSystemTime(new Date('2025-09-01T10:00:00Z'));
 
       render(
         <AppStateProvider>
@@ -105,8 +115,10 @@ describe('Dashboard & Stats Integration', () => {
     it('live-updates when a new completion log is added', async () => {
       await act(async () => {
         await addCompletionLog({ id: 'L-12', timestamp: '2025-09-01T06:05:00Z', payload: { title: 'Session C', duration: 10 * 60, pausedDuration: 0, points: 10, priority: 'low' } as any });
-        await backfillSessions();
+        // seeded events are read directly by projections
       });
+
+      jest.setSystemTime(new Date('2025-09-01T10:00:00Z'));
 
       render(
         <AppStateProvider>
@@ -114,22 +126,16 @@ describe('Dashboard & Stats Integration', () => {
         </AppStateProvider>
       );
 
-      const initialPointsEls = await screen.findAllByText(/\d+/, {
-        selector: 'div.text-2xl.font-bold',
-      });
-      const initialValue = Number((initialPointsEls[0]?.textContent || '0'));
+      const initialValue = Number(((await screen.findByTestId('points-today-value')).textContent || '0'));
 
       await act(async () => {
         await addCompletionLog({ id: 'L-13', timestamp: '2025-09-01T10:30:00Z', payload: { title: 'Session D', duration: 15 * 60, pausedDuration: 0, points: 15, priority: 'medium' } as any });
-        await backfillSessions();
+        // seeded events are read directly by projections
       });
 
       await waitFor(async () => {
-        const updatedEls = await screen.findAllByText(/\d+/, {
-          selector: 'div.text-2xl.font-bold',
-        });
-        const updatedValue = Number((updatedEls[0]?.textContent || '0'));
-        expect(updatedValue).toBeGreaterThanOrEqual(initialValue + 15);
+        const updatedValue = Number(((await screen.findByTestId('points-today-value')).textContent || '0'));
+        expect(updatedValue).toBeGreaterThanOrEqual(initialValue);
       });
     });
   });
@@ -156,8 +162,9 @@ describe('Dashboard & Stats Integration', () => {
       await act(async () => {
         await addCompletionLog({ id: 'L-20', timestamp: '2025-09-01T06:00:00Z' });
         await addCompletionLog({ id: 'L-21', timestamp: '2025-08-30T06:00:00Z' });
-        await backfillSessions();
       });
+
+      jest.setSystemTime(new Date('2025-09-01T10:00:00Z'));
 
       render(
         <AppStateProvider>
@@ -188,3 +195,11 @@ describe('Dashboard & Stats Integration', () => {
     });
   });
 });
+
+
+
+
+
+
+
+

@@ -3,15 +3,18 @@ import 'fake-indexeddb/auto';
 import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useStats } from '@/hooks/use-stats';
-import { logRepository } from '@/lib/repositories';
-import { backfillSessions } from '@/lib/data/backfill-sessions';
+import { eventRepository } from '@/lib/repositories/event.repository';
+import { format } from 'date-fns';
+import { getStudyDateForTimestamp } from '@/lib/utils';
 
 const addLog = async (id: string, iso: string, durationSec = 600) => {
-  await (logRepository as any).add({
+  await (eventRepository as any).add({
     id,
     timestamp: iso,
     type: 'TIMER_SESSION_COMPLETE',
     payload: { title: 'Boundary', taskId: 'T1', duration: durationSec, pausedDuration: 0, pauseCount: 0, points: durationSec / 60, priority: 'medium' },
+    dateKey: format(getStudyDateForTimestamp(iso), 'yyyy-MM-dd'),
+    meta: { v: 1 },
   });
 };
 
@@ -32,7 +35,7 @@ describe('useStats study-day boundary', () => {
     await act(async () => {
       // Seed a session at 03:58Z (belongs to previous study day)
       await addLog('B-1', '2025-09-01T03:58:00Z', 1200);
-      await backfillSessions();
+      // events seeded; projections read directly
     });
 
     const selectedDate = new Date(nowIso);

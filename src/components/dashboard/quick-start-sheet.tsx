@@ -55,7 +55,7 @@ const QuickStartItem = ({ item, onStart, isAnyTimerActive, isCompleted }: QuickS
             >
                 {isCompleted ? (
                     <>
-                     <RotateCw className="mr-2 h-4 w-4" /> Redo
+                     <RotateCw className="mr-2 h-4 w-4" /> Retry
                     </>
                 ) : (
                     <>

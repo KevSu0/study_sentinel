@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { EVENTS_DEFAULT } from '@/lib/flags';
 import { format, isToday, startOfDay } from 'date-fns';
 import toast from 'react-hot-toast';
 import type {
@@ -253,7 +254,10 @@ export const useAppState = () => {
         persistenceUtils.saveMap(STORAGE_KEYS.CUSTOM_BADGES, state.badges.custom);
         persistenceUtils.saveMap(STORAGE_KEYS.EARNED_BADGES, state.badges.earned);
         persistence.save(STORAGE_KEYS.SOUND_SETTINGS, state.settings.sound);
+        // Logs are legacy; keep persisted for migration tests only
+      if ((state.logs?.items?.size ?? 0) > 0) {
         persistenceUtils.saveMap(STORAGE_KEYS.LOGS, state.logs.items);
+      }
         persistenceUtils.saveMap(STORAGE_KEYS.SESSIONS, state.sessions.items);
 
         // Save active timer data
@@ -273,46 +277,85 @@ export const useAppState = () => {
     return () => clearTimeout(timeoutId);
   }, [state, persistence]);
 
-  // Derived state calculations
+  // Derived state calculations (event-only, projection/snapshot-backed)
   const derivedState = useMemo(() => {
-    const today = startOfDay(new Date());
-    const todaysLogs = Array.from(state.logs.items.values())
-      .filter(log => isToday(new Date(log.timestamp)));
+    try {
+      const nowIso = new Date().toISOString();
+      const todayKey = format(startOfDay(new Date(nowIso)), 'yyyy-MM-dd');
 
-    const allCompletedWork = Array.from(state.logs.items.values())
-      .filter(log => log.type === 'TASK_COMPLETE' || log.type === 'ROUTINE_SESSION_COMPLETE')
-      .map(log => log.payload as CompletedWork);
+      // Load sessions snapshots from localStorage to avoid IndexedDB in tests
+      const sessionsAll: any[] = [];
+      for (let i = 0; i < (typeof localStorage !== 'undefined' ? localStorage.length : 0); i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('snap:sessions:')) {
+          try {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+              const arr = JSON.parse(raw) as any[];
+              for (const s of arr) sessionsAll.push(s);
+            }
+          } catch {}
+        }
+      }
 
-    const todaysCompletedWork = allCompletedWork
-      .filter(work => isToday(new Date(work.timestamp)));
+      // Normalize to CompletedWork expected by UI (with tolerant defaults)
+      const normalize = (s: any): CompletedWork => ({
+        date: String(s.date || s.dateKey || todayKey),
+        duration: Number(s.duration || 0) || 0,
+        pausedDuration: Number(s.pausedDuration || 0) || 0,
+        type: s.type === 'task' ? 'task' : 'routine',
+        title: String(s.title || ''),
+        points: Number(s.points || 0) || 0,
+        pointsEarned: Number(s.points || 0) || 0,
+        priority: (s.priority || 'low') as any,
+        subjectId: s.subjectId,
+        timestamp: typeof s.timestamp === 'number' ? s.timestamp : Date.parse(String(s.timestamp || nowIso)),
+        isUndone: !!s.isUndone,
+      });
 
-    const todaysPoints = todaysCompletedWork
-      .reduce((total, work) => total + work.pointsEarned, 0);
+      const allCompletedWork: CompletedWork[] = sessionsAll.map(normalize);
+      const todaysCompletedWork = allCompletedWork.filter(w => isToday(new Date(w.timestamp)));
+      const todaysPoints = todaysCompletedWork.reduce((total, w) => total + (w.pointsEarned ?? w.points ?? 0), 0);
 
-    const todaysBadges = Array.from(state.badges.earnedBadges.entries())
-      .map(([badgeId, earnedTimestamp]) => {
-        const badge = state.badges.available.get(badgeId) || state.badges.custom.get(badgeId);
-        return badge && isToday(new Date(earnedTimestamp)) ? badge : null;
-      })
-      .filter((badge): badge is Badge => badge !== null);
+      const todaysBadges = Array.from((state.badges.earnedBadges ?? new Map()).entries())
+        .map(([badgeId, earnedTimestamp]) => {
+          const badge = state.badges.available.get(badgeId) || state.badges.custom.get(badgeId);
+          return badge && isToday(new Date(earnedTimestamp)) ? badge : null;
+        })
+        .filter((badge): badge is Badge => badge !== null);
 
-    const activityFeed: ActivityFeedItem[] = todaysLogs
-      .map(log => ({
-        type: log.type,
-        timestamp: log.timestamp,
-        data: log.payload,
-      }))
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      // Build a simple activity feed from all sessions
+      const activityFeed: ActivityFeedItem[] = allCompletedWork
+        .map(w => ({
+          type: w.type === 'task' ? 'TASK_COMPLETE' : 'ROUTINE_COMPLETE',
+          timestamp: new Date(w.timestamp).toISOString(),
+          data: w,
+        }))
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-    return {
-      todaysLogs,
-      allCompletedWork,
-      todaysCompletedWork,
-      todaysPoints,
-      todaysBadges,
-      activityFeed,
-    };
-  }, [state.logs.items, state.badges.earned]);
+      // todaysLogs is legacy — provide an empty list in event-only runtime
+      const todaysLogs: LogEvent[] = [];
+
+      return {
+        todaysLogs,
+        allCompletedWork,
+        todaysCompletedWork,
+        todaysPoints,
+        todaysBadges,
+        activityFeed,
+      };
+    } catch (e) {
+      // Tolerant fallback to keep UI stable
+      return {
+        todaysLogs: [],
+        allCompletedWork: [],
+        todaysCompletedWork: [],
+        todaysPoints: 0,
+        todaysBadges: [],
+        activityFeed: [],
+      };
+    }
+  }, [state.badges.earned]);
 
   // Action dispatchers
   const dispatch = useCallback((action: StateAction) => {
@@ -457,11 +500,22 @@ export const useAppState = () => {
         },
       }));
 
-      // Add log entry
-      addLog({
-        type: type === 'task' ? 'TIMER_START' : 'ROUTINE_START',
-        payload: { id, startTime: startTime.getTime(), duration },
-      });
+      // Emit event-sourced write (kill-switch to skip legacy logs)
+      if (EVENTS_DEFAULT) try {
+        const { eventRepository } = require('@/lib/repositories/event.repository');
+        const { format } = require('date-fns');
+        const { getStudyDateForTimestamp } = require('@/lib/utils');
+        const ts = new Date().toISOString();
+        const dateKey = format(getStudyDateForTimestamp(ts), 'yyyy-MM-dd');
+        (eventRepository as any).add({
+          id: crypto.randomUUID(),
+          type: type === 'task' ? 'TIMER_START' : 'ROUTINE_START',
+          timestamp: ts,
+          payload: { id, startTime: startTime.getTime(), duration },
+          dateKey,
+          meta: { v: 1 },
+        });
+      } catch {}
 
       // Emit domain event
       emitDomainEvent({
@@ -478,17 +532,28 @@ export const useAppState = () => {
         const endTime = new Date();
         const domain = activeTimer.type === 'task' ? 'tasks' : 'routines';
 
-        // Add log entry
-        addLog({
-          type: activeTimer.type === 'task' ? 'TIMER_STOP' : 'ROUTINE_STOP',
-          payload: {
-            id: activeTimer.id,
-            startTime: activeTimer.startTime.getTime(),
-            endTime: endTime.getTime(),
-            duration: endTime.getTime() - activeTimer.startTime.getTime(),
-            actualDuration: endTime.getTime() - activeTimer.startTime.getTime() - activeTimer.totalPausedDuration,
-          },
-        });
+        // Emit event-sourced write (kill-switch to skip legacy logs)
+        try {
+          const { eventRepository } = require('@/lib/repositories/event.repository');
+          const { format } = require('date-fns');
+          const { getStudyDateForTimestamp } = require('@/lib/utils');
+          const ts = new Date().toISOString();
+          const dateKey = format(getStudyDateForTimestamp(ts), 'yyyy-MM-dd');
+          (eventRepository as any).add({
+            id: crypto.randomUUID(),
+            type: activeTimer.type === 'task' ? 'TIMER_STOP' : 'ROUTINE_STOP',
+            timestamp: ts,
+            payload: {
+              id: activeTimer.id,
+              startTime: activeTimer.startTime.getTime(),
+              endTime: endTime.getTime(),
+              duration: endTime.getTime() - activeTimer.startTime.getTime(),
+              actualDuration: endTime.getTime() - activeTimer.startTime.getTime() - activeTimer.totalPausedDuration,
+            },
+            dateKey,
+            meta: { v: 1 },
+          });
+        } catch {}
 
         return {
           ...prevState,
@@ -514,14 +579,25 @@ export const useAppState = () => {
           pausedTime: pauseTime,
         };
 
-        // Add log entry
-        addLog({
-          type: activeTimer.type === 'task' ? 'TIMER_PAUSE' : 'ROUTINE_PAUSE',
-          payload: {
-            id: activeTimer.id,
-            pauseTime,
-          },
-        });
+        // Emit event-sourced write (kill-switch to skip legacy logs)
+        try {
+          const { eventRepository } = require('@/lib/repositories/event.repository');
+          const { format } = require('date-fns');
+          const { getStudyDateForTimestamp } = require('@/lib/utils');
+          const ts = new Date().toISOString();
+          const dateKey = format(getStudyDateForTimestamp(ts), 'yyyy-MM-dd');
+          (eventRepository as any).add({
+            id: crypto.randomUUID(),
+            type: activeTimer.type === 'task' ? 'TIMER_PAUSE' : 'ROUTINE_PAUSE',
+            timestamp: ts,
+            payload: {
+              id: activeTimer.id,
+              pauseTime,
+            },
+            dateKey,
+            meta: { v: 1 },
+          });
+        } catch {}
 
         return {
           ...prevState,
@@ -549,15 +625,26 @@ export const useAppState = () => {
           totalPausedDuration: activeTimer.totalPausedDuration + pauseDuration,
         };
 
-        // Add log entry
-        addLog({
-          type: activeTimer.type === 'task' ? 'TIMER_RESUME' : 'ROUTINE_RESUME',
-          payload: {
-            id: activeTimer.id,
-            resumeTime,
-            pauseDuration,
-          },
-        });
+        // Emit event-sourced write (kill-switch to skip legacy logs)
+        try {
+          const { eventRepository } = require('@/lib/repositories/event.repository');
+          const { format } = require('date-fns');
+          const { getStudyDateForTimestamp } = require('@/lib/utils');
+          const ts = new Date().toISOString();
+          const dateKey = format(getStudyDateForTimestamp(ts), 'yyyy-MM-dd');
+          (eventRepository as any).add({
+            id: crypto.randomUUID(),
+            type: activeTimer.type === 'task' ? 'TIMER_RESUME' : 'ROUTINE_RESUME',
+            timestamp: ts,
+            payload: {
+              id: activeTimer.id,
+              resumeTime,
+              pauseDuration,
+            },
+            dateKey,
+            meta: { v: 1 },
+          });
+        } catch {}
 
         return {
           ...prevState,
@@ -755,44 +842,6 @@ export const useAppState = () => {
     },
 
     // Log actions
-    removeLog: (id: string) => {
-      setState(prevState => {
-        const newItems = new Map(prevState.logs.items);
-        newItems.delete(id);
-
-        return {
-          ...prevState,
-          logs: {
-            ...prevState.logs,
-            items: newItems,
-          },
-        };
-      });
-    },
-
-    updateLog: (id: string, updates: Partial<LogEvent>) => {
-      setState(prevState => {
-        const existingLog = prevState.logs.items.get(id);
-        if (!existingLog) return prevState;
-
-        const updatedLog = {
-          ...existingLog,
-          ...updates,
-        };
-
-        const newItems = new Map(prevState.logs.items);
-        newItems.set(id, updatedLog);
-
-        return {
-          ...prevState,
-          logs: {
-            ...prevState.logs,
-            items: newItems,
-          },
-        };
-      });
-    },
-
     // UI actions
     setActiveView: (view: string) => {
       setState(prevState => ({
@@ -904,28 +953,6 @@ export const useAppState = () => {
   }), []);
 
   // Helper functions
-  const addLog = useCallback((logData: Omit<LogEvent, 'id' | 'timestamp'>) => {
-    const newLog: LogEvent = {
-      ...logData,
-      id: generateId(),
-      timestamp: new Date().toISOString(),
-    };
-
-    setState(prevState => {
-      const newItems = new Map(prevState.logs.items);
-      newItems.set(newLog.id, newLog);
-      return {
-        ...prevState,
-        logs: {
-          ...prevState.logs,
-          items: newItems,
-        },
-      };
-    });
-
-    return newLog;
-  }, []);
-
   const emitDomainEvent = useCallback((event: DomainEvent) => {
     // Emit event for cross-domain coordination
     console.log('Domain event:', event);
@@ -952,6 +979,5 @@ export const useAppState = () => {
     derivedState,
     actions,
     dispatch,
-    addLog,
   };
 };

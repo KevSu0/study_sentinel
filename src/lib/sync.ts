@@ -76,6 +76,12 @@ export class SyncEngine {
     // TODO: Implement sync engine stop logic
     console.log('Sync engine stopped');
   }
+
+  async deleteRemoteData(): Promise<{ success: boolean; error?: string }> {
+    // Placeholder for backend delete; wire to API when available
+    console.warn('[SyncEngine] deleteRemoteData is not configured.');
+    return { success: false, error: 'Remote wipe not configured' };
+  }
 }
 
 export const syncEngine = new SyncEngine();

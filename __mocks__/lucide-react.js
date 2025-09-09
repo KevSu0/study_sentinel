@@ -1786,7 +1786,8 @@ const iconNames = [
   'PersonRobust',
   'PersonSturdy',
   'PersonDurable',
-  'PersonLastin'
+  'PersonLastin',
+  'BookOpenCheck',
 ];
 
 // Create mock exports

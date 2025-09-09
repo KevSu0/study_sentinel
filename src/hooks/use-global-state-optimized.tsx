@@ -28,7 +28,7 @@ import toast from 'react-hot-toast';
 import { SYSTEM_BADGES, checkBadge } from '@/lib/badges';
 import { getSessionDate, getStudyDateForTimestamp, getStudyDay, generateShortId } from '@/lib/utils';
 import { motivationalQuotes, getRandomMotivationalMessage } from '@/lib/motivation';
-import { taskRepository, profileRepository, routineRepository, logRepository, badgeRepository, sessionRepository } from '@/lib/repositories';
+import { taskRepository, profileRepository, routineRepository, badgeRepository, sessionRepository, eventRepository } from '@/lib/repositories';
 import { SyncEngine } from '@/lib/sync';
 
 // Performance optimized types and interfaces
@@ -46,7 +46,6 @@ type RoutineLogDialogState = {
 interface AppState {
   isLoaded: boolean;
   tasks: StudyTask[];
-  logs: LogEvent[];
   profile: UserProfile;
   routines: Routine[];
   allBadges: Badge[];
@@ -60,8 +59,6 @@ interface AppState {
   timerProgress: number | null;
   currentQuote: string;
   routineLogDialog: RoutineLogDialogState;
-  todaysLogs: LogEvent[];
-  previousDayLogs: LogEvent[];
   allCompletedWork: CompletedWork[];
   todaysCompletedWork: CompletedWork[];
   todaysPoints: number;
@@ -128,11 +125,11 @@ const createSelectors = (state: AppState) => ({
         return t.date === today && t.status === 'completed';
       }).length,
       totalRoutines: state.routines.filter(r => r.status === 'todo').length,
-      completedRoutines: state.todaysLogs.filter(l => l.type === 'ROUTINE_SESSION_COMPLETE').length,
+      completedRoutines: state.todaysCompletedWork.filter(l => l.type === 'routine').length,
       totalPoints: state.todaysPoints,
       badgesEarned: state.todaysBadges.length,
     }),
-    [state.tasks, state.routines, state.todaysLogs, state.todaysPoints, state.todaysBadges]
+    [state.tasks, state.routines, state.todaysCompletedWork, state.todaysPoints, state.todaysBadges]
   ),
 });
 
@@ -161,9 +158,6 @@ interface OptimizedGlobalStateContextType {
     closeRoutineLogDialog: () => void;
     setSoundSettings: (newSettings: Partial<SoundSettings>) => void;
     toggleMute: () => void;
-    addLog: (type: LogEvent['type'], payload: LogEvent['payload']) => void;
-    removeLog: (logId: string) => void;
-    updateLog: (logId: string, updatedLog: Partial<LogEvent>) => void;
     retryItem: (item: ActivityFeedItem) => void;
     openQuickStart: () => void;
     closeQuickStart: () => void;
@@ -177,7 +171,6 @@ export function OptimizedGlobalStateProvider({ children }: { children: ReactNode
   const [state, setState] = useState<AppState>({
     isLoaded: false,
     tasks: [],
-    logs: [],
     profile: { name: '', email: '', phone: '', passion: '', dream: '', education: '', reasonForUsing: '', dailyStudyGoal: 8 },
     routines: [],
     allBadges: [],
@@ -191,8 +184,6 @@ export function OptimizedGlobalStateProvider({ children }: { children: ReactNode
     timerProgress: null,
     currentQuote: motivationalQuotes[0],
     routineLogDialog: { isOpen: false, action: null },
-    todaysLogs: [],
-    previousDayLogs: [],
     allCompletedWork: [],
     todaysCompletedWork: [],
     todaysPoints: 0,
@@ -342,36 +333,6 @@ export function OptimizedGlobalStateProvider({ children }: { children: ReactNode
 
     toggleMute: useCallback(() => {
       setState(prev => ({ ...prev, isMuted: !prev.isMuted }));
-    }, []),
-
-    addLog: useCallback((type: LogEvent['type'], payload: LogEvent['payload']) => {
-      const newLog: LogEvent = {
-        id: crypto.randomUUID(),
-        type,
-        payload,
-        timestamp: new Date().toISOString()
-      };
-      setState(prev => ({
-        ...prev,
-        logs: [...prev.logs, newLog],
-        todaysLogs: [...prev.todaysLogs, newLog]
-      }));
-    }, []),
-
-    removeLog: useCallback((logId: string) => {
-      setState(prev => ({
-        ...prev,
-        logs: prev.logs.filter(log => log.id !== logId),
-        todaysLogs: prev.todaysLogs.filter(log => log.id !== logId)
-      }));
-    }, []),
-
-    updateLog: useCallback((logId: string, updatedLog: Partial<LogEvent>) => {
-      setState(prev => ({
-        ...prev,
-        logs: prev.logs.map(log => log.id === logId ? { ...log, ...updatedLog } : log),
-        todaysLogs: prev.todaysLogs.map(log => log.id === logId ? { ...log, ...updatedLog } : log)
-      }));
     }, []),
 
     retryItem: useCallback((item: ActivityFeedItem) => {

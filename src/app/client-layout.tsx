@@ -23,6 +23,7 @@ import { Providers } from '@/components/providers';
 import { useStatusBarStyle } from '@/utils/platform-optimization';
 import { UserPreferencesRepository } from '@/lib/repositories/user-preferences.repository';
 import { maybeRunDailyBackup, requestPersistentStorage as requestPersistentStorage2 } from '@/lib/backup';
+import { backfillEventsOnce } from '@/lib/data/backfill-events';
 
 export default function ClientLayout({
   children,
@@ -38,6 +39,13 @@ export default function ClientLayout({
       
       // Initialize database
       await initDatabase();
+
+      // Backfill events from logs
+      try {
+        await backfillEventsOnce();
+      } catch (e) {
+        console.warn('Event backfill failed:', e);
+      }
 
       // Request persistent storage for better offline experience
       try {

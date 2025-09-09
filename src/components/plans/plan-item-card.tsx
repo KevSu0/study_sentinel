@@ -182,7 +182,7 @@ export const PlanItemCard = React.memo(function PlanItemCard({
                     <DropdownMenuItem onSelect={() => onUndoCompleteRoutine?.((item.data as any).log?.id || item.data.id)}>
                       Retry
                     </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => onDeleteCompleteRoutine?.((item.data as any).log?.id || item.data.id)} className="text-destructive">
+                    <DropdownMenuItem onSelect={() => onDeleteCompleteRoutine?.((item.data as any).log?.id || item.data.id)} className="text-destructive" aria-label="Delete Log">
                       Delete Log
                     </DropdownMenuItem>
                   </DropdownMenuContent>

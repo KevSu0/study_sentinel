@@ -47,11 +47,6 @@ jest.mock('@/lib/repositories', () => ({
     update: jest.fn().mockResolvedValue({}),
     delete: jest.fn().mockResolvedValue({}),
   },
-  logRepository: {
-    create: jest.fn().mockResolvedValue({}),
-    update: jest.fn().mockResolvedValue({}),
-    delete: jest.fn().mockResolvedValue({}),
-  },
   badgeRepository: {
     create: jest.fn().mockResolvedValue({}),
     update: jest.fn().mockResolvedValue({}),
@@ -145,7 +140,6 @@ describe('useOptimizedGlobalState', () => {
       
       expect(state.isLoaded).toBe(false);
       expect(state.tasks).toEqual([]);
-      expect(state.logs).toEqual([]);
       expect(state.routines).toEqual([]);
       expect(state.allBadges).toEqual([]);
       expect(state.earnedBadges).toBeInstanceOf(Map);
@@ -184,9 +178,6 @@ describe('useOptimizedGlobalState', () => {
       expect(typeof actions.closeRoutineLogDialog).toBe('function');
       expect(typeof actions.setSoundSettings).toBe('function');
       expect(typeof actions.toggleMute).toBe('function');
-      expect(typeof actions.addLog).toBe('function');
-      expect(typeof actions.removeLog).toBe('function');
-      expect(typeof actions.updateLog).toBe('function');
       expect(typeof actions.retryItem).toBe('function');
     });
   });
@@ -242,7 +233,6 @@ describe('useOptimizedGlobalState', () => {
       expect(typeof state.isMuted).toBe('boolean');
       expect(typeof state.currentQuote).toBe('string');
       expect(Array.isArray(state.tasks)).toBe(true);
-      expect(Array.isArray(state.logs)).toBe(true);
       expect(Array.isArray(state.routines)).toBe(true);
       expect(Array.isArray(state.allBadges)).toBe(true);
       expect(state.earnedBadges instanceof Map).toBe(true);

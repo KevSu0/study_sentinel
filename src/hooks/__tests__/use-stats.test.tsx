@@ -6,11 +6,15 @@ import {
   sessionRepository,
   badgeRepository,
 } from '@/lib/repositories';
+import { eventRepository } from '@/lib/repositories/event.repository';
 import { Badge, UserProfile } from '@/lib/types';
 import { Session } from '@/lib/db';
 import { format, subDays, startOfDay } from 'date-fns';
+import { buildSessionsFromEvents } from '@/lib/projections/sessions';
 
 jest.mock('@/lib/repositories');
+jest.mock('@/lib/repositories/event.repository');
+jest.mock('@/lib/projections/sessions');
 
 const mockProfileRepository = profileRepository as jest.Mocked<
   typeof profileRepository
@@ -22,6 +26,11 @@ const mockSessionRepository = sessionRepository as jest.Mocked<
 const mockBadgeRepository = badgeRepository as jest.Mocked<
   typeof badgeRepository
 >;
+const mockEventRepository = eventRepository as jest.Mocked<
+  typeof eventRepository
+>;
+const mockBuildSessionsFromEvents =
+  buildSessionsFromEvents as jest.MockedFunction<typeof buildSessionsFromEvents>;
 
 const mockBadges: Badge[] = [
   {
@@ -74,8 +83,12 @@ describe('useStats', () => {
     jest.clearAllMocks();
     mockSessionRepository.getByDateRange.mockResolvedValue([]);
     mockTaskRepository.getByDateRange.mockResolvedValue([]);
+    mockTaskRepository.getAll.mockResolvedValue([]);
     mockBadgeRepository.getAll.mockResolvedValue(mockBadges);
     mockProfileRepository.getById.mockResolvedValue(mockUserProfile);
+    mockEventRepository.getByRange.mockResolvedValue([]);
+    mockEventRepository.getAll.mockResolvedValue([]);
+    mockBuildSessionsFromEvents.mockReturnValue([]);
   });
 
   it('should fetch allBadges and earnedBadges correctly', async () => {
@@ -108,7 +121,7 @@ describe('useStats', () => {
   });
 
   it('should calculate timeRangeStats correctly', async () => {
-    mockSessionRepository.getByDateRange.mockResolvedValue(mockCompletedWork);
+    mockBuildSessionsFromEvents.mockReturnValue(mockCompletedWork);
 
     const { result } = renderHook(() =>
       useStats({ timeRange: 'daily', selectedDate: new Date() })
@@ -130,8 +143,7 @@ describe('useStats', () => {
 
     await waitFor(() => {
         const expectedDate = format(selectedDate, 'yyyy-MM-dd');
-        expect(mockTaskRepository.getByDateRange).toHaveBeenCalledWith(expectedDate, expectedDate);
-        expect(mockSessionRepository.getByDateRange).toHaveBeenCalledWith(expectedDate, expectedDate);
+        expect(mockEventRepository.getByRange).toHaveBeenCalledWith(expectedDate, expectedDate);
     });
   });
 
@@ -145,8 +157,7 @@ describe('useStats', () => {
         const now = startOfDay(new Date());
         const expectedStartDate = format(subDays(now, 7), 'yyyy-MM-dd');
         const expectedEndDate = format(now, 'yyyy-MM-dd');
-        expect(mockTaskRepository.getByDateRange).toHaveBeenCalledWith(expectedStartDate, expectedEndDate);
-        expect(mockSessionRepository.getByDateRange).toHaveBeenCalledWith(expectedStartDate, expectedEndDate);
+        expect(mockEventRepository.getByRange).toHaveBeenCalledWith(expectedStartDate, expectedEndDate);
     });
   });
 
@@ -160,8 +171,7 @@ describe('useStats', () => {
         const now = startOfDay(new Date());
         const expectedStartDate = format(subDays(now, 30), 'yyyy-MM-dd');
         const expectedEndDate = format(now, 'yyyy-MM-dd');
-        expect(mockTaskRepository.getByDateRange).toHaveBeenCalledWith(expectedStartDate, expectedEndDate);
-        expect(mockSessionRepository.getByDateRange).toHaveBeenCalledWith(expectedStartDate, expectedEndDate);
+        expect(mockEventRepository.getByRange).toHaveBeenCalledWith(expectedStartDate, expectedEndDate);
     });
   });
 
@@ -174,8 +184,7 @@ describe('useStats', () => {
     await waitFor(() => {
         const expectedStartDate = '1970-01-01';
         const expectedEndDate = '9999-12-31';
-        expect(mockTaskRepository.getByDateRange).toHaveBeenCalledWith(expectedStartDate, expectedEndDate);
-        expect(mockSessionRepository.getByDateRange).toHaveBeenCalledWith(expectedStartDate, expectedEndDate);
+        expect(mockEventRepository.getByRange).toHaveBeenCalledWith(expectedStartDate, expectedEndDate);
     });
   });
 });

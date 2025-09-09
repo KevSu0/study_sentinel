@@ -1,6 +1,7 @@
 
 import Dexie, { Table } from 'dexie';
 import { Badge, StudyTask, Routine, LogEvent, UserProfile } from './types';
+import type { EventRecord } from './events';
 import { runMigration } from './migration';
 
 // Define your interfaces based on the application's needs
@@ -100,6 +101,7 @@ export class MyDatabase extends Dexie {
   public routines!: Table<Routine, string>;
   public logs!: Table<LogEvent, string>;
   public badges!: Table<Badge, string>;
+  public events!: Table<EventRecord, string>;
   
   // New tables for offline-first functionality
   public syncConflicts!: Table<SyncConflict, string>;
@@ -108,7 +110,7 @@ export class MyDatabase extends Dexie {
 
   constructor(name: string = 'MyDatabase') {
     super(name);
-    this.version(6).stores({
+    this.version(7).stores({
       plans: 'id, date, status', // Added indexes for date and status
       users: 'id',
       sessions: 'id, date',
@@ -117,6 +119,7 @@ export class MyDatabase extends Dexie {
       outbox: '++id, timestamp, retries',
       routines: 'id',
       logs: 'id, timestamp, type', // Added indexes for timestamp and type
+      events: 'id, timestamp, type, dateKey',
       badges: 'id',
       
       // New tables for offline-first functionality

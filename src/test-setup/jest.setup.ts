@@ -1,4 +1,8 @@
+process.env.TZ = 'UTC';
 import '@testing-library/jest-dom';
+
+// Default-mock GlobalStateProvider/useGlobalState to avoid Dexie boot in jsdom
+jest.mock('@/hooks/use-global-state');
 import 'fake-indexeddb/auto';
 import 'core-js/actual/structured-clone';
 import { __setTestDB, getDB } from '@/lib/db';
@@ -15,7 +19,16 @@ try {
   }
 } catch {}
 // Minimal dynamic() mock to avoid Next.js runtime in tests
-jest.mock('next/dynamic', () => () => {
+jest.mock('next/dynamic', () => (loader: any) => {
+  try {
+    const txt = loader?.toString?.() || '';
+    if (txt.includes('add-task-dialog')) {
+      // Eagerly resolve AddItemDialog in tests so it mounts synchronously
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const mod = require('@/components/tasks/add-task-dialog');
+      return mod.AddItemDialog;
+    }
+  } catch {}
   const DynamicComponent = (_props: any) => null;
   (DynamicComponent as any).displayName = 'DynamicMock';
   return DynamicComponent;
@@ -126,8 +139,6 @@ if (typeof window !== 'undefined') {
       selectNodeContents: () => {},
       extractContents: () => document.createDocumentFragment(),
       cloneContents: () => document.createDocumentFragment(),
-      insertNode: () => {},
-      surroundContents: () => {},
     } as any);
   }
 
@@ -150,7 +161,7 @@ if (typeof (global as any).Request === 'undefined') {
     constructor(input: string) { this.url = input; }
   }
   // @ts-ignore
-  (global as any).Request = MockRequest;
+  (global as any).Request = MockRequest as any;
 }
 
 // Minimal Response polyfill to support NextResponse in tests
@@ -203,11 +214,6 @@ try {
     rht.toast = rht.default;
   }
 } catch {}
-
-// Trivial test to satisfy Jest when scanning __tests__ helpers.
-test('jest setup runs', () => {
-  expect(typeof window).toBe('object');
-});
 
 // Default to real timers at the start of each test
 beforeEach(() => {
@@ -299,3 +305,9 @@ try {
   });
   afterAll(() => (console.warn as any).mockRestore?.());
 } catch {}
+// Ensure DOM and mocks are cleaned up between tests to reduce memory usage
+afterEach(() => {
+  try { cleanup(); } catch {}
+  try { jest.clearAllMocks(); } catch {}
+  try { jest.useRealTimers(); } catch {}
+});

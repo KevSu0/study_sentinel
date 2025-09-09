@@ -1,4 +1,5 @@
 import React, { createContext, useContext, ReactNode } from 'react';
+import { EVENTS_DEFAULT, ALLOW_LEGACY_LOGS_READ } from '@/lib/flags';
 import { useAppState } from '../core/use-app-state';
 import type {
   AppState,
@@ -65,11 +66,6 @@ interface AppStateContextType {
     updateSoundSettings: (settings: Partial<SoundSettings>) => void;
     toggleMute: () => void;
     
-    // Log actions
-    addLog: (logData: Omit<LogEvent, 'id' | 'timestamp'>) => LogEvent;
-    removeLog: (id: string) => void;
-    updateLog: (id: string, updates: Partial<LogEvent>) => void;
-    
     // UI actions
     setActiveView: (view: string) => void;
     toggleSidebar: () => void;
@@ -102,63 +98,188 @@ interface AppStateProviderProps {
  * Provides centralized state management with domain separation
  */
 export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) => {
-  const { state, derivedState, actions, dispatch, addLog } = useAppState();
+  const { state, derivedState, actions, dispatch } = useAppState();
 
   // Extended actions that build on core actions
   const extendedActions = {
     ...actions,
-    addLog,
     
     // Task management
-    archiveTask: (id: string) => {
-      actions.updateTask(id, { status: 'archived' });
-      addLog({
-          type: 'TASK_ARCHIVED',
-          payload: { taskId: id },
+    addTask: (task: Omit<StudyTask, 'id' | 'createdAt' | 'updatedAt'>) => {
+      const id = actions.addTask(task);
+      if (EVENTS_DEFAULT) try {
+        const { eventRepository } = require('@/lib/repositories/event.repository');
+        const { format } = require('date-fns');
+        const { getStudyDateForTimestamp } = require('@/lib/utils');
+        const ts = new Date().toISOString();
+        const dateKey = format(getStudyDateForTimestamp(ts), 'yyyy-MM-dd');
+        (eventRepository as any).add({
+          id: crypto.randomUUID(),
+          type: 'TASK_ADD',
+          timestamp: ts,
+          payload: { id, ...task },
+          dateKey,
+          meta: { v: 1, refs: { entityId: id } },
         });
+      } catch {}
+      return id;
+    },
+
+    updateTask: (id: string, updates: Partial<StudyTask>) => {
+      actions.updateTask(id, updates);
+      if (EVENTS_DEFAULT) try {
+        const { eventRepository } = require('@/lib/repositories/event.repository');
+        const { format } = require('date-fns');
+        const { getStudyDateForTimestamp } = require('@/lib/utils');
+        const ts = new Date().toISOString();
+        const dateKey = format(getStudyDateForTimestamp(ts), 'yyyy-MM-dd');
+        (eventRepository as any).add({
+          id: crypto.randomUUID(),
+          type: 'TASK_UPDATE',
+          timestamp: ts,
+          payload: { id, ...updates },
+          dateKey,
+          meta: { v: 1, refs: { entityId: id } },
+        });
+      } catch {}
+    },
+
+    archiveTask: (id: string) => {
+      const task = state.tasks.items.get(id);
+      actions.updateTask(id, { status: 'archived' });
+      if (EVENTS_DEFAULT) try {
+        const { eventRepository } = require('@/lib/repositories/event.repository');
+        const { format } = require('date-fns');
+        const { getStudyDateForTimestamp } = require('@/lib/utils');
+        const ts = new Date().toISOString();
+        const dateKey = format(getStudyDateForTimestamp(ts), 'yyyy-MM-dd');
+        (eventRepository as any).add({
+          id: crypto.randomUUID(),
+          type: 'TASK_ARCHIVE',
+          timestamp: ts,
+          payload: { taskId: id, title: task?.title },
+          dateKey,
+          meta: { v: 1 },
+        });
+      } catch {}
     },
     
     unarchiveTask: (id: string) => {
       actions.updateTask(id, { status: 'todo' });
-      addLog({
-          type: 'TASK_UNARCHIVED',
+      if (EVENTS_DEFAULT) try {
+        const { eventRepository } = require('@/lib/repositories/event.repository');
+        const { format } = require('date-fns');
+        const { getStudyDateForTimestamp } = require('@/lib/utils');
+        const ts = new Date().toISOString();
+        const dateKey = format(getStudyDateForTimestamp(ts), 'yyyy-MM-dd');
+        (eventRepository as any).add({
+          id: crypto.randomUUID(),
+          type: 'TASK_UNARCHIVE',
+          timestamp: ts,
           payload: { taskId: id },
+          dateKey,
+          meta: { v: 1, refs: { entityId: id } },
         });
+      } catch {}
     },
+
     
     pushTaskToNextDay: (id: string) => {
       const task = state.tasks.items.get(id);
       if (task) {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
-        actions.updateTask(id, {});
-        addLog({
-          type: 'TASK_RESCHEDULED',
-          payload: { taskId: id, newDate: tomorrow },
-        });
+        const newDate = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+        actions.updateTask(id, { date: newDate });
+        if (EVENTS_DEFAULT) try {
+          const { eventRepository } = require('@/lib/repositories/event.repository');
+          const { format } = require('date-fns');
+          const { getStudyDateForTimestamp } = require('@/lib/utils');
+          const ts = new Date().toISOString();
+          const dateKey = format(getStudyDateForTimestamp(ts), 'yyyy-MM-dd');
+          (eventRepository as any).add({
+            id: crypto.randomUUID(),
+            type: 'TASK_PUSH_NEXT_DAY',
+            timestamp: ts,
+            payload: { taskId: id, date: newDate },
+            dateKey,
+            meta: { v: 1, refs: { entityId: id } },
+          });
+        } catch {}
       }
     },
     
     manuallyCompleteTask: (id: string, data: ManualLogFormData) => {
+      const ts = new Date().toISOString();
+      const { format } = require('date-fns');
+      const { getStudyDateForTimestamp } = require('@/lib/utils');
+      const dateKey = format(getStudyDateForTimestamp(ts), 'yyyy-MM-dd');
+
       const task = state.tasks.items.get(id);
       if (task) {
         actions.updateTask(id, { status: 'completed' });
-        addLog({
-          type: 'TASK_COMPLETE',
-          payload: {
-            id: task.id,
-            name: task.title,
-            type: 'task',
-            duration: 0,
-            pointsEarned: 0,
-            timestamp: new Date().getTime(),
-            isManual: true,
-            notes: data.notes,
-          },
-        });
       }
     },
     
+    // Routine management
+    addRoutine: (routine: Omit<Routine, 'id' | 'createdAt' | 'updatedAt'>) => {
+      const id = actions.addRoutine(routine);
+      if (EVENTS_DEFAULT) try {
+        const { eventRepository } = require('@/lib/repositories/event.repository');
+        const { format } = require('date-fns');
+        const { getStudyDateForTimestamp } = require('@/lib/utils');
+        const ts = new Date().toISOString();
+        const dateKey = format(getStudyDateForTimestamp(ts), 'yyyy-MM-dd');
+        (eventRepository as any).add({
+          id: crypto.randomUUID(),
+          type: 'ROUTINE_ADD',
+          timestamp: ts,
+          payload: { id, ...routine },
+          dateKey,
+          meta: { v: 1, refs: { entityId: id } },
+        });
+      } catch {}
+      return id;
+    },
+
+    updateRoutine: (id: string, updates: Partial<Routine>) => {
+      actions.updateRoutine(id, updates);
+      if (EVENTS_DEFAULT) try {
+        const { eventRepository } = require('@/lib/repositories/event.repository');
+        const { format } = require('date-fns');
+        const { getStudyDateForTimestamp } = require('@/lib/utils');
+        const ts = new Date().toISOString();
+        const dateKey = format(getStudyDateForTimestamp(ts), 'yyyy-MM-dd');
+        (eventRepository as any).add({
+          id: crypto.randomUUID(),
+          type: 'ROUTINE_UPDATE',
+          timestamp: ts,
+          payload: { id, ...updates },
+          dateKey,
+          meta: { v: 1, refs: { entityId: id } },
+        });
+      } catch {}
+    },
+
+    deleteRoutine: (id: string) => {
+      actions.deleteRoutine(id);
+      if (EVENTS_DEFAULT) try {
+        const { eventRepository } = require('@/lib/repositories/event.repository');
+        const { format } = require('date-fns');
+        const { getStudyDateForTimestamp } = require('@/lib/utils');
+        const ts = new Date().toISOString();
+        const dateKey = format(getStudyDateForTimestamp(ts), 'yyyy-MM-dd');
+        (eventRepository as any).add({
+          id: crypto.randomUUID(),
+          type: 'ROUTINE_DELETE',
+          timestamp: ts,
+          payload: { id },
+          dateKey,
+          meta: { v: 1, refs: { entityId: id } },
+        });
+      } catch {}
+    },
+
     // Timer management
     pauseTimer: () => {
       const activeTimer = state.tasks.activeTimer || state.routines.activeTimer;
@@ -171,11 +292,6 @@ export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) 
             isPaused: true,
           },
         });
-        
-        addLog({
-            type: activeTimer.type === 'task' ? 'TIMER_PAUSE' : 'ROUTINE_PAUSE',
-            payload: { id: activeTimer.id, pauseTime },
-          });
       }
     },
     
@@ -191,11 +307,6 @@ export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) 
             isPaused: false,
           },
         });
-        
-        addLog({
-            type: activeTimer.type === 'task' ? 'TIMER_RESUME' : 'ROUTINE_RESUME',
-            payload: { id: activeTimer.id, resumeTime, pauseDuration },
-          });
       }
     },
     
@@ -205,38 +316,57 @@ export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) 
         const completionTime = new Date();
         const actualDuration = completionTime.getTime() - activeTimer.startTime.getTime() - activeTimer.totalPausedDuration;
         
+        if (EVENTS_DEFAULT) try {
+          const { eventRepository } = require('@/lib/repositories/event.repository');
+          const { format } = require('date-fns');
+          const { getStudyDateForTimestamp } = require('@/lib/utils');
+          const ts = completionTime.toISOString();
+          const dateKey = format(getStudyDateForTimestamp(ts), 'yyyy-MM-dd');
+          const basePayload = {
+            taskId: activeTimer.type === 'task' ? activeTimer.id : undefined,
+            routineId: activeTimer.type === 'routine' ? activeTimer.id : undefined,
+            pausedDuration: activeTimer.totalPausedDuration || 0,
+            points: (() => {
+              if (activeTimer.type === 'task') {
+                const t = state.tasks.items.get(activeTimer.id);
+                return t ? calculateTaskPoints(t, actualDuration) : 0;
+              }
+              const r = state.routines.items.get(activeTimer.id);
+              return r ? calculateRoutinePoints(r, actualDuration) : 0;
+            })(),
+            title: (() => {
+              if (activeTimer.type === 'task') return state.tasks.items.get(activeTimer.id)?.title || '';
+              return state.routines.items.get(activeTimer.id)?.title || '';
+            })(),
+            priority: (() => {
+              if (activeTimer.type === 'task') return state.tasks.items.get(activeTimer.id)?.priority;
+              return state.routines.items.get(activeTimer.id)?.priority;
+            })(),
+            subject: (() => {
+              if (activeTimer.type === 'task') return state.tasks.items.get(activeTimer.id)?.shortId || undefined;
+              return state.routines.items.get(activeTimer.id)?.shortId || undefined;
+            })(),
+            id: activeTimer.id,
+            duration: actualDuration,
+          };
+          (eventRepository as any).add({
+            id: crypto.randomUUID(),
+            type: activeTimer.type === 'task' ? 'TIMER_SESSION_COMPLETE' : 'ROUTINE_SESSION_COMPLETE',
+            timestamp: ts,
+            payload: basePayload,
+            dateKey,
+            meta: { v: 1, refs: { entityId: activeTimer.id } },
+          });
+        } catch {}
+
         if (activeTimer.type === 'task') {
           const task = state.tasks.items.get(activeTimer.id);
           if (task) {
             actions.updateTask(activeTimer.id, { status: 'completed' });
-            addLog({
-              type: 'TASK_COMPLETE',
-              payload: {
-                id: activeTimer.id,
-                name: task.title,
-                type: 'task',
-                duration: actualDuration,
-                pointsEarned: calculateTaskPoints(task, actualDuration),
-                timestamp: completionTime.getTime(),
-                isManual: false,
-              },
-            });
           }
         } else {
           const routine = state.routines.items.get(activeTimer.id);
           if (routine) {
-            addLog({
-              type: 'ROUTINE_SESSION_COMPLETE',
-              payload: {
-                id: routine.id,
-                name: routine.title,
-                type: 'routine',
-                duration: actualDuration,
-                pointsEarned: calculateRoutinePoints(routine, actualDuration),
-                timestamp: completionTime.getTime(),
-                isManual: false,
-              },
-            });
           }
         }
         
@@ -271,11 +401,6 @@ export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) 
           type: 'AWARD_BADGE',
           payload: { badgeId, reason },
         });
-        
-        addLog({
-          type: 'BADGE_EARNED',
-          payload: { badgeId, badgeName: badge.name, reason },
-        });
       }
     },
     
@@ -301,6 +426,27 @@ export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) 
     
     // Log management
     removeLog: (id: string) => {
+      if (!ALLOW_LEGACY_LOGS_READ) {
+        console.debug('[legacy-logs] removeLog no-op (gated) — id=', id);
+        return; // no-op under event-only runtime
+      }
+      // Emit a completion revoked event referencing the original completion if applicable
+      try {
+        const { eventRepository } = require('@/lib/repositories/event.repository');
+        const { format } = require('date-fns');
+        const { getStudyDateForTimestamp } = require('@/lib/utils');
+        const ts = new Date().toISOString();
+        const dateKey = format(getStudyDateForTimestamp(ts), 'yyyy-MM-dd');
+        (eventRepository as any).add({
+          id: `${id}::revoke`,
+          type: 'COMPLETION_REVOKED',
+          timestamp: ts,
+          payload: {},
+          dateKey,
+          meta: { v: 1, refs: { originalEventId: id } },
+        });
+      } catch {}
+      // Maintain state consistency if any UI relies on local log removal (noop if not in use)
       dispatch({
         type: 'REMOVE_LOG',
         payload: id,
@@ -308,6 +454,10 @@ export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) 
     },
     
     updateLog: (id: string, updates: Partial<LogEvent>) => {
+      if (!ALLOW_LEGACY_LOGS_READ) {
+        console.debug('[legacy-logs] updateLog no-op (gated) — id=', id);
+        return; // no-op under event-only runtime
+      }
       const existingLog = state.logs.items.get(id);
       if (existingLog) {
         dispatch({
@@ -372,10 +522,21 @@ export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) 
       if (type === 'task') {
         actions.updateTask(id, { status: 'todo' });
       }
-      addLog({
-        type: 'ITEM_RETRY',
-        payload: { id, type },
-      });
+      try {
+        const { eventRepository } = require('@/lib/repositories/event.repository');
+        const { format } = require('date-fns');
+        const { getStudyDateForTimestamp } = require('@/lib/utils');
+        const ts = new Date().toISOString();
+        const dateKey = format(getStudyDateForTimestamp(ts), 'yyyy-MM-dd');
+        (eventRepository as any).add({
+          id: crypto.randomUUID(),
+          type: type === 'task' ? 'TASK_RETRY' : 'ROUTINE_RETRY',
+          timestamp: ts,
+          payload: { id },
+          dateKey,
+          meta: { v: 1 },
+        });
+      } catch {}
     },
     
     playSound: (soundType: string) => {

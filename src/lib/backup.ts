@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { db } from './db';
+import { INCLUDE_LEGACY_LOGS_IN_BACKUP } from './flags';
 import { rotateRetention } from './backup-retention';
 import { aesGcmEncrypt, aesGcmDecrypt, type EncMeta, aesGcmEncryptWithRawKey, aesGcmDecryptWithRawKey } from './backup-crypto';
 import { ensureKeyfile, keyfileRawBytes, KEYFILE_NAME, readKeyfile } from './backup-keyfile';
@@ -41,7 +42,7 @@ async function collectAllDataTxn(): Promise<BackupPayload & { _counts: Record<st
       sessions: await db.sessions.toArray(),
       stats_daily: await db.stats_daily.toArray(),
       routines: await db.routines.toArray(),
-      logs: await db.logs.toArray(),
+      logs: INCLUDE_LEGACY_LOGS_IN_BACKUP ? await db.logs.toArray() : [],
       badges: await db.badges.toArray(),
       meta: await db.meta.toArray(),
       userPreferences: await db.userPreferences.toArray(),

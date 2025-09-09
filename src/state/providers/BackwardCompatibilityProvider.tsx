@@ -1,5 +1,6 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useAppStateContext } from './AppStateProvider';
+import { ALLOW_LEGACY_LOGS_READ } from '@/lib/flags';
 import type {
   StudyTask,
   Routine,
@@ -109,7 +110,7 @@ export const BackwardCompatibilityProvider: React.FC<BackwardCompatibilityProvid
     earnedBadges: new Map(Array.from(state.badges.available.entries()).filter(([id]) => 
       state.badges.earned.has(id)
     )),
-    logs: new Map(state.logs.items),
+    logs: ALLOW_LEGACY_LOGS_READ ? new Map(state.logs.items) : new Map(),
     sessions: new Map(state.sessions.items),
     soundSettings: state.settings.sound,
     activeTimer: state.tasks.activeTimer || state.routines.activeTimer,

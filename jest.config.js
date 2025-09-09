@@ -5,7 +5,7 @@ const createJestConfig = nextJest({
 })
 
 const customJestConfig = {
-  setupFilesAfterEnv: ['<rootDir>/src/__tests__/jest.setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/src/test-setup/jest.setup.ts'],
   testEnvironment: 'jest-environment-jsdom',
   resetMocks: true,
   resetModules: true,

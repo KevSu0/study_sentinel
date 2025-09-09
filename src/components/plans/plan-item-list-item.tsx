@@ -126,7 +126,7 @@ export const PlanListItem = React.memo(function PlanListItem({
                 <DropdownMenuItem onSelect={() => onUndoCompleteRoutine?.(item.data.id)}>
                   Retry
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => onDeleteCompleteRoutine?.(item.data.id)} className="text-destructive">
+                <DropdownMenuItem onSelect={() => onDeleteCompleteRoutine?.(item.data.id)} className="text-destructive" aria-label="Delete Log">
                   Delete Log
                 </DropdownMenuItem>
               </DropdownMenuContent>

@@ -5,15 +5,18 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import StatsPage from '@/app/stats/page';
 import { AppStateProvider } from '@/hooks/state/AppStateProvider';
-import { logRepository } from '@/lib/repositories';
-import { backfillSessions } from '@/lib/data/backfill-sessions';
+import { eventRepository } from '@/lib/repositories/event.repository';
+import { format } from 'date-fns';
+import { getStudyDateForTimestamp } from '@/lib/utils';
 
 const add = async (id: string, iso: string, points = 10, durationSec = 600) => {
-  await (logRepository as any).add({
+  await (eventRepository as any).add({
     id,
     timestamp: iso,
     type: 'TIMER_SESSION_COMPLETE',
     payload: { taskId: 'T', title: id, duration: durationSec, pausedDuration: 0, points, priority: 'medium' },
+    dateKey: format(getStudyDateForTimestamp(iso), 'yyyy-MM-dd'),
+    meta: { v: 1 },
   });
 };
 
@@ -27,7 +30,7 @@ describe('Stats page tabs', () => {
   it('renders tabs and navigates between them', async () => {
     await add('TAB-1', '2025-09-01T06:00:00Z');
     await add('TAB-2', '2025-08-29T06:00:00Z');
-    await backfillSessions();
+    // events seeded; projections read directly
 
     render(
       <AppStateProvider>

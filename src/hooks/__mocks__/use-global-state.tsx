@@ -1,10 +1,7 @@
 import React from 'react';
-import {
-  MOCK_USER_PROFILE,
-  MOCK_STUDY_TASK,
-  MOCK_COMPLETED_WORK,
-} from '@/__tests__/mock-data';
+import { MOCK_USER_PROFILE, MOCK_STUDY_TASK, MOCK_COMPLETED_WORK } from '@/__tests__/mock-data';
 
+// Deterministic default state matching the real AppState shape
 const DEFAULT_RETURN = {
   state: {
     isLoaded: true,
@@ -13,11 +10,8 @@ const DEFAULT_RETURN = {
     profile: MOCK_USER_PROFILE,
     routines: [],
     allBadges: [],
-    earnedBadges: new Map(),
-    soundSettings: {
-      notificationSound: 'default',
-      timerSound: 'default',
-    },
+    earnedBadges: new Map<string, string>(),
+    soundSettings: { alarm: 'alarm_clock', tick: 'none', notificationInterval: 15 },
     activeItem: null,
     timeDisplay: '25:00',
     isPaused: true,
@@ -25,10 +19,7 @@ const DEFAULT_RETURN = {
     isMuted: false,
     timerProgress: 100,
     currentQuote: 'Test Quote',
-    routineLogDialog: {
-      isOpen: false,
-      routineId: null,
-    },
+    routineLogDialog: { isOpen: false, action: null as any },
     todaysLogs: [],
     previousDayLogs: [],
     allCompletedWork: MOCK_COMPLETED_WORK,
@@ -57,16 +48,13 @@ const DEFAULT_RETURN = {
   updateBadge: jest.fn(),
   deleteBadge: jest.fn(),
   updateProfile: jest.fn(),
-  openRoutineLogDialog: jest.fn(),
-  closeRoutineLogDialog: jest.fn(),
   setSoundSettings: jest.fn(),
   toggleMute: jest.fn(),
-  addLog: jest.fn(),
-  removeLog: jest.fn(),
-  updateLog: jest.fn(),
   retryItem: jest.fn(),
   openQuickStart: jest.fn(),
   closeQuickStart: jest.fn(),
+  openRoutineLogDialog: jest.fn(),
+  closeRoutineLogDialog: jest.fn(),
 };
 
 // Export a jest.fn so tests can override via mockReturnValue/mockImplementation

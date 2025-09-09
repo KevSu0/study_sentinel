@@ -11,8 +11,8 @@ import {
   statsDailyRepository,
   badgeRepository,
 } from '@/lib/repositories';
-import { logRepository } from '@/lib/repositories/log.repository';
-import { buildSessionFromLog } from '@/lib/data/backfill-sessions';
+import { eventRepository } from '@/lib/repositories/event.repository';
+import { buildSessionsFromEvents } from '@/lib/projections/sessions';
 import type {
   StudyTask,
   CompletedWork,
@@ -30,6 +30,7 @@ import {
   selectAiBriefingData,
   selectAchievementProgress,
 } from '@/lib/stats/selectors';
+import { buildTasksFromEvents } from '@/lib/projections/tasks';
 
 interface UseStatsProps {
   timeRange: string;
@@ -72,38 +73,26 @@ export function useStats({
     return { startDate, endDate };
   }, [timeRange, selectedDate]);
 
-  const tasks = useLiveQuery(() => taskRepository.getByDateRange(dateRange.startDate, dateRange.endDate), [dateRange]);
-  const sessionsForRange = useLiveQuery(
-    () => sessionRepository.getByDateRange(dateRange.startDate, dateRange.endDate),
-    [dateRange]
-  );
-  // Fallback: if sessions are not backfilled, derive sessions directly from logs across the selected date range
-  const logsDerivedSessions = useLiveQuery(
+  const tasks = useLiveQuery(async () => {
+    const baseTasks = await taskRepository.getAll();
+    const events = await eventRepository.getAll();
+    const allBuiltTasks = buildTasksFromEvents(events, baseTasks);
+    if (!allBuiltTasks) return [];
+    return allBuiltTasks.filter(t => t.date >= dateRange.startDate && t.date <= dateRange.endDate);
+  }, [dateRange]);
+
+  // Event-sourced: derive CompletedWork directly from events across the selected date range
+  const allCompletedWork = useLiveQuery(
     async () => {
       try {
-        // Build an inclusive list of YYYY-MM-dd dates between start and end
-        const start = parse(dateRange.startDate, 'yyyy-MM-dd', new Date());
-        const end = parse(dateRange.endDate, 'yyyy-MM-dd', new Date());
-        const days: string[] = [];
-        let cursor = start;
-        while (cursor <= end) {
-          days.push(format(cursor, 'yyyy-MM-dd'));
-          cursor = addDays(cursor, 1);
-        }
-        const logsByDay = await Promise.all(days.map(d => logRepository.getLogsByDate(d)));
-        const combined = logsByDay.flat().filter(Boolean) as any[];
-        const sessions = combined
-          .filter(l => l.type === 'TIMER_SESSION_COMPLETE' || l.type === 'ROUTINE_SESSION_COMPLETE')
-          .map(buildSessionFromLog)
-          .filter(Boolean) as any[];
-        return sessions;
+        const events = await eventRepository.getByRange(dateRange.startDate, dateRange.endDate);
+        return buildSessionsFromEvents(events);
       } catch {
         return [] as any[];
       }
     },
     [dateRange]
   );
-  const allCompletedWork = sessionsForRange && sessionsForRange.length > 0 ? sessionsForRange : logsDerivedSessions;
   const profile = useLiveQuery(() => profileRepository.getById('user-profile'), []);
   const allBadges = useLiveQuery(() => badgeRepository.getAll(), []);
   const earnedBadges = useLiveQuery(() => profileRepository.getById('user-profile').then(p => p?.earnedBadges), []);

@@ -119,7 +119,7 @@ export const ActivityItem = memo(function ActivityItem({
                   Retry
                 </DropdownMenuItem>
                 {onDelete && (
-                    <DropdownMenuItem onSelect={onDelete} className="text-destructive">
+                    <DropdownMenuItem onSelect={onDelete} className="text-destructive" aria-label="Delete Log">
                         Delete Log
                     </DropdownMenuItem>
                 )}

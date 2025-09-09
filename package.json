@@ -11,6 +11,7 @@
     "src/components/providers.tsx"
   ],
   "scripts": {
+    "test:debug": "jest --runInBand --coverage=false --maxWorkers=50%",
     "dev": "next dev --turbo",
     "dev:fast": "cross-env NODE_ENV=development next dev --turbo --experimental-https",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
@@ -26,6 +27,8 @@
     "test:discussed": "jest --maxWorkers=50% src/utils/__tests__/point-calculator.test.ts src/utils/__tests__/id-generator.test.ts src/providers/__tests__/quote-provider.test.ts src/providers/__tests__/sound-provider.test.ts src/utils/__tests__/performance-monitor.test.ts src/utils/__tests__/sync-engine.test.ts src/app/api/ping/__tests__/route.test.ts",
     "test:focus:all": "npm run -s test:new && npm run -s test:discussed",
     "test:ci": "jest --ci --maxWorkers=50% --coverage --reporters=default --json --outputFile=.jest-results.json",
+    "test:ci:low": "jest --ci --maxWorkers=25% --coverage --reporters=default --json --outputFile=.jest-results.json",
+    "test:ci:serial": "jest --ci --runInBand --coverage --reporters=default --json --outputFile=.jest-results.json",
     "test:ci:report": "npm run test:ci && node scripts/print-slow-tests.mjs .jest-results.json 10",
     "test:repeat": "node scripts/repeat-jest.mjs",
     "analyze": "cross-env ANALYZE=true NODE_OPTIONS='--max-old-space-size=8192' next build",

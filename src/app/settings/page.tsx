@@ -24,17 +24,29 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { OfflineStatusIndicator, SyncStatusIndicator } from '@/components/ui/offline-status-indicator';
 import { UserPreferencesRepository } from '@/lib/repositories/user-preferences.repository';
+import Dexie from 'dexie';
+import { SyncEngine } from '@/lib/sync';
+import { getStudyDayStartMinutes } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export default function SettingsPage() {
   const { state, setSoundSettings } = useGlobalState();
   const { isLoaded, soundSettings } = state;
   const [preferences, setPreferences] = useState<Record<string, any>>({});
+  const [studyDayStart, setStudyDayStart] = useState<string>('04:00');
   const [isLoading, setIsLoading] = useState(true);
   const userPrefsRepo = new UserPreferencesRepository();
+  const sync = new SyncEngine();
 
   useEffect(() => {
     loadPreferences();
+    // Initialize study day start from preferences/localStorage
+    try {
+      const mins = getStudyDayStartMinutes();
+      const hh = String(Math.floor(mins / 60)).padStart(2, '0');
+      const mm = String(mins % 60).padStart(2, '0');
+      setStudyDayStart(`${hh}:${mm}`);
+    } catch {}
   }, []);
 
   const loadPreferences = async () => {
@@ -62,6 +74,56 @@ export default function SettingsPage() {
     } catch (error) {
       console.error('Failed to save preference:', error);
       toast.error('Failed to save preference');
+    }
+  };
+
+  const handleStudyDayStartChange = async (value: string) => {
+    try {
+      setStudyDayStart(value);
+      const [h, m] = value.split(':').map(n => parseInt(n, 10));
+      const minutes = (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
+      await userPrefsRepo.setPreference('study.dayStartMinutes', minutes);
+      localStorage.setItem('studyDayStartMinutes', String(minutes));
+      // Clear session snapshots so they are rebuilt using the new boundary
+      try {
+        const keys: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('snap:sessions:')) keys.push(k);
+        }
+        keys.forEach(k => localStorage.removeItem(k));
+      } catch {}
+      toast.success('Study day start updated. Reloading to apply...');
+      setTimeout(() => window.location.reload(), 500);
+    } catch (e) {
+      console.error('Failed to save study day start:', e);
+      toast.error('Failed to save study day start');
+    }
+  };
+
+  const wipeLocalData = async () => {
+    try {
+      await Dexie.delete('MyDatabase');
+      try { localStorage.clear(); } catch {}
+      toast.success('Local data wiped. Reloading...');
+      setTimeout(() => window.location.reload(), 400);
+    } catch (e) {
+      console.error('Failed to wipe local data:', e);
+      toast.error('Failed to wipe local data');
+    }
+  };
+
+  const wipeRemoteData = async () => {
+    try {
+      const res = await sync.deleteRemoteData();
+      if (res.success) {
+        toast.success('Requested remote data wipe');
+      } else {
+        toast.error(res.error || 'Remote wipe not configured');
+      }
+    } catch (e) {
+      console.error('Failed to wipe remote data:', e);
+      toast.error('Failed to wipe remote data');
     }
   };
 
@@ -111,6 +173,25 @@ export default function SettingsPage() {
       </header>
       <main className="flex-1 p-2 sm:p-4 overflow-y-auto">
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Study Day</CardTitle>
+              <CardDescription>Configure when your study day starts</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="studyStart">Study Day Start Time</Label>
+                <input
+                  id="studyStart"
+                  type="time"
+                  value={studyDayStart}
+                  onChange={(e) => handleStudyDayStartChange(e.target.value)}
+                  className="h-9 rounded-md border px-3 text-sm"
+                />
+                <p className="text-xs text-muted-foreground">Defaults to 04:00. Changing this will reload the app and recompute today’s data.</p>
+              </div>
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader>
               <CardTitle>Connection & Sync</CardTitle>
@@ -235,12 +316,18 @@ export default function SettingsPage() {
                   </p>
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button variant="outline" onClick={migrateFromLocalStorage}>
                   Migrate from localStorage
                 </Button>
                 <Button variant="destructive" onClick={clearAllPreferences}>
                   Clear All Preferences
+                </Button>
+                <Button variant="destructive" onClick={wipeLocalData}>
+                  Wipe Local Data
+                </Button>
+                <Button variant="outline" onClick={wipeRemoteData}>
+                  Wipe Remote Data
                 </Button>
               </div>
             </CardContent>

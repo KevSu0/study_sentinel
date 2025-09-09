@@ -7,6 +7,12 @@ import { DailySummaryInput } from '@/lib/types';
 
 // Mock the core AI generation function
 jest.mock('@/ai/core');
+// Mock Genkit ai.defineFlow to avoid plugin initialization and API keys
+jest.mock('@/ai/genkit', () => ({
+  ai: {
+    defineFlow: (_cfg: any, impl: any) => ({ run: async (input: any) => ({ result: await impl(input) }) })
+  }
+}));
 
 // Typecast the mocked function
 const mockedGenerateWithFallback = generateWithFallback as jest.Mock;
@@ -30,7 +36,8 @@ describe('ai/flows/generateDailySummary', () => {
     const mockResponse = 'EVALUATION: Test eval. MOTIVATION: Test motivation.';
     mockedGenerateWithFallback.mockResolvedValue({ text: mockResponse });
 
-    await generateDailySummary(validInput);
+    // Use .run() to avoid initializing real AI plugins during tests
+    await generateDailySummary.run(validInput);
 
     expect(mockedGenerateWithFallback).toHaveBeenCalledTimes(1);
     const calledWith = mockedGenerateWithFallback.mock.calls[0][0];
