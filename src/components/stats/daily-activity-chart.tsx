@@ -1,15 +1,15 @@
 'use client';
 import React from 'react';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-  Tooltip,
-  Cell,
-  LabelList
-} from 'recharts';
+  LazyBarChart as BarChart,
+  LazyBar as Bar,
+  LazyXAxis as XAxis,
+  LazyYAxis as YAxis,
+  LazyResponsiveContainer as ResponsiveContainer,
+  LazyTooltip as Tooltip,
+  LazyCell as Cell,
+  LazyLabelList as LabelList,
+} from '@/components/lazy/chart-components';
 import {
   Card,
   CardContent,

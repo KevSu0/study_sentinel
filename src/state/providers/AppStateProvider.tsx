@@ -66,6 +66,11 @@ interface AppStateContextType {
     updateSoundSettings: (settings: Partial<SoundSettings>) => void;
     toggleMute: () => void;
     
+    // Log management
+    addLog: (log: Omit<LogEvent, 'id' | 'timestamp'>) => LogEvent;
+    removeLog: (id: string) => void;
+    updateLog: (id: string, updates: Partial<LogEvent>) => void;
+    
     // UI actions
     setActiveView: (view: string) => void;
     toggleSidebar: () => void;
@@ -425,6 +430,28 @@ export const AppStateProvider: React.FC<AppStateProviderProps> = ({ children }) 
      },
     
     // Log management
+    addLog: (log: Omit<LogEvent, 'id' | 'timestamp'>) => {
+      // In the event-sourcing runtime, we primarily record externally-generated events.
+      // For legacy support, we allow adding a log into local state when reading legacy logs is enabled.
+      if (!ALLOW_LEGACY_LOGS_READ) {
+        // No-op: under event-only runtime, logs are projections from events, not manually added here.
+        return { id: crypto.randomUUID(), timestamp: new Date().toISOString(), type: 'LEGACY_LOG_ADD', payload: log } as LogEvent;
+      }
+      const newLog: LogEvent = {
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        type: (log as any).type || 'MANUAL_ENTRY',
+        payload: log,
+      };
+      // Persist for UI that may still read local logs
+      // (If a reducer for ADD_LOG exists, dispatch; otherwise, this is a soft path for backward compat.)
+      try {
+        // @ts-ignore optional legacy reducer
+        dispatch?.({ type: 'ADD_LOG', payload: newLog });
+      } catch {}
+      return newLog;
+    },
+
     removeLog: (id: string) => {
       if (!ALLOW_LEGACY_LOGS_READ) {
         console.debug('[legacy-logs] removeLog no-op (gated) — id=', id);

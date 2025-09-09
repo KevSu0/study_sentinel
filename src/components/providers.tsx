@@ -42,7 +42,6 @@ import {ViewModeProvider} from '@/hooks/use-view-mode';
 import {DashboardLayoutProvider} from '@/hooks/use-dashboard-layout';
 import {Skeleton} from './ui/skeleton';
 import { RoutineLogDialog } from './routines/routine-log-dialog';
-import { AnimatePresence, motion } from 'framer-motion';
 import { QuickStartSheet } from './dashboard/quick-start-sheet';
 import { db } from '@/lib/db';
 

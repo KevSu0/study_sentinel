@@ -1,6 +1,13 @@
 'use client';
 import React from 'react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+  LazyLineChart as LineChart,
+  LazyLine as Line,
+  LazyXAxis as XAxis,
+  LazyYAxis as YAxis,
+  LazyTooltip as Tooltip,
+  LazyResponsiveContainer as ResponsiveContainer,
+} from '@/components/lazy/chart-components';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 

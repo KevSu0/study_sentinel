@@ -10,7 +10,7 @@ import { TimerControls } from '@/components/tasks/timer-controls';
 import { cn } from '@/lib/utils';
 import { useWakeLock } from '@/hooks/use-wake-lock';
 import { StopTimerDialog } from '@/components/tasks/stop-timer-dialog';
-import { AnimatePresence, motion } from 'framer-motion';
+import { LazyAnimatePresence, LazyMotionDiv, LazyMotion, domAnimation } from '@/components/lazy/animation-components';
 import { MotivationalQuote } from '@/components/shared/motivational-quote';
 
 function Hourglass({ progress }: { progress: number }) {
@@ -139,19 +139,21 @@ export default function TimerPage() {
         onConfirm={handleConfirmStop}
       />
       
-      <AnimatePresence>
-        {showStarAnimation && (
-            <motion.div
-                className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1.5, rotate: 360 }}
-                exit={{ opacity: 0, scale: 0 }}
-                transition={{ duration: 1.5, type: 'spring' }}
+      <LazyMotion features={domAnimation}>
+        <LazyAnimatePresence>
+          {showStarAnimation && (
+            <LazyMotionDiv
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1.5, rotate: 360 }}
+              exit={{ opacity: 0, scale: 0 }}
+              transition={{ duration: 1.5, type: 'spring' }}
             >
-                <Star className="w-32 h-32 text-yellow-400 fill-current drop-shadow-lg" />
-            </motion.div>
-        )}
-      </AnimatePresence>
+              <Star className="w-32 h-32 text-yellow-400 fill-current drop-shadow-lg" />
+            </LazyMotionDiv>
+          )}
+        </LazyAnimatePresence>
+      </LazyMotion>
     </div>
   );
 }

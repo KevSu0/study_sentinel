@@ -22,7 +22,7 @@ import { getSessionDate } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Calendar } from '@/components/ui/calendar';
+const LazyCalendar = dynamic(() => import('@/components/ui/calendar').then(m => m.Calendar), { ssr: false, loading: () => <Skeleton className="h-[312px] w-[312px]" /> });
 import { format, isSameDay, addDays } from 'date-fns';
 import { RoutineStatsList } from '@/components/stats/routine-stats-list';
 import { PeakProductivityCard } from '@/components/stats/peak-productivity-card';
@@ -47,6 +47,7 @@ const DailyActivitySkeleton = dynamic(
 export default function StatsPage() {
   const [timeRange, setTimeRange] = useState('daily');
   const [selectedDate, setSelectedDate] = useState(getSessionDate());
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const {
     timeRangeStats,
@@ -103,16 +104,18 @@ export default function StatsPage() {
                 <Button variant="ghost" size="icon" onClick={() => changeDate(-1)}>
                     <ChevronLeft className="h-5 w-5" />
                 </Button>
-                <Popover>
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                     <PopoverTrigger asChild>
                     <Button variant={'outline'} className="text-base font-semibold w-40 sm:w-48 justify-center">
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {isSameDay(selectedDate, getSessionDate()) ? 'Today' : format(selectedDate, 'MMM d, yyyy')}
                     </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={selectedDate} onSelect={(date) => date && setSelectedDate(date)} initialFocus />
+                    {isCalendarOpen && (
+                      <PopoverContent className="w-auto p-0">
+                        <LazyCalendar mode="single" selected={selectedDate} onSelect={(date) => date && setSelectedDate(date)} initialFocus />
                     </PopoverContent>
+                    )}
                 </Popover>
                 <Button variant="ghost" size="icon" onClick={() => changeDate(1)}>
                     <ChevronRight className="h-5 w-5" />

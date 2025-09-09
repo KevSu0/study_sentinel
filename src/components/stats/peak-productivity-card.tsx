@@ -1,7 +1,14 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
+import {
+  LazyBarChart as BarChart,
+  LazyBar as Bar,
+  LazyXAxis as XAxis,
+  LazyYAxis as YAxis,
+  LazyResponsiveContainer as ResponsiveContainer,
+  LazyTooltip as Tooltip,
+} from '@/components/lazy/chart-components';
 import { BrainCircuit } from 'lucide-react';
 
 interface PeakProductivityCardProps {

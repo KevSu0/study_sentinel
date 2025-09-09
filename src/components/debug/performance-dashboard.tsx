@@ -7,7 +7,17 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PerformanceMonitor, { usePerformanceMonitor } from '@/utils/performance-monitor';
 import MemoryManager, { useMemoryManager } from '@/utils/memory-manager';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import {
+  LazyLineChart as LineChart,
+  LazyLine as Line,
+  LazyXAxis as XAxis,
+  LazyYAxis as YAxis,
+  LazyCartesianGrid as CartesianGrid,
+  LazyTooltip as Tooltip,
+  LazyResponsiveContainer as ResponsiveContainer,
+  LazyBarChart as BarChart,
+  LazyBar as Bar,
+} from '@/components/lazy/chart-components';
 import { Activity, Clock, HardDrive, Zap, RefreshCw, Trash2 } from 'lucide-react';
 
 interface PerformanceMetric {

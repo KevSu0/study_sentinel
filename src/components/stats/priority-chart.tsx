@@ -1,13 +1,13 @@
 'use client';
 import React, {useState, useCallback} from 'react';
 import {
-  PieChart,
-  Pie,
-  Legend,
-  Cell,
-  ResponsiveContainer,
-  Sector,
-} from 'recharts';
+  LazyPieChart as PieChart,
+  LazyPie as Pie,
+  LazyLegend as Legend,
+  LazyCell as Cell,
+  LazyResponsiveContainer as ResponsiveContainer,
+  LazySector as Sector,
+} from '@/components/lazy/chart-components';
 import {
   Card,
   CardContent,

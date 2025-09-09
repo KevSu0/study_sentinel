@@ -12,6 +12,13 @@ export const LazyMotionDiv = dynamic(
   }
 );
 
+export const LazyMotionP = dynamic(
+  () => import('framer-motion').then(mod => ({ default: mod.motion.p })),
+  {
+    ssr: false,
+  }
+);
+
 export const LazyAnimatePresence = dynamic(
   () => import('framer-motion').then(mod => ({ default: mod.AnimatePresence })),
   {

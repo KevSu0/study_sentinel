@@ -7,16 +7,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-  LabelList,
-} from 'recharts';
+  LazyBarChart as BarChart,
+  LazyBar as Bar,
+  LazyXAxis as XAxis,
+  LazyYAxis as YAxis,
+  LazyCartesianGrid as CartesianGrid,
+  LazyTooltip as Tooltip,
+  LazyResponsiveContainer as ResponsiveContainer,
+  LazyCell as Cell,
+  LazyLabelList as LabelList,
+} from '@/components/lazy/chart-components';
 
 interface ActivityData {
   name: string;

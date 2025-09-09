@@ -32,6 +32,10 @@
     "test:ci:report": "npm run test:ci && node scripts/print-slow-tests.mjs .jest-results.json 10",
     "test:repeat": "node scripts/repeat-jest.mjs",
     "analyze": "cross-env ANALYZE=true NODE_OPTIONS='--max-old-space-size=8192' next build",
+    "ci:analyze": "npm run analyze",
+    "ci:check:imports": "node scripts/check-heavy-imports.cjs",
+    "ci:check:bundles": "node scripts/check-bundle-budgets.mjs",
+    "ci:perf": "npm run ci:analyze && npm run ci:check:imports && npm run ci:check:bundles",
     "clean": "rimraf .next out dist coverage",
     "clean:cache": "rimraf .next/cache node_modules/.cache",
     "prebuild": "npm run clean:cache"
@@ -40,6 +44,7 @@
     "@dnd-kit/core": "^6.1.0",
     "@dnd-kit/sortable": "^8.0.0",
     "@dnd-kit/utilities": "^3.2.2",
+    "@emotion/is-prop-valid": "^1.4.0",
     "@genkit-ai/ai": "^1.13.0",
     "@genkit-ai/googleai": "^1.13.0",
     "@genkit-ai/next": "^1.13.0",

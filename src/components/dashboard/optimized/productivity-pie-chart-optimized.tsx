@@ -5,19 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  PieChart, 
-  Pie, 
-  Cell, 
-  ResponsiveContainer, 
-  Tooltip, 
-  Legend,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid
-} from 'recharts';
+import {
+  LazyPieChart as PieChart,
+  LazyPie as Pie,
+  LazyCell as Cell,
+  LazyResponsiveContainer as ResponsiveContainer,
+  LazyTooltip as Tooltip,
+  LazyLegend as Legend,
+  LazyBarChart as BarChart,
+  LazyBar as Bar,
+  LazyXAxis as XAxis,
+  LazyYAxis as YAxis,
+  LazyCartesianGrid as CartesianGrid,
+} from '@/components/lazy/chart-components';
 import { 
   TrendingUp, 
   BarChart3, 

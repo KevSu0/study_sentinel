@@ -4,11 +4,11 @@ import React, {useState, useEffect, useMemo} from 'react';
 import {Card, CardContent} from '@/components/ui/card';
 import {useGlobalState} from '@/hooks/use-global-state';
 import {Trophy} from 'lucide-react';
-import {motion} from 'framer-motion';
+import { LazyMotionDiv, LazyMotion, domAnimation } from '@/components/lazy/animation-components';
 import { getRandomMotivationalMessage } from '@/lib/motivation';
 
 const CountdownUnit = ({value, label}: {value: number; label: string}) => (
-  <motion.div
+  <LazyMotionDiv
     className="text-center bg-black/10 backdrop-blur-sm p-2 sm:p-3 rounded-lg shadow-lg w-16 sm:w-20"
     initial={{opacity: 0, y: 20}}
     animate={{opacity: 1, y: 0}}
@@ -20,7 +20,7 @@ const CountdownUnit = ({value, label}: {value: number; label: string}) => (
     <div className="text-[10px] sm:text-xs font-light text-foreground/80 uppercase tracking-wider">
       {label}
     </div>
-  </motion.div>
+  </LazyMotionDiv>
 );
 
 export const AchievementCountdownWidget = () => {
@@ -83,11 +83,12 @@ export const AchievementCountdownWidget = () => {
   if (totalSeconds <= 0) return null;
 
   return (
-    <motion.div
-      initial={{opacity: 0, scale: 0.9}}
-      animate={{opacity: 1, scale: 1}}
-      transition={{duration: 0.5}}
-    >
+    <LazyMotion features={domAnimation}>
+      <LazyMotionDiv
+        initial={{opacity: 0, scale: 0.9}}
+        animate={{opacity: 1, scale: 1}}
+        transition={{duration: 0.5}}
+      >
       <Card className="bg-card border-none shadow-lg overflow-hidden">
         <CardContent className="p-4 sm:p-6 flex flex-col items-center justify-center text-foreground relative">
           <Trophy className="absolute -top-4 -left-4 h-16 w-16 sm:h-24 sm:w-24 text-foreground/5 transform rotate-[-15deg]" />
@@ -109,7 +110,7 @@ export const AchievementCountdownWidget = () => {
             <CountdownUnit value={countdown.seconds} label="Secs" />
           </div>
 
-          <motion.div
+          <LazyMotionDiv
             className="text-center z-10 px-2"
             key={dailyMessage}
             initial={{opacity: 0}}
@@ -117,9 +118,10 @@ export const AchievementCountdownWidget = () => {
             transition={{duration: 1}}
           >
             <p className="text-sm italic text-foreground/90">"{dailyMessage}"</p>
-          </motion.div>
+          </LazyMotionDiv>
         </CardContent>
       </Card>
-    </motion.div>
+      </LazyMotionDiv>
+    </LazyMotion>
   );
 };
