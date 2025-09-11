@@ -21,12 +21,12 @@ jest.mock('@/components/badges/badge-card', () => ({
 const mockUseGlobalState = useGlobalState as jest.Mock;
 
 const mockBadges: Badge[] = [
-  { id: '1', name: 'Daily Badge 1', description: 'Daily badge 1 description', icon: 'award', category: 'daily', isEnabled: true, isCustom: false, requiredCount: 1 },
-  { id: '2', name: 'Weekly Badge 1', description: 'Weekly badge 1 description', icon: 'award', category: 'weekly', isEnabled: true, isCustom: false, requiredCount: 1 },
-  { id: '3', name: 'Monthly Badge 1', description: 'Monthly badge 1 description', icon: 'award', category: 'monthly', isEnabled: true, isCustom: false, requiredCount: 1 },
-  { id: '4', name: 'Overall Badge 1', description: 'Overall badge 1 description', icon: 'award', category: 'overall', isEnabled: true, isCustom: false, requiredCount: 1 },
-  { id: '5', name: 'Custom Badge 1', description: 'Custom badge 1 description', icon: 'award', category: 'daily', isEnabled: true, isCustom: true, requiredCount: 1 },
-  { id: '6', name: 'Disabled Badge', description: 'This should not be visible', icon: 'award', category: 'daily', isEnabled: false, isCustom: false, requiredCount: 1 },
+  { id: '1', name: 'Daily Badge 1', description: 'Daily badge 1 description', icon: 'award', category: 'daily', isEnabled: true, isCustom: false, requiredCount: 1, conditions: [] },
+  { id: '2', name: 'Weekly Badge 1', description: 'Weekly badge 1 description', icon: 'award', category: 'weekly', isEnabled: true, isCustom: false, requiredCount: 1, conditions: [] },
+  { id: '3', name: 'Monthly Badge 1', description: 'Monthly badge 1 description', icon: 'award', category: 'monthly', isEnabled: true, isCustom: false, requiredCount: 1, conditions: [] },
+  { id: '4', name: 'Overall Badge 1', description: 'Overall badge 1 description', icon: 'award', category: 'overall', isEnabled: true, isCustom: false, requiredCount: 1, conditions: [] },
+  { id: '5', name: 'Custom Badge 1', description: 'Custom badge 1 description', icon: 'award', category: 'daily', isEnabled: true, isCustom: true, requiredCount: 1, conditions: [] },
+  { id: '6', name: 'Disabled Badge', description: 'This should not be visible', icon: 'award', category: 'daily', isEnabled: false, isCustom: false, requiredCount: 1, conditions: [] },
 ];
 
 describe('BadgesPage', () => {
@@ -36,7 +36,7 @@ describe('BadgesPage', () => {
       state: {
         allBadges: mockBadges,
         earnedBadges: new Set(['1', '2']),
-        isLoaded: true,
+        isLoaded: true
       },
     });
   });
@@ -99,12 +99,12 @@ describe('BadgesPage', () => {
     const user = userEvent.setup();
     mockUseGlobalState.mockReturnValue({
       state: {
-        allBadges: [
-          { id: '1', name: 'Only Daily Badge', description: 'desc', icon: 'award', category: 'daily', isEnabled: true, isCustom: false, requiredCount: 1 },
+                allBadges: [
+          { id: '1', name: 'Only Daily Badge', description: 'desc', icon: 'award', category: 'daily', isEnabled: true, isCustom: false, requiredCount: 1, conditions: [] },
         ],
         earnedBadges: new Set(),
-        isLoaded: true,
-      },
+        isLoaded: true
+      }
     });
     render(<BadgesPage />, { wrapper: MemoryRouterProvider });
     

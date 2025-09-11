@@ -1,7 +1,12 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { subDays, parseISO, set, startOfDay } from 'date-fns';
+import { parseISO } from 'date-fns';
+
+function subDaysUTC(date: Date, amount: number): Date {
+  const newDate = new Date(date);
+  newDate.setUTCDate(newDate.getUTCDate() - amount);
+  return newDate;
+}
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -17,41 +22,41 @@ export function generateShortId(prefix: 'T' | 'R'): string {
 }
 
 /**
- * Returns the "session date" for the app, where the day rolls over at 4 AM.
+ * Returns the "session date" for the app, where the day rolls over at 4 AM UTC.
  * @returns {Date} The current session date object.
  */
 export function getSessionDate(): Date {
   const now = new Date();
-  // If it's before 4 AM, we're still on the "previous" day's session.
-  if (now.getHours() < 4) {
-    return subDays(now, 1);
+  // If it's before 4 AM UTC, we're still on the "previous" day's session.
+  if (now.getUTCHours() < 4) {
+    return subDaysUTC(now, 1);
   }
   return now;
 }
 
 /**
  * For a given timestamp, returns the "study day" it belongs to.
- * The day rolls over at 4 AM.
+ * The day rolls over at 4 AM UTC.
  * @param {string} timestamp ISO 8601 timestamp string.
  * @returns {Date} The date object representing the study day.
  */
 export function getStudyDateForTimestamp(timestamp: string): Date {
   const date = parseISO(timestamp);
-  if (date.getHours() < 4) {
-    return subDays(date, 1);
+  if (date.getUTCHours() < 4) {
+    return subDaysUTC(date, 1);
   }
   return date;
 };
 
 /**
  * For a given date, returns the "study day" it belongs to.
- * The day rolls over at 4 AM.
+ * The day rolls over at 4 AM UTC.
  * @param {Date} date The date object.
  * @returns {Date} The date object representing the study day.
  */
 export function getStudyDay(date: Date): Date {
-  if (date.getHours() < 4) {
-    return subDays(date, 1);
+  if (date.getUTCHours() < 4) {
+    return subDaysUTC(date, 1);
   }
   return date;
 }
@@ -60,13 +65,10 @@ export function getTimeSinceStudyDayStart(timestamp: number | null): number | nu
   if (timestamp === null) return null;
   const date = new Date(timestamp);
   
-  let studyDayStart = set(startOfDay(date), { hours: 4, minutes: 0, seconds: 0, milliseconds: 0 });
+  const studyDay = getStudyDay(date);
+  const studyDayStart = Date.UTC(studyDay.getUTCFullYear(), studyDay.getUTCMonth(), studyDay.getUTCDate(), 4, 0, 0, 0);
 
-  if (date.getHours() < 4) {
-    studyDayStart = subDays(studyDayStart, 1);
-  }
-
-  return date.getTime() - studyDayStart.getTime();
+  return date.getTime() - studyDayStart;
 }
 
 

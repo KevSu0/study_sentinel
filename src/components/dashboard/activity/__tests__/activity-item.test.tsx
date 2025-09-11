@@ -108,7 +108,7 @@ describe('ActivityItem', () => {
       expect(screen.getByText(mockTask.title)).toHaveClass('text-muted-foreground');
       
       await user.click(screen.getByTestId('MoreHorizontalIcon').closest('button')!);
-      const undoButton = await screen.findByRole('menuitem', { name: 'Normal Undo' });
+      const undoButton = await screen.findByRole('menuitem', { name: 'Undo Completion' });
       expect(undoButton).toHaveAttribute('aria-disabled', 'true');
     });
   });
@@ -205,7 +205,7 @@ describe('ActivityItem', () => {
     const moreButton = screen.getByTestId('MoreHorizontalIcon').closest('button')!;
     await user.click(moreButton);
     
-    const undoButton = await screen.findByRole('menuitem', { name: 'Normal Undo' });
+    const undoButton = await screen.findByRole('menuitem', { name: 'Undo Completion' });
     await user.click(undoButton);
     expect(defaultProps.onUndo).toHaveBeenCalledTimes(1);
 
@@ -228,7 +228,7 @@ describe('ActivityItem', () => {
     const moreButton = screen.getByTestId('MoreHorizontalIcon').closest('button')!;
     await user.click(moreButton);
 
-    const undoButton = await screen.findByRole('menuitem', { name: 'Normal Undo' });
+    const undoButton = await screen.findByRole('menuitem', { name: 'Undo Completion' });
     await expect(user.click(undoButton)).resolves.not.toThrow();
   });
 

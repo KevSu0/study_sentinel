@@ -1,10 +1,12 @@
 'use client';
+'use client';
 import React, {useMemo} from 'react';
+import dynamic from 'next/dynamic';
 import {useGlobalState} from '@/hooks/use-global-state';
 import {TaskList} from '@/components/tasks/task-list';
 import {EmptyState} from '@/components/tasks/empty-state';
 import {Skeleton} from '@/components/ui/skeleton';
-import {Archive} from 'lucide-react';
+const Archive = dynamic(() => import('lucide-react').then(m => m.Archive));
 
 export default function ArchivePage() {
   const {

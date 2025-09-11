@@ -25,14 +25,14 @@ const mockTasks: StudyTask[] = [
 
 const mockAllCompletedWork: CompletedWork[] = [
   // Today's work
-  { date: todayStr, duration: 3600, type: 'task', title: 'Completed Task Today', points: 10, timestamp: new Date(new Date(MOCK_DATE).setHours(10, 0, 0, 0)).toISOString(), priority: 'high' },
-  { date: todayStr, duration: 1800, type: 'routine', title: 'Morning Routine', points: 5, timestamp: new Date(new Date(MOCK_DATE).setHours(9, 0, 0, 0)).toISOString(), priority: 'medium' },
+  { date: todayStr, duration: 3600, type: 'task', title: 'Completed Task Today', points: 10, timestamp: new Date(new Date(MOCK_DATE).setUTCHours(10, 0, 0, 0)).toISOString(), priority: 'high' },
+  { date: todayStr, duration: 1800, type: 'routine', title: 'Morning Routine', points: 5, timestamp: new Date(new Date(MOCK_DATE).setUTCHours(9, 0, 0, 0)).toISOString(), priority: 'medium' },
   // Yesterday's work
-  { date: yesterdayStr, duration: 7200, type: 'task', title: 'Completed Task Yesterday', points: 2, timestamp: new Date(subDays(new Date(MOCK_DATE), 1).setHours(14, 0, 0, 0)).toISOString(), priority: 'low' },
+  { date: yesterdayStr, duration: 7200, type: 'task', title: 'Completed Task Yesterday', points: 2, timestamp: new Date(subDays(new Date(MOCK_DATE), 1).setUTCHours(14, 0, 0, 0)).toISOString(), priority: 'low' },
   // Two days ago
-  { date: twoDaysAgoStr, duration: 3600, type: 'task', title: 'Old Task', points: 5, timestamp: new Date(subDays(new Date(MOCK_DATE), 2).setHours(12, 0, 0, 0)).toISOString(), priority: 'medium' },
+  { date: twoDaysAgoStr, duration: 3600, type: 'task', title: 'Old Task', points: 5, timestamp: new Date(subDays(new Date(MOCK_DATE), 2).setUTCHours(12, 0, 0, 0)).toISOString(), priority: 'medium' },
   // Last month's work
-  { date: lastMonthStr, duration: 5400, type: 'task', title: 'Completed Task Last Month', points: 15, timestamp: new Date(subDays(new Date(MOCK_DATE), 30).setHours(10, 0, 0, 0)).toISOString(), priority: 'high' },
+  { date: lastMonthStr, duration: 5400, type: 'task', title: 'Completed Task Last Month', points: 15, timestamp: new Date(subDays(new Date(MOCK_DATE), 30).setUTCHours(10, 0, 0, 0)).toISOString(), priority: 'high' },
 ];
 
 const mockAllBadges: Badge[] = [
@@ -183,7 +183,7 @@ describe('useStats', () => {
 
     it('should handle timeline data crossing midnight (study day starts at 4am)', () => {
         const lateNightDate = new Date(today);
-        lateNightDate.setHours(2, 0, 0, 0);
+        lateNightDate.setUTCHours(2, 0, 0, 0);
         const workAcrossMidnight: CompletedWork[] = [
             { date: yesterdayStr, duration: 3600, type: 'task', title: 'Late Night Task', points: 10, timestamp: lateNightDate.toISOString(), priority: 'high' },
         ];
@@ -271,9 +271,9 @@ describe('useStats', () => {
     it('should calculate average start/end times in performanceCoachStats', () => {
         const coachWork: CompletedWork[] = [
             // Today: 10am - 11am
-            { date: todayStr, duration: 3600, type: 'task', title: 'Task 1', points: 10, timestamp: new Date(new Date(MOCK_DATE).setHours(10, 0, 0, 0)).toISOString(), priority: 'high' },
+            { date: todayStr, duration: 3600, type: 'task', title: 'Task 1', points: 10, timestamp: new Date(new Date(MOCK_DATE).setUTCHours(10, 0, 0, 0)).toISOString(), priority: 'high' },
             // Yesterday: 11am - 12pm
-            { date: yesterdayStr, duration: 3600, type: 'task', title: 'Task 2', points: 10, timestamp: new Date(subDays(new Date(MOCK_DATE), 1).setHours(11, 0, 0, 0)).toISOString(), priority: 'high' },
+            { date: yesterdayStr, duration: 3600, type: 'task', title: 'Task 2', points: 10, timestamp: new Date(subDays(new Date(MOCK_DATE), 1).setUTCHours(11, 0, 0, 0)).toISOString(), priority: 'high' },
         ];
 
         const { result } = renderHook(() => useStats({ ...defaultProps, allCompletedWork: coachWork, selectedDate: today }));

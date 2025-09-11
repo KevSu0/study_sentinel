@@ -179,7 +179,7 @@ export function useStats({
     
     return workForDay.map(work => {
       const startTime = parseISO(work.timestamp);
-      let startHour = startTime.getHours() + startTime.getMinutes() / 60;
+      let startHour = startTime.getUTCHours() + startTime.getUTCMinutes() / 60;
       
       if (startHour < 4) {
         startHour += 24;
@@ -411,11 +411,12 @@ export function useStats({
       const avgStartOffset = totalStartOffset / sessions.length;
       const avgEndOffset = totalEndOffset / sessions.length;
 
-      const selectedStudyDayStart = set(startOfDay(selectedDate), { hours: 4 });
+      const studyDay = getStudyDay(selectedDate);
+      const studyDayStart = Date.UTC(studyDay.getUTCFullYear(), studyDay.getUTCMonth(), studyDay.getUTCDate(), 4, 0, 0, 0);
 
       return {
-        avgStart: selectedStudyDayStart.getTime() + avgStartOffset,
-        avgEnd: selectedStudyDayStart.getTime() + avgEndOffset,
+        avgStart: studyDayStart + avgStartOffset,
+        avgEnd: studyDayStart + avgEndOffset,
       };
     };
 
