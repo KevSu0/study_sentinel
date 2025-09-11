@@ -2,7 +2,7 @@
 // This is a new file for the settings page
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useGlobalState } from '@/hooks/use-global-state';
 import {
   Card,
@@ -20,6 +20,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PerformanceMonitor } from '@/components/pwa/performance-monitor';
+import { Settings, Database, Zap, Bell } from 'lucide-react';
 
 export default function SettingsPage() {
   const { state, setSoundSettings } = useGlobalState();
@@ -50,13 +53,34 @@ export default function SettingsPage() {
         <p className="text-muted-foreground">Customize your experience.</p>
       </header>
       <main className="flex-1 p-2 sm:p-4 overflow-y-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle>Sound & Notifications</CardTitle>
-            <CardDescription>
-              Choose the sounds for timer alerts and reminders.
-            </CardDescription>
-          </CardHeader>
+        <Tabs defaultValue="general" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="general" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              <span className="hidden sm:inline">General</span>
+            </TabsTrigger>
+            <TabsTrigger value="sounds" className="flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              <span className="hidden sm:inline">Sounds</span>
+            </TabsTrigger>
+            <TabsTrigger value="performance" className="flex items-center gap-2">
+              <Zap className="h-4 w-4" />
+              <span className="hidden sm:inline">Performance</span>
+            </TabsTrigger>
+            <TabsTrigger value="storage" className="flex items-center gap-2">
+              <Database className="h-4 w-4" />
+              <span className="hidden sm:inline">Storage</span>
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="sounds" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Sound & Notifications</CardTitle>
+                <CardDescription>
+                  Choose the sounds for timer alerts and reminders.
+                </CardDescription>
+              </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="alarmSound">Alarm Sound</Label>
@@ -111,7 +135,51 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
-      </main>
+        </TabsContent>
+        
+        <TabsContent value="performance" className="space-y-6">
+          <PerformanceMonitor />
+        </TabsContent>
+        
+        <TabsContent value="storage" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Storage & Cache</CardTitle>
+              <CardDescription>
+                Manage app storage and cached data.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground">
+                  <p>Your study data is stored locally on this device.</p>
+                  <p className="mt-2">Cache helps the app work offline and load faster.</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="general" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>General Settings</CardTitle>
+              <CardDescription>
+                Basic app configuration and preferences.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground">
+                  <p>Study Sentinel is a Progressive Web App (PWA) that works offline.</p>
+                  <p className="mt-2">Your data is stored locally and never leaves your device.</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </main>
     </div>
   );
 }

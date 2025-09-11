@@ -9,8 +9,10 @@ import {Sparkles, Lightbulb} from 'lucide-react';
 import {getDailySummary} from '@/lib/actions';
 import {useGlobalState} from '@/hooks/use-global-state';
 import { getSessionDate } from '@/lib/utils';
+import { OfflineGate, useAIFeature, AILoadingState } from '@/components/pwa/offline-gate';
 
 export default function DailyBriefingPage() {
+  const { isOnline } = useAIFeature();
   const {state} = useGlobalState();
   const {isLoaded, previousDayLogs, profile, tasks, routines} = state;
   const [dailySummary, setDailySummary] = useState<{
@@ -69,13 +71,14 @@ export default function DailyBriefingPage() {
   }, [isLoaded, previousDayLogs, profile, routines, tasks]);
 
   return (
-    <div className="flex flex-col h-full">
-      <header className="p-4 border-b">
-        <h1 className="text-3xl font-bold text-primary">AI Daily Briefing</h1>
-        <p className="text-muted-foreground">
-          Your personalized evaluation and motivation for today.
-        </p>
-      </header>
+    <OfflineGate featureName="AI Daily Briefing">
+      <div className="flex flex-col h-full">
+        <header className="p-4 border-b">
+          <h1 className="text-3xl font-bold text-primary">AI Daily Briefing</h1>
+          <p className="text-muted-foreground">
+            Your personalized evaluation and motivation for today.
+          </p>
+        </header>
       <main className="flex-1 p-2 sm:p-4 overflow-y-auto">
         {isSummaryLoading || !isLoaded ? (
           <div className="space-y-4">
@@ -124,6 +127,7 @@ export default function DailyBriefingPage() {
           </Card>
         )}
       </main>
-    </div>
+      </div>
+    </OfflineGate>
   );
 }

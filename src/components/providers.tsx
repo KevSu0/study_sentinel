@@ -42,6 +42,7 @@ import {DashboardLayoutProvider} from '@/hooks/use-dashboard-layout';
 import {Skeleton} from './ui/skeleton';
 import { RoutineLogDialog } from './routines/routine-log-dialog';
 import { AnimatePresence, motion } from 'framer-motion';
+import { PWAUpdateNotification, PWAInstallPrompt } from './pwa/update-notification';
 
 const UserMenu = dynamic(() => import('./user-menu').then(m => m.UserMenu), {
   ssr: false,
@@ -154,6 +155,8 @@ export function Providers({children}: {children: ReactNode}) {
           <ViewModeProvider>
             <DashboardLayoutProvider>
               <AppContent>{children}</AppContent>
+              <PWAUpdateNotification />
+              <PWAInstallPrompt />
             </DashboardLayoutProvider>
           </ViewModeProvider>
         </GlobalStateProvider>

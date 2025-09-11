@@ -5,7 +5,15 @@
       "Bash(find:*)",
       "Bash(npx tsc:*)",
       "Bash(npm run build:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(npm test:*)",
+      "Bash(pkill:*)",
+      "Bash(taskkill:*)",
+      "Bash(set:*)",
+      "Bash(npx ts-node:*)",
+      "Bash(node:*)",
+      "Bash(python:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

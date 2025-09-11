@@ -12,6 +12,7 @@ import {cn} from '@/lib/utils';
 import {Skeleton} from '@/components/ui/skeleton';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { OfflineGate, useAIFeature, AILoadingState } from '@/components/pwa/offline-gate';
 
 function MessageBubble({message}: {message: ChatMessage}) {
   const isModel = message.role === 'model';
@@ -45,6 +46,7 @@ function MessageBubble({message}: {message: ChatMessage}) {
 }
 
 export default function ChatPage() {
+  const { isOnline, canUseAI } = useAIFeature();
   const {state: globalState} = useGlobalState();
   const {messages, addMessage, clearMessages, isLoaded} = useChatHistory();
   const [input, setInput] = useState('');
@@ -134,14 +136,15 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <header className="flex items-center justify-between p-4 border-b">
-        <div>
-          <h1 className="text-2xl font-bold text-primary">AI Positive Psychologist</h1>
-          <p className="text-sm text-muted-foreground">
-            Your personal AI motivation coach.
-          </p>
-        </div>
+    <OfflineGate featureName="AI Chat">
+      <div className="flex flex-col h-full">
+        <header className="flex items-center justify-between p-4 border-b">
+          <div>
+            <h1 className="text-2xl font-bold text-primary">AI Positive Psychologist</h1>
+            <p className="text-sm text-muted-foreground">
+              Your personal AI motivation coach.
+            </p>
+          </div>
         <Button
           variant="outline"
           size="sm"
@@ -205,5 +208,6 @@ export default function ChatPage() {
         </div>
       </div>
     </div>
+    </OfflineGate>
   );
 }
