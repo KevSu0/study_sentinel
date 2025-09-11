@@ -26,7 +26,7 @@ interface BadgeListItemProps {
   badge: Badge;
   onEdit: (badge: Badge) => void;
   onDelete: (badgeId: string) => void;
-  onToggle: (badge: Badge) => void;
+  onToggle: (badgeId: string, updates: Partial<Badge>) => void;
   isEarned: boolean;
 }
 
@@ -39,8 +39,8 @@ export const BadgeListItem = memo(function BadgeListItem({
 }: BadgeListItemProps) {
   const Icon = (Icons as any)[badge.icon] || Icons.Award;
 
-  const handleToggle = () => {
-    onToggle({...badge, isEnabled: !badge.isEnabled});
+  const handleToggle = (isEnabled: boolean) => {
+    onToggle(badge.id, { isEnabled });
   };
 
   return (
@@ -55,7 +55,6 @@ export const BadgeListItem = memo(function BadgeListItem({
           <div className="flex items-center gap-4">
             <Icon
               className="h-10 w-10 shrink-0"
-              style={{color: badge.color}}
             />
             <div>
               <CardTitle>{badge.name}</CardTitle>

@@ -32,17 +32,19 @@ const COLORS = [
 ];
 
 const formatTime = (totalSeconds: number) => {
-  if (totalSeconds < 1) return '0s';
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = Math.floor(totalSeconds % 60);
+  const totalMinutes = Math.round(totalSeconds / 60);
+  if (totalMinutes === 0) {
+    return totalSeconds > 0 ? '<1m' : '0m';
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
 
   const parts = [];
   if (hours > 0) parts.push(`${hours}h`);
   if (minutes > 0) parts.push(`${minutes}m`);
-  if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
 
-  return parts.join(' ');
+  return parts.length > 0 ? parts.join(' ') : '0m';
 };
 
 const renderActiveShape = (props: any) => {
@@ -117,7 +119,7 @@ export default function ProductivityPieChart({
 
   if (totalSeconds === 0) {
     return (
-      <Card className="h-full flex flex-col">
+      <Card className="h-full min-h-[260px] flex flex-col">
         <CardHeader>
           <CardTitle>Today's Productivity</CardTitle>
           <CardDescription>
@@ -132,7 +134,7 @@ export default function ProductivityPieChart({
   }
 
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-full min-h-[260px] flex flex-col">
       <CardHeader>
         <CardTitle>Today's Productivity</CardTitle>
         <CardDescription>
@@ -151,15 +153,15 @@ export default function ProductivityPieChart({
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              activeIndex={activeIndex as number}
+              activeIndex={activeIndex === null ? -1 : activeIndex}
               activeShape={renderActiveShape}
               data={data}
               cx="50%"
               cy="50%"
               dataKey="value"
               nameKey="name"
-              innerRadius="65%"
-              outerRadius="90%"
+              innerRadius="85%"
+              outerRadius="99%"
               paddingAngle={2}
               stroke="hsl(var(--background))"
               strokeWidth={2}

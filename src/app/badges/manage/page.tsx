@@ -77,7 +77,12 @@ export default function ManageBadgesPage() {
                 badge={badge}
                 onEdit={openEditDialog}
                 onDelete={deleteBadge}
-                onToggle={updateBadge}
+                onToggle={(badgeId, updates) => {
+                  const badge = allBadges.find(b => b.id === badgeId);
+                  if (badge) {
+                    updateBadge({...badge, ...updates});
+                  }
+                }}
                 isEarned={earnedBadges.has(badge.id)}
               />
             ))}
@@ -101,7 +106,12 @@ export default function ManageBadgesPage() {
           isOpen={isDialogOpen}
           onOpenChange={setDialogOpen}
           onAddBadge={addBadge}
-          onUpdateBadge={updateBadge}
+          onUpdateBadge={(id, updates) => {
+            const badge = allBadges.find(b => b.id === id);
+            if (badge) {
+              updateBadge({...badge, ...updates});
+            }
+          }}
           badgeToEdit={editingBadge}
         />
       )}

@@ -1,11 +1,11 @@
 'use server';
 
+import {generateDailySummary} from '@/ai/flows/generate-daily-summary';
+import {generateChatbotResponse} from '@/ai/flows/positive-psychologist-flow';
 import {
-  generateDailySummary,
   type DailySummaryInput,
-} from '@/ai/flows/generate-daily-summary';
-import {getChatbotResponse as getChatbotResponseFlow} from '@/ai/flows/positive-psychologist-flow';
-import {type PositivePsychologistInput} from '@/lib/types';
+  type PositivePsychologistInput,
+} from '@/lib/types';
 
 export async function getDailySummary(input: DailySummaryInput) {
   try {
@@ -24,7 +24,7 @@ export async function getChatbotResponse(input: PositivePsychologistInput) {
   try {
     // The validation is now handled by the flow itself.
     // We just pass the input directly.
-    const result = await getChatbotResponseFlow(input);
+    const result = await generateChatbotResponse(input);
     return result;
   } catch (error) {
     console.error('AI chat response failed:', error);

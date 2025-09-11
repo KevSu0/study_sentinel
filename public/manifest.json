@@ -1,0 +1,10 @@
+{
+  "name": "KuKe's Motivation",
+  "short_name": "KuKe",
+  "description": "Your personal AI-powered motivator to track and conquer your goals.",
+  "theme_color": "#1c192c",
+  "background_color": "#1c192c",
+  "start_url": "/",
+  "display": "standalone",
+  "scope": "/"
+}

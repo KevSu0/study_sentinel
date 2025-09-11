@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, {useState, Suspense, lazy, useMemo} from 'react';
@@ -21,8 +22,9 @@ import {cn} from '@/lib/utils';
 import type {StudyTask} from '@/lib/types';
 import {useConfetti} from '@/components/providers/confetti-provider';
 import toast from 'react-hot-toast';
-import {format, parseISO} from 'date-fns';
+import {format} from 'date-fns';
 import {useGlobalState} from '@/hooks/use-global-state';
+import { Skeleton } from '../ui/skeleton';
 
 const TimerDialog = lazy(() =>
   import('./timer-dialog').then(module => ({default: module.TimerDialog}))
@@ -138,7 +140,7 @@ export const SimpleTaskItem = React.memo(function SimpleTaskItem({
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="More options">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -174,7 +176,7 @@ export const SimpleTaskItem = React.memo(function SimpleTaskItem({
         </div>
       </div>
       {isTimerOpen && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<Skeleton className="h-64 w-full" />}>
           <TimerDialog
             task={task}
             isOpen={isTimerOpen}

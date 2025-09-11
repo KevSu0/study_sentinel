@@ -4,24 +4,30 @@ import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {cn} from '@/lib/utils';
 import {
+  Calendar,
   LayoutDashboard,
   TrendingUp,
-  User,
-  ClipboardList
+  ClipboardList,
+  MessageCircle,
 } from 'lucide-react';
 
 const menuItems = [
   {href: '/', label: 'Dashboard', icon: LayoutDashboard},
   {href: '/plans', label: 'Plans', icon: ClipboardList},
+  {href: '/calendar', label: 'Calendar', icon: Calendar},
+  {href: '/chat', label: 'AI Coach', icon: MessageCircle},
   {href: '/stats', label: 'Stats', icon: TrendingUp},
-  {href: '/profile', label: 'Profile', icon: User},
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
 
+  if (pathname === '/timer') {
+    return null;
+  }
+
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-background border-t z-40">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-20 bg-background border-t z-40">
       <div className="flex justify-around items-center h-full">
         {menuItems.map(item => {
           const isActive = pathname === item.href;
@@ -36,7 +42,7 @@ export function BottomNav() {
                   : 'text-muted-foreground hover:text-primary'
               )}
             >
-              <item.icon className="h-5 w-5" />
+              <item.icon className="h-6 w-6" />
               <span>{item.label}</span>
             </Link>
           );

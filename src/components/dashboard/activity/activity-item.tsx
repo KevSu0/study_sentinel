@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, {memo} from 'react';
+import React from 'react';
 import {
   CheckCircle,
   Timer,
@@ -10,7 +10,16 @@ import {
   AlertTriangle,
   BookText,
   Clock,
+  Undo,
+  MoreHorizontal,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {Button} from '@/components/ui/button';
 import {Badge} from '@/components/ui/badge';
 import type {ActivityFeedItem} from '@/hooks/use-global-state';
 import {cn} from '@/lib/utils';
@@ -32,10 +41,16 @@ const formatDuration = (seconds: number) => {
   return `${minutes}m`;
 };
 
-export const ActivityItem = memo(function ActivityItem({
+export const ActivityItem = React.memo(function ActivityItem({
   item,
+  onUndo,
+  onHardUndo,
+  isUndone,
 }: {
   item: ActivityFeedItem;
+  onUndo?: () => void;
+  onHardUndo?: () => void;
+  isUndone: boolean;
 }) {
   const baseClasses =
     'flex items-start gap-4 p-3 border rounded-lg transition-colors bg-card/70';
@@ -44,16 +59,37 @@ export const ActivityItem = memo(function ActivityItem({
   switch (item.type) {
     case 'TASK_COMPLETE': {
       const {task, log} = item.data as {task: StudyTask; log: any | null};
-      const duration = log ? log.payload.duration : task.duration * 60;
+      const duration = log ? log.payload.duration : (task.duration || 0) * 60;
       const points = log ? log.payload.points : task.points;
 
       return (
-        <div className={cn(baseClasses, 'border-green-500/50')}>
-          <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
+        <div className={cn(baseClasses, isUndone ? 'border-muted/50' : 'border-green-500/50')}>
+          {isUndone ? (
+            <Undo className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+          ) : (
+            <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
+          )}
           <div className="flex-1 grid gap-1">
-            <p className="font-medium text-muted-foreground line-through">
-              {task.title}
-            </p>
+            <div className="flex justify-between items-center">
+              <p className={cn("font-medium", isUndone && "line-through text-muted-foreground")}>
+                {task.title}
+              </p>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Open menu">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={onUndo} disabled={isUndone} aria-label="Undo Completion">
+                    Undo Completion
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={onHardUndo} className="text-destructive" aria-label="Hard Undo">
+                    Hard Undo
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <Timer className="h-4 w-4" />
@@ -79,12 +115,33 @@ export const ActivityItem = memo(function ActivityItem({
       const {data: log} = item;
       const {title, duration, points, studyLog} = log.payload;
       return (
-        <div className={cn(baseClasses, 'border-accent/50')}>
-          <CheckCircle className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+        <div className={cn(baseClasses, isUndone ? 'border-muted/50' : 'border-accent/50')}>
+          {isUndone ? (
+            <Undo className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+          ) : (
+            <CheckCircle className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+          )}
           <div className="flex-1 grid gap-1">
-            <p className="font-medium text-muted-foreground line-through">
-              {title}
-            </p>
+            <div className="flex justify-between items-center">
+              <p className={cn("font-medium", isUndone && "line-through text-muted-foreground")}>
+                {title}
+              </p>
+               <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Open menu">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={onUndo} disabled={isUndone} aria-label="Undo Completion">
+                    Undo Completion
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={onHardUndo} className="text-destructive" aria-label="Hard Undo">
+                    Hard Undo
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5">
                 <Timer className="h-4 w-4" />

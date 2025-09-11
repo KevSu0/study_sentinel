@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, {useState, useEffect} from 'react';
@@ -7,10 +8,11 @@ import {Skeleton} from '@/components/ui/skeleton';
 import {Sparkles, Lightbulb} from 'lucide-react';
 import {getDailySummary} from '@/lib/actions';
 import {useGlobalState} from '@/hooks/use-global-state';
+import { getSessionDate } from '@/lib/utils';
 
 export default function DailyBriefingPage() {
   const {state} = useGlobalState();
-  const {isLoaded, previousDayLogs, profile} = state;
+  const {isLoaded, previousDayLogs, profile, tasks, routines} = state;
   const [dailySummary, setDailySummary] = useState<{
     evaluation: string;
     motivationalParagraph: string;
@@ -19,28 +21,34 @@ export default function DailyBriefingPage() {
 
   useEffect(() => {
     const fetchDailySummary = async () => {
-      if (!isLoaded) return;
+      setIsSummaryLoading(true);
 
       const DAILY_SUMMARY_KEY = 'dailySummaryLastShown';
-      const lastShownDate = localStorage.getItem(DAILY_SUMMARY_KEY);
-      const now = new Date();
-      const currentHour = now.getHours();
-      const sessionDate = new Date();
-
-      if (currentHour < 4) {
-        sessionDate.setDate(sessionDate.getDate() - 1);
-      }
+      const sessionDate = getSessionDate();
       const sessionDateStr = format(sessionDate, 'yyyy-MM-dd');
 
+      const lastShownDate = localStorage.getItem(DAILY_SUMMARY_KEY);
       const storedSummary = localStorage.getItem('dailySummaryContent');
       if (lastShownDate === sessionDateStr && storedSummary) {
-        setDailySummary(JSON.parse(storedSummary));
-        setIsSummaryLoading(false);
-        return;
+        try {
+          setDailySummary(JSON.parse(storedSummary));
+          setIsSummaryLoading(false);
+          return;
+        } catch (error) {
+          // Malformed JSON, proceed to fetch new data
+        }
       }
 
       if (previousDayLogs.length > 0) {
-        const summary = await getDailySummary({logs: previousDayLogs, profile});
+        const summary = await getDailySummary({
+          logs: previousDayLogs,
+          profile: {
+            name: profile.name || 'User',
+            dream: profile.dream || 'achieving their goals',
+          },
+          tasks,
+          routines,
+        });
         if (summary && !('error' in summary)) {
           const summaryData = summary as any;
           setDailySummary(summaryData);
@@ -53,9 +61,12 @@ export default function DailyBriefingPage() {
       }
       setIsSummaryLoading(false);
     };
-
-    fetchDailySummary();
-  }, [isLoaded, previousDayLogs, profile]);
+    
+    if (isLoaded) {
+      fetchDailySummary();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, previousDayLogs, profile, routines, tasks]);
 
   return (
     <div className="flex flex-col h-full">

@@ -7,11 +7,10 @@ import {format} from 'date-fns';
 import {Button} from '@/components/ui/button';
 import {PlusCircle, Settings} from 'lucide-react';
 import {useGlobalState} from '@/hooks/use-global-state';
-import {useViewMode} from '@/hooks/use-view-mode.tsx';
 import {
   useDashboardLayout,
   type DashboardWidgetType,
-} from '@/hooks/use-dashboard-layout.tsx';
+} from '@/hooks/use-dashboard-layout';
 import {
   DndContext,
   closestCenter,
@@ -26,11 +25,17 @@ import {
 import {CSS} from '@dnd-kit/utilities';
 import {Skeleton} from '@/components/ui/skeleton';
 import Link from 'next/link';
-import {DailyBriefingWidget} from '@/components/dashboard/widgets/daily-briefing-widget';
-import {StatsOverviewWidget} from '@/components/dashboard/widgets/stats-overview-widget';
-import {UnlockedBadgesWidget} from '@/components/dashboard/widgets/unlocked-badges-widget';
-import {CompletedTodayWidget} from '@/components/dashboard/widgets/completed-today-widget';
+import {AddItemDialog} from '@/components/dashboard/add-item-dialog';
+import {TodaysPlanWidget} from '@/components/dashboard/widgets/todays-plan-widget';
 import {EmptyState} from '@/components/tasks/empty-state';
+
+const DailyBriefingWidget = dynamic(() => import('@/components/dashboard/widgets/daily-briefing-widget').then(m => m.DailyBriefingWidget), { ssr: false, loading: () => <Skeleton className="h-40 w-full" /> });
+const StatsOverviewWidget = dynamic(() => import('@/components/dashboard/widgets/stats-overview-widget').then(m => m.StatsOverviewWidget), { ssr: false, loading: () => <Skeleton className="h-40 w-full" /> });
+const UnlockedBadgesWidget = dynamic(() => import('@/components/dashboard/widgets/unlocked-badges-widget').then(m => m.UnlockedBadgesWidget), { ssr: false, loading: () => <Skeleton className="h-28 w-full" /> });
+const CompletedTodayWidget = dynamic(() => import('@/components/dashboard/widgets/completed-today-widget').then(m => m.CompletedTodayWidget), { ssr: false, loading: () => <Skeleton className="h-28 w-full" /> });
+const TodaysRoutinesWidget = dynamic(() => import('@/components/dashboard/widgets/todays-routines-widget').then(m => m.TodaysRoutinesWidget), { ssr: false, loading: () => <Skeleton className="h-28 w-full" /> });
+const AchievementCountdownWidget = dynamic(() => import('@/components/dashboard/widgets/achievement-countdown-widget').then(m => m.AchievementCountdownWidget), { ssr: false, loading: () => <Skeleton className="h-28 w-full" /> });
+
 
 const CustomizeDialog = dynamic(
   () =>
@@ -67,9 +72,7 @@ function SortableWidget({
 
 export default function DashboardPage() {
   const {state} = useGlobalState();
-  const {viewMode} = useViewMode();
-  const {layout, setLayout, visibleWidgets, isLoaded: layoutLoaded} =
-    useDashboardLayout();
+  const {layout, setLayout, isLoaded: layoutLoaded} = useDashboardLayout();
 
   const [isCustomizeOpen, setCustomizeOpen] = React.useState(false);
 
@@ -89,24 +92,17 @@ export default function DashboardPage() {
 
   const isLoaded = state.isLoaded && layoutLoaded;
 
-  const widgetMap: Record<DashboardWidgetType, React.FC<any>> = {
+  const widgetMap: Record<DashboardWidgetType, React.ComponentType<any>> = {
     daily_briefing: DailyBriefingWidget,
     stats_overview: StatsOverviewWidget,
     unlocked_badges: UnlockedBadgesWidget,
     completed_today: CompletedTodayWidget,
+    todays_routines: TodaysRoutinesWidget,
+    todays_plan: TodaysPlanWidget,
+    achievement_countdown: AchievementCountdownWidget,
   };
-
-  const widgetProps = {
-    ...state,
-    viewMode,
-  };
-
-  const hasContent =
-    visibleWidgets.length > 0 &&
-    (state.todaysActivity.length > 0 ||
-      state.todaysBadges.length > 0 ||
-      state.previousDayLogs.length > 0);
-
+  
+  const hasContent = state.tasks.length > 0 || state.routines.length > 0 || state.todaysActivity.length > 0;
 
   return (
     <div className="flex flex-col h-full">
@@ -127,19 +123,14 @@ export default function DashboardPage() {
               <Settings className="h-4 w-4" />
               <span className="hidden sm:inline ml-2">Customize</span>
             </Button>
-            <Button asChild className="w-full sm:w-auto">
-              <Link href="/plans">
-                <PlusCircle />
-                <span className="hidden sm:inline ml-2">Manage Plans</span>
-              </Link>
-            </Button>
+            <AddItemDialog />
           </div>
         </div>
       </header>
 
       <main className="flex-1 p-2 sm:p-4 overflow-y-auto">
         {!isLoaded ? (
-          <div className="space-y-4">
+          <div data-testid="dashboard-skeleton" className="space-y-4">
             <Skeleton className="h-24 w-full" />
             <Skeleton className="h-40 w-full" />
             <Skeleton className="h-28 w-full" />
@@ -150,16 +141,41 @@ export default function DashboardPage() {
             onDragEnd={handleDragEnd}
           >
             <SortableContext
-              items={visibleWidgets.map(w => w.id)}
+              items={layout.map(w => w.id)}
               strategy={verticalListSortingStrategy}
             >
               <div className="space-y-6">
-                {visibleWidgets.map(widget => {
+                {layout.map(widget => {
+                  if (!widget.isVisible) return null;
                   const WidgetComponent = widgetMap[widget.id];
                   if (!WidgetComponent) return null;
+                  
+                  let props: any = {};
+                  if (widget.id === 'daily_briefing') {
+                    props = {
+                      previousDayLogs: state.previousDayLogs,
+                      profile: state.profile,
+                      tasks: state.tasks,
+                      routines: state.routines
+                    };
+                  } else if (widget.id === 'stats_overview') {
+                    props = {
+                      todaysBadges: state.todaysBadges,
+                      todaysActivity: state.todaysActivity,
+                    };
+                  } else if (widget.id === 'unlocked_badges') {
+                    props = {
+                      todaysBadges: state.todaysBadges
+                    };
+                  } else if (widget.id === 'completed_today') {
+                    props = {
+                      todaysActivity: state.todaysActivity,
+                    };
+                  }
+
                   return (
                     <SortableWidget key={widget.id} id={widget.id}>
-                      <WidgetComponent {...widgetProps} />
+                      <WidgetComponent {...props} />
                     </SortableWidget>
                   );
                 })}

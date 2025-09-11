@@ -15,7 +15,7 @@ import {
   useDashboardLayout,
   WIDGET_NAMES,
   type DashboardWidget,
-} from '@/hooks/use-dashboard-layout.tsx';
+} from '@/hooks/use-dashboard-layout';
 import {DndContext, closestCenter, type DragEndEvent} from '@dnd-kit/core';
 import {
   arrayMove,
@@ -25,7 +25,7 @@ import {
 } from '@dnd-kit/sortable';
 import {CSS} from '@dnd-kit/utilities';
 import {GripVertical, LayoutGrid, List} from 'lucide-react';
-import {useViewMode} from '@/hooks/use-view-mode.tsx';
+import {useViewMode} from '@/hooks/use-view-mode';
 import {Separator} from '../ui/separator';
 
 interface CustomizeDialogProps {
