@@ -1,12 +1,9 @@
 'use client';
-'use client';
 import React, {useMemo} from 'react';
-import dynamic from 'next/dynamic';
 import {useGlobalState} from '@/hooks/use-global-state';
 import {TaskList} from '@/components/tasks/task-list';
 import {EmptyState} from '@/components/tasks/empty-state';
 import {Skeleton} from '@/components/ui/skeleton';
-const Archive = dynamic(() => import('lucide-react').then(m => m.Archive));
 
 export default function ArchivePage() {
   const {
@@ -55,7 +52,9 @@ export default function ArchivePage() {
               message="Tasks you archive will appear here."
             >
               <div className="mt-6">
-                <Archive className="h-16 w-16 text-primary/80" />
+                <svg className="h-16 w-16 text-primary/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8l4 4 4-4m0 0V4a2 2 0 012-2h2a2 2 0 012 2v4m-6 0l4 4 4-4" />
+                </svg>
               </div>
             </EmptyState>
           </div>

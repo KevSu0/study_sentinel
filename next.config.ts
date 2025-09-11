@@ -32,6 +32,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  eslint: {
+    // Skip ESLint during next build to avoid long lint phase in CI/limited environments
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    // Keep type checks enabled (we fixed TS errors). Set to true only if you want to bypass TS checks.
+    ignoreBuildErrors: false,
+  },
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },

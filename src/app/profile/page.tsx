@@ -20,7 +20,6 @@ import {
 import {useGlobalState} from '@/hooks/use-global-state';
 import toast from 'react-hot-toast';
 import {Skeleton} from '@/components/ui/skeleton';
-import {UserProfile} from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
@@ -50,7 +49,7 @@ export default function ProfilePage() {
     reset,
     control,
     formState: {errors, isDirty},
-  } = useForm<UserProfile>({
+  } = useForm<z.infer<typeof profileSchema>>({
     resolver: zodResolver(profileSchema),
     defaultValues: profile,
   });
@@ -61,7 +60,7 @@ export default function ProfilePage() {
     }
   }, [isLoaded, profile, reset]);
 
-  const onSubmit = (data: UserProfile) => {
+  const onSubmit = (data: z.infer<typeof profileSchema>) => {
     updateProfile(data);
     toast.success('Your information has been updated successfully.');
     reset(data);

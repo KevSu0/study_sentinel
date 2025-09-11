@@ -74,9 +74,9 @@ type RoutineFormData = z.infer<typeof routineSchema>;
 interface AddItemDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onAddTask: (task: Omit<StudyTask, 'id' | 'status'>) => void;
+  onAddTask: (task: Omit<StudyTask, 'id' | 'status' | 'shortId'>) => void;
   onUpdateTask: (task: StudyTask) => void;
-  onAddRoutine: (routine: Omit<Routine, 'id'>) => void;
+  onAddRoutine: (routine: Omit<Routine, 'id' | 'shortId'>) => void;
   onUpdateRoutine: (routine: Routine) => void;
   editingItem?: StudyTask | Routine | null;
   itemType?: 'task' | 'routine';
@@ -401,8 +401,17 @@ export function AddItemDialog({ isOpen, onOpenChange, onAddTask, onUpdateTask, o
     if (editingTask) {
       onUpdateTask({ ...editingTask, ...finalData });
     } else {
-      const shortId = Math.random().toString(36).substring(2, 8);
-      onAddTask({ ...finalData, shortId });
+      const payload: Omit<StudyTask, 'id' | 'status' | 'shortId'> = {
+        title: data.title,
+        description: data.description || '',
+        date: data.date,
+        time: data.time,
+        duration: data.timerType === 'infinity' ? undefined : data.duration,
+        points,
+        priority: data.priority,
+        timerType: data.timerType,
+      };
+      onAddTask(payload);
     }
     handleOpenChange(false);
   };
@@ -411,11 +420,15 @@ export function AddItemDialog({ isOpen, onOpenChange, onAddTask, onUpdateTask, o
     if (editingRoutine) {
       onUpdateRoutine({ ...editingRoutine, ...data });
     } else {
-      const newRoutine = {
-        ...data,
-        shortId: Math.random().toString(36).substring(2, 8),
+      const payload: Omit<Routine, 'id' | 'shortId'> = {
+        title: data.title,
+        description: data.description || '',
+        days: data.days,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        priority: data.priority,
       };
-      onAddRoutine(newRoutine);
+      onAddRoutine(payload);
     }
     handleOpenChange(false);
   };
