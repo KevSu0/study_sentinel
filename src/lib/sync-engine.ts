@@ -1,4 +1,4 @@
-import { db, OutboxEvent, SyncCheckpoint, AppEvent } from './database';
+import { db, OutboxEvent, SyncCheckpoint, AppEvent, TaskEvent } from './database';
 import { getDeviceId } from './event-sourcing';
 
 // Sync engine implementation
@@ -426,7 +426,7 @@ export interface UploadResult {
 
 export interface DownloadResult {
   success: boolean;
-  downloadedCount: number;
+  downloadedCount?: number;
   lastEventId?: string | null;
   error?: string;
 }

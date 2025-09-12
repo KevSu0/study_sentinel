@@ -1,4 +1,38 @@
 import '@testing-library/jest-dom';
+import 'fake-indexeddb/auto';
+
+// Mock structuredClone for fake-indexeddb
+if (!global.structuredClone) {
+  global.structuredClone = (obj) => {
+    if (obj === null || obj === undefined) {
+      return obj;
+    }
+    
+    if (typeof obj !== 'object') {
+      return obj;
+    }
+    
+    if (Array.isArray(obj)) {
+      return obj.map(item => global.structuredClone(item));
+    }
+    
+    if (obj instanceof Date) {
+      return new Date(obj.getTime());
+    }
+    
+    if (obj instanceof RegExp) {
+      return new RegExp(obj.source, obj.flags);
+    }
+    
+    const cloned = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        cloned[key] = global.structuredClone(obj[key]);
+      }
+    }
+    return cloned;
+  };
+}
 const React = require('react');
 
 // Mock PointerEvent for Radix UI components, only if in a browser-like environment

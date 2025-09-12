@@ -1,3 +1,5 @@
+import { useState, useCallback } from 'react';
+
 /**
  * iOS Networking Validator
  * Tests iOS-specific networking behavior, sync OFF functionality, and zero-network guarantees
@@ -304,6 +306,12 @@ export class iOSNetworkValidator {
           // Store in IndexedDB
           const db = await new Promise<IDBDatabase>((resolve, reject) => {
             const request = indexedDB.open('ios-offline-test', 1);
+            request.onupgradeneeded = () => {
+                const db = request.result;
+                if (!db.objectStoreNames.contains('test-store')) {
+                    db.createObjectStore('test-store', { keyPath: 'timestamp' });
+                }
+            };
             request.onsuccess = () => resolve(request.result);
             request.onerror = () => reject(request.error);
           });
@@ -313,7 +321,7 @@ export class iOSNetworkValidator {
           await store.add(testData);
           
           // Retrieve and verify
-          const result = await store.get(testData.timestamp);
+          const result = await store.get(testData.timestamp) as unknown as { testData: string };
           db.close();
           
           return result && result.testData === 'offline-persistence-test';
@@ -379,7 +387,7 @@ export class iOSNetworkValidator {
           };
           
           // Test queuing mechanism
-          const queueKey = `sync-queue-${syncData.timestamp}`;
+          const queueKey = `sync-queue-${syncData.data.timestamp}`;
           sessionStorage.setItem(queueKey, JSON.stringify(syncData));
           
           const retrieved = sessionStorage.getItem(queueKey);

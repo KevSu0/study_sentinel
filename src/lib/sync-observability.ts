@@ -3,6 +3,8 @@
  * Implements client-side metrics collection and server monitoring integration
  */
 
+import { useState, useEffect } from 'react';
+
 export interface SyncObservabilityConfig {
   // Metrics collection
   enableMetrics: boolean;

@@ -252,7 +252,7 @@ export class MonitoringDashboard {
     return false; // Simplified for now
   }
 
-  private notifyAlert(alert: string, severity: 'critical' | 'warning'): void {
+  public notifyAlert(alert: string, severity: 'critical' | 'warning'): void {
     console.log(`🚨 ${severity.toUpperCase()}: ${alert}`);
     
     // Send to external monitoring
@@ -443,6 +443,3 @@ ${this.alerts.map(alert => `  - ${alert}`).join('\n')}
     }
   }
 }
-
-// Export for use in the application
-export { MonitoringDashboard };

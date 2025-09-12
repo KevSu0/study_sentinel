@@ -438,5 +438,3 @@ if (typeof window !== 'undefined') {
   }
 }
 
-// Export for use in modules
-export { InternalCohortRollout };

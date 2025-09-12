@@ -1,6 +1,6 @@
 // IndexedDB v1 to v2 Migration Manager
-import { StorageManagerV2 } from '../storage-v2';
-import { generateEventId } from '../id-generator';
+import { StorageManagerV2, EventType } from './storage-v2';
+import { generateEventId } from './id-generator';
 import { GOLDEN_DATASET, validateInvariants } from '../test/golden-dataset';
 
 interface MigrationProgress {
@@ -126,7 +126,11 @@ class MigrationManager {
   private async checkMigrationNeeded(): Promise<{ needed: boolean; reason?: string }> {
     try {
       // Check if v1 database exists
-      const v1Db = await indexedDB.open('StudySentinelDB', 1);
+      const v1Db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open('StudySentinelDB', 1);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
       v1Db.close();
 
       // Check if v2 database already exists
@@ -157,7 +161,11 @@ class MigrationManager {
 
   private async createBackup(): Promise<{ success: boolean; error?: string; data?: any }> {
     try {
-      const v1Db = await indexedDB.open('StudySentinelDB', 1);
+      const v1Db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open('StudySentinelDB', 1);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
       
       const backup = {
         version: 1,
@@ -168,13 +176,23 @@ class MigrationManager {
       };
 
       // Backup events
-      const eventStore = v1Db.transaction('events', 'readonly').objectStore('events');
-      backup.events = await eventStore.getAll();
+      const eventTx = v1Db.transaction('events', 'readonly');
+      const eventStore = eventTx.objectStore('events');
+      backup.events = await new Promise((resolve, reject) => {
+        const req = eventStore.getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
 
       // Backup settings
       try {
-        const settingsStore = v1Db.transaction('settings', 'readonly').objectStore('settings');
-        backup.settings = await settingsStore.getAll();
+        const settingsTx = v1Db.transaction('settings', 'readonly');
+        const settingsStore = settingsTx.objectStore('settings');
+        backup.settings = await new Promise((resolve, reject) => {
+            const req = settingsStore.getAll();
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
       } catch (error) {
         // Settings store might not exist in v1
         backup.settings = [];
@@ -196,19 +214,30 @@ class MigrationManager {
     let count = 0;
 
     try {
-      const v1Db = await indexedDB.open('StudySentinelDB', 1);
+      const v1Db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open('StudySentinelDB', 1);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
       
-      const eventStore = v1Db.transaction('events', 'readonly').objectStore('events');
-      const events = await eventStore.getAll();
+      const eventTx = v1Db.transaction('events', 'readonly');
+      const eventStore = eventTx.objectStore('events');
+      const events = await new Promise<any[]>((resolve, reject) => {
+        const req = eventStore.getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
 
       for (const event of events) {
         try {
           // Transform v1 event to v2 format
           const v2Event = this.transformEventV1ToV2(event);
           
-          // Add to v2 storage
-          await this.storageV2.addEvent(v2Event);
-          count++;
+          if (v2Event) {
+            // Add to v2 storage
+            await this.storageV2.addEvent(v2Event);
+            count++;
+          }
           
           // Update progress periodically
           if (count % 10 === 0) {
@@ -282,30 +311,36 @@ class MigrationManager {
             sessionId: v1Event.sessionId
           }
         };
-
-      default:
-        // Unknown event type, preserve as much as possible
-        return {
-          ...baseEvent,
-          type: v1Event.type,
-          data: v1Event.data
-        };
     }
+    return null;
   }
 
   private async migrateSettings(): Promise<{ count: number }> {
     let count = 0;
 
     try {
-      const v1Db = await indexedDB.open('StudySentinelDB', 1);
+      const v1Db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open('StudySentinelDB', 1);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
       
       try {
-        const settingsStore = v1Db.transaction('settings', 'readonly').objectStore('settings');
-        const settings = await settingsStore.getAll();
+        const settingsTx = v1Db.transaction('settings', 'readonly');
+        const settingsStore = settingsTx.objectStore('settings');
+        const settings = await new Promise<any[]>((resolve, reject) => {
+            const req = settingsStore.getAll();
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
 
         for (const setting of settings) {
           try {
-            await this.storageV2.saveSetting(setting.key, setting.value, setting.type || 'ui');
+            let type: 'sync' | 'privacy' | 'analytics' | 'ui' = 'ui';
+            if (['sync', 'privacy', 'analytics', 'ui'].includes(setting.type)) {
+                type = setting.type;
+            }
+            await this.storageV2.saveSetting(setting.key, setting.value, type);
             count++;
           } catch (error) {
             console.warn(`Failed to migrate setting ${setting.key}:`, error);
@@ -373,7 +408,7 @@ class MigrationManager {
           errors.push(`Event missing required fields: ${JSON.stringify(event)}`);
         }
 
-        if (event.type.startsWith('study_session')) {
+        if ((event.type as string).startsWith('study_session')) {
           const data = event.data as any;
           if (!data.subject || !data.duration || !data.startTime || !data.endTime) {
             errors.push(`Study session event missing required data: ${event.id}`);
@@ -409,7 +444,7 @@ class MigrationManager {
       const eventTypes = new Set(events.map(e => e.type));
       const expectedTypes = ['study_session_created', 'task_created', 'badge_earned'];
       for (const type of expectedTypes) {
-        if (!eventTypes.has(type)) {
+        if (!eventTypes.has(type as EventType)) {
           errors.push(`Expected event type ${type} not found`);
         }
       }
@@ -513,21 +548,38 @@ class MigrationManager {
       const backup = JSON.parse(backupData);
       
       // Restore v1 database
-      const v1Db = await indexedDB.open('StudySentinelDB', 1);
+      const v1Db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open('StudySentinelDB', 1);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
       
       // Clear existing data
-      const eventStore = v1Db.transaction('events', 'readwrite').objectStore('events');
-      await eventStore.clear();
+      const eventTx = v1Db.transaction('events', 'readwrite');
+      const eventStore = eventTx.objectStore('events');
+      await new Promise<void>((resolve, reject) => {
+        const req = eventStore.clear();
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
 
       // Restore events
       for (const event of backup.events) {
-        await eventStore.add(event);
+        await new Promise<void>((resolve, reject) => {
+            const req = eventStore.add(event);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
       }
 
       v1Db.close();
 
       // Delete v2 database
-      await indexedDB.deleteDatabase('StudySentinelDB');
+      await new Promise<void>((resolve, reject) => {
+        const req = indexedDB.deleteDatabase('StudySentinelDB');
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
 
       // Clear migration flags
       localStorage.removeItem('migration_v2_complete');

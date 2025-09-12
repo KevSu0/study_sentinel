@@ -1,0 +1,124 @@
+# Study Sentinel IndexedDB Schema Manifest
+# Version: 1.0.0
+# Last Updated: 2025-09-12
+# DRI: Storage Development Team
+
+manifest_version: 1
+db:
+  name: StudySentinelDB
+  version: 2
+  library: idb@7.1.1
+  description: Study session and task event storage with sync capabilities
+
+policies:
+  global:
+    timestamps:
+      storage_unit: milliseconds
+      normalization: whole_seconds_only  # Floor to nearest second
+      invariant: "timestamp % 1000 === 0 for new writes"
+    values:
+      serializable: json_only  # No functions, classes, Map, Set, BigInt
+      max_size: "4MB per record"
+    synced:
+      default_new_writes: false
+      legacy_handling: "undefined values excluded from by_sync_status index"
+      migration_strategy: "none (dev phase only)"
+
+stores:
+  - name: events
+    indexes:
+      - by_timestamp
+      - by_device_timestamp
+      - by_session_id
+      - by_type_timestamp
+      - by_sync_status
+    
+    notes:
+      - "Compound index tuple order is strict - queries must match keyPath order"
+      - "Legacy events may have synced=undefined, making them absent from by_sync_status"
+      - "All values must be JSON-serializable - no functions or complex objects"
+      - "Timestamp normalization applies only to new writes"
+
+governance:
+  change_procedure:
+    checklist:
+      - "Update upgrade() function in storage-v2.ts (index add/remove/change)"
+      - "Update StudySentinelDBV2 schema interface typing"
+      - "Update this Schema Manifest file"
+      - "DB version bump ONLY if value shape changes or index set changes"
+      - "Add/update smoke tests for new/modified indexes"
+      - "Add compile-time tuple shape validation tests"
+      - "Reviewer must verify tuple order and query patterns"
+      - "Run CI consistency checks"
+      - "Update ADR if significant changes"
+    validation:
+      - "All compound queries use correct tuple ordering"
+      - "Index keyPath arrays match actual creation calls"
+      - "Type definitions match idb@7.1.1 expectations"
+      - "No breaking changes to existing queries"
+  
+  ci_checks:
+    consistency:
+      - "Validate index names in code vs manifest match exactly"
+      - "Validate keyPath arrays match between code and manifest"
+      - "Check for missing indexes in manifest"
+      - "Check for orphaned indexes in manifest"
+    policies:
+      - "Warn if new indexes added without manifest update"
+      - "Fail if index keyPath mismatches between code and manifest"
+      - "Block merge if ADR/Manifest mismatch label is present"
+    files_to_monitor:
+      - "src/lib/storage-v2.ts"
+      - "docs/storage-schema-manifest.yaml"
+      - "docs/adr/adr-001-indexeddb-typing-governance.md"
+
+  contacts:
+    dri: "Storage Development Team"
+    reviewers: ["Frontend Lead", "QA Team"]
+    escalation: "Tech Lead"
+    last_reviewed: "2025-09-12"
+    next_review: "2025-12-12"  # Quarterly reviews
+
+  emergency_rollback:
+    procedure: "Revert PR - no migration needed as no on-disk changes"
+    contact: "Storage DRI"
+    criteria: "Critical production issues or data corruption"
+
+testing:
+  smoke_test_matrix: |
+    See docs/storage-smoke-test-matrix.md for comprehensive test cases
+    covering:
+    - Basic time range queries
+    - Compound index ordering
+    - Cross-browser compatibility
+    - Edge cases and negative scenarios
+    - Performance baseline establishment
+  
+  browser_targets:
+    - "Chromium (latest)"
+    - "Firefox (latest)"
+    - "Safari (optional - if in target matrix)"
+
+monitoring:
+  dev_only:
+    metrics:
+      - "Database open timing (p95)"
+      - "Index query performance (p95 per index)"
+      - "Error rates (DataCloneError, ConstraintError)"
+      - "Storage usage trends"
+    sampling:
+      rate: "10% of operations"
+      throttle: "max 100 samples per minute"
+    privacy: "No payload logging - timing and error codes only"
+
+# Schema checksum for CI validation (auto-generated)
+checksum: "pending-implementation"
+version_control:
+  git:
+    tracked_files:
+      - "docs/storage-schema-manifest.yaml"
+      - "docs/adr/adr-001-indexeddb-typing-governance.md"
+    protection:
+      - "Main branch requires PR approval"
+      - "CI checks must pass"
+      - "Manifest consistency check required"

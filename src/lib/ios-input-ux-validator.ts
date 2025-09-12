@@ -1,3 +1,5 @@
+import { useState, useCallback } from 'react';
+
 /**
  * iOS Input/UX Validator
  * Tests iOS-specific user experience, virtual keyboard behavior, banner rendering, and touch interactions

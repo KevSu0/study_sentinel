@@ -8,66 +8,66 @@ interface StudySentinelDBV2 extends DBSchema {
     key: string;
     value: EventRecord;
     indexes: {
-      by_timestamp: number;
-      by_device_timestamp: [string, number];
+      by_timestamp: string;
+      by_device_timestamp: string;
       by_session_id: string;
-      by_type_timestamp: [string, number];
-      by_sync_status: [boolean, number];
+      by_type_timestamp: string;
+      by_sync_status: string;
     };
   };
   outbox: {
     key: string;
     value: OutboxRecord;
     indexes: {
-      by_priority: [number, number];
-      by_retry_count: [number, number];
+      by_priority: string;
+      by_retry_count: string;
     };
   };
   checkpoints: {
     key: string;
     value: CheckpointRecord;
     indexes: {
-      by_device_time: [string, number];
-      by_version: [number, number];
+      by_device_time: string;
+      by_version: string;
     };
   };
   rollups_day: {
     key: string;
     value: RollupRecord;
     indexes: {
-      by_period_subject: ['day', string];
-      by_timestamp: number;
+      by_period_subject: string;
+      by_timestamp: string;
     };
   };
   rollups_week: {
     key: string;
     value: RollupRecord;
     indexes: {
-      by_period_subject: ['week', string];
-      by_timestamp: number;
+      by_period_subject: string;
+      by_timestamp: string;
     };
   };
   rollups_month: {
     key: string;
     value: RollupRecord;
     indexes: {
-      by_period_subject: ['month', string];
-      by_timestamp: number;
+      by_period_subject: string;
+      by_timestamp: string;
     };
   };
   rollups_extended: {
     key: string;
     value: RollupRecord;
     indexes: {
-      by_period_subject: ['7d' | '30d' | '90d', string];
-      by_timestamp: number;
+      by_period_subject: string;
+      by_timestamp: string;
     };
   };
   settings: {
     key: string;
     value: SettingsRecord;
     indexes: {
-      by_type: 'sync' | 'privacy' | 'analytics' | 'ui';
+      by_type: string;
       by_device_id: string;
     };
   };
@@ -76,7 +76,7 @@ interface StudySentinelDBV2 extends DBSchema {
     value: KeyRecord;
     indexes: {
       by_device_id: string;
-      by_type: 'encryption' | 'signing';
+      by_type: string;
     };
   };
 }
@@ -220,6 +220,44 @@ interface SettingsEventData {
   category: string;
 }
 
+// Policy Helper Functions
+function normalizeTimestamp(timestamp: number = Date.now()): number {
+  // Floor to nearest second for consistency
+  return Math.floor(timestamp / 1000) * 1000;
+}
+
+function validateJsonSerializable(data: any): void {
+  // Basic validation for JSON serializable data
+  const unsafeTypes = ['function', 'symbol', 'bigint'];
+  const checkValue = (value: any): void => {
+    if (value === null || value === undefined) return;
+    
+    if (unsafeTypes.includes(typeof value)) {
+      throw new Error(`Non-JSON-serializable value found: ${typeof value}`);
+    }
+    
+    if (typeof value === 'object') {
+      if (value instanceof Date) {
+        // Dates are acceptable, will be serialized to ISO string
+        return;
+      }
+      if (value instanceof Array || value instanceof Object) {
+        Object.values(value).forEach(checkValue);
+      }
+    }
+  };
+  
+  checkValue(data);
+}
+
+function createEventDefaults(): Partial<EventRecord> {
+  return {
+    synced: false, // Default to false for new writes
+    timestamp: normalizeTimestamp(),
+    version: 1
+  };
+}
+
 class StorageManagerV2 {
   private db: IDBPDatabase<StudySentinelDBV2> | null = null;
   private readonly dbName = 'StudySentinelDB';
@@ -236,6 +274,8 @@ class StorageManagerV2 {
       return;
     }
 
+    this.startTiming('initialize');
+    
     try {
       this.db = await openDB<StudySentinelDBV2>(this.dbName, this.dbVersion, {
         upgrade: (db, oldVersion, newVersion) => {
@@ -255,6 +295,8 @@ class StorageManagerV2 {
     } catch (error) {
       console.error('Failed to initialize storage v2:', error);
       throw error;
+    } finally {
+      this.endTiming('initialize');
     }
   }
 
@@ -292,19 +334,19 @@ class StorageManagerV2 {
     // Create rollup stores
     const rollupPeriods = ['day', 'week', 'month'] as const;
     rollupPeriods.forEach(period => {
-      const storeName = `rollups_${period}`;
+      const storeName = `rollups_${period}` as const;
       if (!db.objectStoreNames.contains(storeName)) {
         const store = db.createObjectStore(storeName, { keyPath: 'id' });
-        store.createIndex('by_period_subject', ['period', 'subject']);
-        store.createIndex('by_timestamp', 'timestamp');
+        store.createIndex('by_period_subject', ['period', 'subject'] as any);
+        store.createIndex('by_timestamp', 'timestamp' as any);
       }
     });
 
     // Create extended rollups store
     if (!db.objectStoreNames.contains('rollups_extended')) {
       const extendedStore = db.createObjectStore('rollups_extended', { keyPath: 'id' });
-      extendedStore.createIndex('by_period_subject', ['period', 'subject']);
-      extendedStore.createIndex('by_timestamp', 'timestamp');
+      extendedStore.createIndex('by_period_subject', ['period', 'subject'] as any);
+      extendedStore.createIndex('by_timestamp', 'timestamp' as any);
     }
 
     // Create settings store
@@ -326,7 +368,7 @@ class StorageManagerV2 {
     try {
       // Check if v1 database exists
       const v1Db = await indexedDB.open('StudySentinelDB', 1);
-      v1Db.close();
+      (v1Db as any).close();
 
       console.log('Found v1 database, starting migration...');
       await this.migrateFromV1();
@@ -345,14 +387,20 @@ class StorageManagerV2 {
 
   // Event Management
   async addEvent(event: Omit<EventRecord, 'id' | 'timestamp' | 'version'>): Promise<string> {
+    this.startTiming('addEvent');
     this.ensureInitialized();
     
+    // Validate JSON serializable data
+    validateJsonSerializable(event.data);
+    
+    const defaults = createEventDefaults();
     const eventRecord: EventRecord = {
       id: generateEventId(),
-      timestamp: Date.now(),
-      version: 1,
       deviceId: this.deviceId,
-      ...event
+      ...event,
+      timestamp: defaults.timestamp!,
+      version: defaults.version!,
+      synced: defaults.synced
     };
 
     await this.db!.add('events', eventRecord);
@@ -360,6 +408,7 @@ class StorageManagerV2 {
     // Add to outbox for sync
     await this.addToOutbox(eventRecord.id, 'create');
     
+    this.endTiming('addEvent');
     return eventRecord.id;
   }
 
@@ -371,11 +420,16 @@ class StorageManagerV2 {
       throw new Error(`Event with id ${id} not found`);
     }
 
+    // Validate data if it's being updated
+    if (updates.data) {
+      validateJsonSerializable(updates.data);
+    }
+
     const updated: EventRecord = {
       ...existing,
       ...updates,
       version: existing.version + 1,
-      timestamp: Date.now()
+      timestamp: normalizeTimestamp()
     };
 
     await this.db!.put('events', updated);
@@ -399,30 +453,40 @@ class StorageManagerV2 {
   }
 
   async getEvents(filter?: EventFilter): Promise<EventRecord[]> {
+    this.startTiming('getEvents');
     this.ensureInitialized();
     
-    if (!filter) {
-      return this.db!.getAll('events');
-    }
-
     let events: EventRecord[] = [];
     
-    if (filter.type) {
-      events = await this.db!.getAllFromIndex('events', 'by_type_timestamp', 
-        IDBKeyRange.bound([filter.type, filter.startTime || 0], [filter.type, filter.endTime || Date.now()]));
-    } else if (filter.deviceId) {
-      events = await this.db!.getAllFromIndex('events', 'by_device_timestamp', 
-        IDBKeyRange.bound([filter.deviceId, filter.startTime || 0], [filter.deviceId, filter.endTime || Date.now()]));
-    } else if (filter.startTime || filter.endTime) {
-      events = await this.db!.getAllFromIndex('events', 'by_timestamp', 
-        IDBKeyRange.bound(filter.startTime || 0, filter.endTime || Date.now()));
-    } else {
+    if (!filter) {
       events = await this.db!.getAll('events');
+    } else {
+      // Handle compound queries by using the most specific index first
+      if (filter.type && filter.deviceId) {
+        // For type + device + time: use type index first, then filter by device and time
+        events = await this.db!.getAllFromIndex('events', 'by_type_timestamp', 
+          IDBKeyRange.bound([filter.type, filter.startTime || 0], [filter.type, filter.endTime || Date.now()]));
+        // Then filter by device
+        events = events.filter(event => event.deviceId === filter.deviceId);
+      } else if (filter.type) {
+        events = await this.db!.getAllFromIndex('events', 'by_type_timestamp', 
+          IDBKeyRange.bound([filter.type, filter.startTime || 0], [filter.type, filter.endTime || Date.now()]));
+      } else if (filter.deviceId) {
+        events = await this.db!.getAllFromIndex('events', 'by_device_timestamp', 
+          IDBKeyRange.bound([filter.deviceId, filter.startTime || 0], [filter.deviceId, filter.endTime || Date.now()]));
+      } else if (filter.startTime || filter.endTime) {
+        events = await this.db!.getAllFromIndex('events', 'by_timestamp', 
+          IDBKeyRange.bound(filter.startTime || 0, filter.endTime || Date.now()));
+      } else {
+        events = await this.db!.getAll('events');
+      }
     }
 
+    this.endTiming('getEvents');
     return events;
   }
 
+  
   // Outbox Management
   async addToOutbox(eventId: string, operation: 'create' | 'update' | 'delete', priority: number = 5): Promise<void> {
     this.ensureInitialized();
@@ -453,7 +517,7 @@ class StorageManagerV2 {
 
     if (filter.maxRetries !== undefined) {
       return this.db!.getAllFromIndex('outbox', 'by_retry_count', 
-        IDBKeyRange.upperBound(filter.maxRetries));
+        IDBKeyRange.bound([0, 0], [filter.maxRetries, Date.now()]));
     }
 
     return this.db!.getAll('outbox');
@@ -534,7 +598,7 @@ class StorageManagerV2 {
       ? 'rollups_extended' 
       : `rollups_${rollup.period}`;
 
-    await this.db!.put(storeName, rollupRecord);
+    await this.db!.put(storeName as any, rollupRecord);
   }
 
   async getRollups(period: string, subject?: string): Promise<RollupRecord[]> {
@@ -545,11 +609,11 @@ class StorageManagerV2 {
       : `rollups_${period}`;
 
     if (subject) {
-      return this.db!.getAllFromIndex(storeName, 'by_period_subject', 
-        IDBKeyRange.only([period, subject]));
+      return this.db!.getAllFromIndex(storeName as any, 'by_period_subject' as any, 
+        IDBKeyRange.only([period, subject])) as Promise<RollupRecord[]>;
     }
 
-    return this.db!.getAll(storeName);
+    return this.db!.getAll(storeName as any) as Promise<RollupRecord[]>;
   }
 
   // Settings Management
@@ -624,7 +688,7 @@ class StorageManagerV2 {
     };
 
     // Get rollup counts
-    const rollupStores = ['rollups_day', 'rollups_week', 'rollups_month', 'rollups_extended'];
+    const rollupStores = ['rollups_day', 'rollups_week', 'rollups_month', 'rollups_extended'] as const;
     for (const store of rollupStores) {
       if (this.db!.objectStoreNames.contains(store)) {
         stats.rollupCounts[store] = await this.db!.count(store as any);
@@ -740,6 +804,13 @@ class StorageManagerV2 {
 
     // Import new data
     for (const event of data.events) {
+      // Validate imported data is JSON serializable
+      try {
+        validateJsonSerializable(event.data);
+      } catch (error) {
+        console.warn(`Skipping invalid event ${event.id}:`, error);
+        continue;
+      }
       await tx.objectStore('events').add(event);
     }
 
@@ -779,6 +850,100 @@ class StorageManagerV2 {
       hash = hash & hash;
     }
     return Math.abs(hash).toString(16);
+  }
+
+  // Development Observability (timing metrics)
+  private timings: Record<string, number[]> = {};
+  
+  private startTiming(operation: string): void {
+    if (process.env.NODE_ENV === 'development') {
+      if (!this.timings[operation]) {
+        this.timings[operation] = [];
+      }
+      if (typeof performance !== 'undefined' && performance.mark) {
+        performance.mark(`${operation}-start`);
+      } else {
+        // Fallback for environments without performance API
+        (this.timings[operation] as any)._lastStart = Date.now();
+      }
+    }
+  }
+  
+  private endTiming(operation: string): void {
+    if (process.env.NODE_ENV === 'development') {
+      if (typeof performance !== 'undefined' && performance.mark) {
+        performance.mark(`${operation}-end`);
+        performance.measure(`${operation}`, `${operation}-start`, `${operation}-end`);
+        const measures = performance.getEntriesByName(`${operation}`);
+        if (measures.length > 0) {
+          this.timings[operation].push(measures[measures.length - 1].duration);
+          performance.clearMarks(`${operation}-start`);
+          performance.clearMarks(`${operation}-end`);
+          performance.clearMeasures(`${operation}`);
+        }
+      } else {
+        // Fallback for environments without performance API
+        const start = (this.timings[operation] as any)._lastStart;
+        if (start) {
+          const duration = Date.now() - start;
+          this.timings[operation].push(duration);
+          delete (this.timings[operation] as any)._lastStart;
+        }
+      }
+    }
+  }
+  
+  getPerformanceMetrics(): Record<string, { count: number; avg: number; min: number; max: number }> {
+    const metrics: Record<string, { count: number; avg: number; min: number; max: number }> = {};
+    
+    for (const [operation, times] of Object.entries(this.timings)) {
+      if (times.length > 0) {
+        metrics[operation] = {
+          count: times.length,
+          avg: times.reduce((a, b) => a + b, 0) / times.length,
+          min: Math.min(...times),
+          max: Math.max(...times)
+        };
+      }
+    }
+    
+    return metrics;
+  }
+  
+  clearPerformanceMetrics(): void {
+    this.timings = {};
+  }
+  
+  // Test Helper Methods
+  async clearAllData(): Promise<void> {
+    this.ensureInitialized();
+    
+    const tx = this.db!.transaction(['events', 'outbox', 'checkpoints', 'settings', 'keys'], 'readwrite');
+    
+    // Clear all object stores
+    await Promise.all([
+      tx.objectStore('events').clear(),
+      tx.objectStore('outbox').clear(),
+      tx.objectStore('checkpoints').clear(),
+      tx.objectStore('settings').clear(),
+      tx.objectStore('keys').clear()
+    ]);
+    
+    await tx.done;
+  }
+
+  async cleanup(): Promise<void> {
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+      this.initialized = false;
+    }
+  }
+
+  async getEventsBySession(sessionId: string): Promise<EventRecord[]> {
+    this.ensureInitialized();
+    
+    return this.db!.getAllFromIndex('events', 'by_session_id', IDBKeyRange.only(sessionId));
   }
 }
 

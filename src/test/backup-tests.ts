@@ -517,6 +517,7 @@ export class MigrationBackupTester {
     }
     
     return {
+      backupCreated: true,
       backupIntact,
       dataComplete,
       checksumValid,
@@ -542,8 +543,8 @@ export class MigrationBackupTester {
     const originalEventIds = new Set(originalData.events.map((e: any) => e.id));
     
     originalEventIds.forEach(id => {
-      if (!backupEventIds.has(id)) {
-        missingEvents.push(id);
+      if (!backupEventIds.has(id as string)) {
+        missingEvents.push(id as string);
       }
     });
     
@@ -552,8 +553,8 @@ export class MigrationBackupTester {
     const originalSettingKeys = new Set(originalData.settings.map((s: any) => s.key));
     
     originalSettingKeys.forEach(key => {
-      if (!backupSettingKeys.has(key)) {
-        missingSettings.push(key);
+      if (!backupSettingKeys.has(key as string)) {
+        missingSettings.push(key as string);
       }
     });
     
@@ -638,6 +639,3 @@ export async function runBackupTests(): Promise<void> {
     process.exit(1);
   }
 }
-
-// Export for use in other test files
-export { MigrationBackupTester };

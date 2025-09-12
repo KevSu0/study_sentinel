@@ -10,6 +10,24 @@ jest.mock('../offline-gate', () => ({
 
 const mockUseAIFeature = useAIFeature as jest.MockedFunction<typeof useAIFeature>;
 
+const mockOnline = {
+  isOnline: true,
+  lastCheck: null,
+  checkConnectivity: jest.fn().mockResolvedValue(true),
+  canUseAI: true,
+  isAIEnabled: true,
+  disableAI: jest.fn()
+};
+
+const mockOffline = {
+  isOnline: false,
+  lastCheck: null,
+  checkConnectivity: jest.fn().mockResolvedValue(false),
+  canUseAI: false,
+  isAIEnabled: false,
+  disableAI: jest.fn()
+};
+
 describe('OfflineGate', () => {
   beforeEach(() => {
     // Reset all mocks before each test
@@ -28,12 +46,7 @@ describe('OfflineGate', () => {
   });
 
   it('renders children when online', () => {
-    mockUseAIFeature.mockReturnValue({
-      isOnline: true,
-      lastCheck: null,
-      checkConnectivity: jest.fn().mockResolvedValue(true),
-      canUseAI: true
-    });
+    mockUseAIFeature.mockReturnValue(mockOnline);
 
     render(
       <OfflineGate featureName="AI Feature">
@@ -45,12 +58,7 @@ describe('OfflineGate', () => {
   });
 
   it('shows offline UI when offline', () => {
-    mockUseAIFeature.mockReturnValue({
-      isOnline: false,
-      lastCheck: null,
-      checkConnectivity: jest.fn().mockResolvedValue(false),
-      canUseAI: false
-    });
+    mockUseAIFeature.mockReturnValue(mockOffline);
 
     render(
       <OfflineGate featureName="AI Feature">
@@ -63,12 +71,7 @@ describe('OfflineGate', () => {
   });
 
   it('shows fallback when provided and offline', () => {
-    mockUseAIFeature.mockReturnValue({
-      isOnline: false,
-      lastCheck: null,
-      checkConnectivity: jest.fn().mockResolvedValue(false),
-      canUseAI: false
-    });
+    mockUseAIFeature.mockReturnValue(mockOffline);
 
     render(
       <OfflineGate featureName="AI Feature" fallback={<div>Custom Fallback</div>}>
@@ -83,10 +86,8 @@ describe('OfflineGate', () => {
   it('handles retry connection click', async () => {
     const mockCheckConnectivity = jest.fn().mockResolvedValue(true);
     mockUseAIFeature.mockReturnValue({
-      isOnline: false,
-      lastCheck: null,
-      checkConnectivity: mockCheckConnectivity,
-      canUseAI: false
+      ...mockOffline,
+      checkConnectivity: mockCheckConnectivity
     });
 
     render(
@@ -104,12 +105,7 @@ describe('OfflineGate', () => {
   });
 
   it('shows loading state when checking connection', () => {
-    mockUseAIFeature.mockReturnValue({
-      isOnline: false,
-      lastCheck: null,
-      checkConnectivity: jest.fn(),
-      canUseAI: false
-    });
+    mockUseAIFeature.mockReturnValue(mockOffline);
 
     render(
       <OfflineGate featureName="AI Feature">
@@ -128,12 +124,7 @@ describe('OfflineGate', () => {
     const addEventListenerSpy = jest.spyOn(window, 'addEventListener');
     const removeEventListenerSpy = jest.spyOn(window, 'removeEventListener');
 
-    mockUseAIFeature.mockReturnValue({
-      isOnline: true,
-      lastCheck: null,
-      checkConnectivity: jest.fn().mockResolvedValue(true),
-      canUseAI: true
-    });
+    mockUseAIFeature.mockReturnValue(mockOnline);
 
     const { rerender } = render(
       <OfflineGate featureName="AI Feature">
@@ -155,12 +146,7 @@ describe('OfflineGate', () => {
     });
 
     // Update mock to reflect offline state
-    mockUseAIFeature.mockReturnValue({
-      isOnline: false,
-      lastCheck: null,
-      checkConnectivity: jest.fn().mockResolvedValue(false),
-      canUseAI: false
-    });
+    mockUseAIFeature.mockReturnValue(mockOffline);
 
     rerender(
       <OfflineGate featureName="AI Feature">
@@ -210,12 +196,7 @@ describe('mockUseAIFeature hook', () => {
   });
 
   it('returns correct initial state', () => {
-    mockUseAIFeature.mockReturnValue({
-      isOnline: true,
-      lastCheck: null,
-      checkConnectivity: jest.fn().mockResolvedValue(true),
-      canUseAI: true
-    });
+    mockUseAIFeature.mockReturnValue(mockOnline);
 
     const { result } = renderHook(() => mockUseAIFeature());
 
@@ -231,10 +212,8 @@ describe('mockUseAIFeature hook', () => {
       .mockResolvedValueOnce(true);
 
     mockUseAIFeature.mockReturnValue({
-      isOnline: true,
-      lastCheck: null,
-      checkConnectivity: mockCheckConnectivity,
-      canUseAI: true
+      ...mockOnline,
+      checkConnectivity: mockCheckConnectivity
     });
 
     const { result } = renderHook(() => mockUseAIFeature());
@@ -252,10 +231,8 @@ describe('mockUseAIFeature hook', () => {
     const mockCheckConnectivity = jest.fn().mockRejectedValue(new Error('Network error'));
     
     mockUseAIFeature.mockReturnValue({
-      isOnline: true,
-      lastCheck: null,
-      checkConnectivity: mockCheckConnectivity,
-      canUseAI: true
+      ...mockOnline,
+      checkConnectivity: mockCheckConnectivity
     });
 
     const { result } = renderHook(() => mockUseAIFeature());

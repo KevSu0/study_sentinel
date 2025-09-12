@@ -1,5 +1,5 @@
 // Hybrid Rollups System - Incremental + Idle Compaction
-import { StorageManagerV2 } from './storage-v2';
+import { StorageManagerV2, EventRecord, StudyEventData, TaskEventData, BadgeEventData, EventData } from './storage-v2';
 import { calculateExpectedMetrics, validateInvariants } from '../test/golden-dataset';
 
 interface RollupConfig {
@@ -99,7 +99,7 @@ class HybridRollupManager {
   }
 
   // Main entry point - called when events are added/updated
-  async processEvent(eventType: string, eventData: any): Promise<void> {
+  async processEvent(eventType: string, eventData: EventData): Promise<void> {
     this.lastActivity = Date.now();
     
     if (!this.config.incremental) {
@@ -248,8 +248,9 @@ class HybridRollupManager {
     // Most productive hours
     const hourlyData: Record<number, number> = {};
     studySessions.forEach(session => {
-      const hour = new Date(session.data.startTime).getHours();
-      hourlyData[hour] = (hourlyData[hour] || 0) + session.data.duration;
+      const data = session.data as StudyEventData;
+      const hour = new Date(data.startTime).getHours();
+      hourlyData[hour] = (hourlyData[hour] || 0) + data.duration;
     });
     const mostProductiveHours = Object.entries(hourlyData)
       .map(([hour, duration]) => ({ hour: parseInt(hour), duration }))
@@ -260,15 +261,17 @@ class HybridRollupManager {
     const weeklyPatterns: Record<string, number> = {};
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     studySessions.forEach(session => {
-      const dayOfWeek = dayNames[new Date(session.data.startTime).getDay()];
-      weeklyPatterns[dayOfWeek] = (weeklyPatterns[dayOfWeek] || 0) + session.data.duration;
+      const data = session.data as StudyEventData;
+      const dayOfWeek = dayNames[new Date(data.startTime).getDay()];
+      weeklyPatterns[dayOfWeek] = (weeklyPatterns[dayOfWeek] || 0) + data.duration;
     });
 
     // Monthly trends
     const monthlyData: Record<string, number> = {};
     studySessions.forEach(session => {
-      const month = new Date(session.data.startTime).toISOString().substring(0, 7);
-      monthlyData[month] = (monthlyData[month] || 0) + session.data.duration;
+      const data = session.data as StudyEventData;
+      const month = new Date(data.startTime).toISOString().substring(0, 7);
+      monthlyData[month] = (monthlyData[month] || 0) + data.duration;
     });
     const monthlyTrends = Object.entries(monthlyData)
       .map(([month, duration]) => ({ month, duration }))
@@ -279,19 +282,20 @@ class HybridRollupManager {
         const change = ((item.duration - prevDuration) / prevDuration) * 100;
         return {
           ...item,
-          trend: change > 5 ? 'up' : change < -5 ? 'down' : 'stable'
+          trend: change > 5 ? 'up' as const : change < -5 ? 'down' as const : 'stable' as const
         };
       });
 
     // Subject efficiency
     const subjectStats: Record<string, { ratings: number[]; durations: number[] }> = {};
     studySessions.forEach(session => {
-      const subject = session.data.subject;
+      const data = session.data as StudyEventData;
+      const subject = data.subject;
       if (!subjectStats[subject]) {
         subjectStats[subject] = { ratings: [], durations: [] };
       }
-      subjectStats[subject].ratings.push(session.data.rating || 3);
-      subjectStats[subject].durations.push(session.data.duration);
+      subjectStats[subject].ratings.push(data.rating || 3);
+      subjectStats[subject].durations.push(data.duration);
     });
     const subjectEfficiency: Record<string, any> = {};
     Object.entries(subjectStats).forEach(([subject, stats]) => {
@@ -333,7 +337,7 @@ class HybridRollupManager {
 
   // Private methods
 
-  private async updateRollupsIncremental(eventType: string, eventData: any): Promise<void> {
+  private async updateRollupsIncremental(eventType: string, eventData: EventData): Promise<void> {
     const now = Date.now();
     
     // Only process study session events for rollups
@@ -341,7 +345,7 @@ class HybridRollupManager {
       return;
     }
 
-    const session = eventData;
+    const session = eventData as StudyEventData;
     const date = new Date(session.startTime).toISOString().split('T')[0];
     const week = this.getWeekNumber(new Date(session.startTime));
     const month = date.substring(0, 7); // YYYY-MM
@@ -471,7 +475,7 @@ class HybridRollupManager {
     await Promise.all(promises);
   }
 
-  private calculateMetricsFromEvents(events: any[]): RollupMetrics {
+  private calculateMetricsFromEvents(events: EventRecord[]): RollupMetrics {
     // Filter study sessions
     const studySessions = events.filter(e => e.type.startsWith('study_session'));
     
@@ -479,15 +483,16 @@ class HybridRollupManager {
       return this.getEmptyMetrics();
     }
 
-    const totalDuration = studySessions.reduce((sum, e) => sum + e.data.duration, 0);
+    const totalDuration = studySessions.reduce((sum, e) => sum + (e.data as StudyEventData).duration, 0);
     const totalSessions = studySessions.length;
     const averageSessionLength = totalDuration / totalSessions;
 
     // Subject breakdown
     const subjectBreakdown: Record<string, number> = {};
     studySessions.forEach(e => {
-      const subject = e.data.subject;
-      subjectBreakdown[subject] = (subjectBreakdown[subject] || 0) + e.data.duration;
+      const data = e.data as StudyEventData;
+      const subject = data.subject;
+      subjectBreakdown[subject] = (subjectBreakdown[subject] || 0) + data.duration;
     });
 
     // Time-based totals
@@ -501,9 +506,9 @@ class HybridRollupManager {
 
     // Session length distribution
     const sessionLengthDistribution = {
-      short: studySessions.filter(e => e.data.duration < 30).length,
-      medium: studySessions.filter(e => e.data.duration >= 30 && e.data.duration <= 120).length,
-      long: studySessions.filter(e => e.data.duration > 120).length
+      short: studySessions.filter(e => (e.data as StudyEventData).duration < 30).length,
+      medium: studySessions.filter(e => (e.data as StudyEventData).duration >= 30 && (e.data as StudyEventData).duration <= 120).length,
+      long: studySessions.filter(e => (e.data as StudyEventData).duration > 120).length
     };
 
     // Consistency score
@@ -535,11 +540,12 @@ class HybridRollupManager {
     };
   }
 
-  private calculateTimeTotals(events: any[], period: 'day' | 'week' | 'month'): Record<string, number> {
+  private calculateTimeTotals(events: EventRecord[], period: 'day' | 'week' | 'month'): Record<string, number> {
     const totals: Record<string, number> = {};
     
     events.forEach(e => {
-      const date = new Date(e.data.startTime);
+      const data = e.data as StudyEventData;
+      const date = new Date(data.startTime);
       let key: string;
       
       switch (period) {
@@ -554,13 +560,13 @@ class HybridRollupManager {
           break;
       }
       
-      totals[key] = (totals[key] || 0) + e.data.duration;
+      totals[key] = (totals[key] || 0) + data.duration;
     });
     
     return totals;
   }
 
-  private calculateExtendedTotals(events: any[]): Record<string, number> {
+  private calculateExtendedTotals(events: EventRecord[]): Record<string, number> {
     const now = Date.now();
     const cutoffs = {
       '7d': now - (7 * 24 * 60 * 60 * 1000),
@@ -572,20 +578,21 @@ class HybridRollupManager {
     
     Object.entries(cutoffs).forEach(([period, cutoff]) => {
       totals[period] = events
-        .filter(e => e.data.startTime >= cutoff)
-        .reduce((sum, e) => sum + e.data.duration, 0);
+        .filter(e => (e.data as StudyEventData).startTime >= cutoff)
+        .reduce((sum, e) => sum + (e.data as StudyEventData).duration, 0);
     });
 
     return totals;
   }
 
-  private calculateHeatmap(events: any[]): Record<number, number> {
+  private calculateHeatmap(events: EventRecord[]): Record<number, number> {
     const heatmap: Record<number, number> = {};
     
     events.forEach(e => {
-      const startHour = new Date(e.data.startTime).getHours();
-      const endHour = new Date(e.data.endTime).getHours();
-      const duration = e.data.duration;
+      const data = e.data as StudyEventData;
+      const startHour = new Date(data.startTime).getHours();
+      const endHour = new Date(data.endTime).getHours();
+      const duration = data.duration;
       
       // Handle sessions that span multiple hours
       if (startHour === endHour) {
@@ -606,27 +613,27 @@ class HybridRollupManager {
     return heatmap;
   }
 
-  private calculateConsistencyScore(events: any[]): number {
+  private calculateConsistencyScore(events: EventRecord[]): number {
     if (events.length === 0) return 0;
     
     // Simple consistency based on ratings and regularity
-    const avgRating = events.reduce((sum, e) => sum + (e.data.rating || 3), 0) / events.length;
+    const avgRating = events.reduce((sum, e) => sum + ((e.data as StudyEventData).rating || 3), 0) / events.length;
     const ratingScore = avgRating / 5; // Normalize to 0-1
     
     // Check for regular study patterns
-    const studyDays = new Set(events.map(e => new Date(e.data.startTime).toDateString()));
-    const totalDays = Math.max(1, (Date.now() - Math.min(...events.map(e => e.data.startTime))) / (24 * 60 * 60 * 1000));
+    const studyDays = new Set(events.map(e => new Date((e.data as StudyEventData).startTime).toDateString()));
+    const totalDays = Math.max(1, (Date.now() - Math.min(...events.map(e => (e.data as StudyEventData).startTime))) / (24 * 60 * 60 * 1000));
     const regularityScore = studyDays.size / totalDays;
     
     return (ratingScore + regularityScore) / 2;
   }
 
-  private calculateStudyStreaks(events: any[]): { current: number; longest: number } {
+  private calculateStudyStreaks(events: EventRecord[]): { current: number; longest: number } {
     if (events.length === 0) return { current: 0, longest: 0 };
     
     // Group by date
     const studyDays = new Set(
-      events.map(e => new Date(e.data.startTime).toDateString())
+      events.map(e => new Date((e.data as StudyEventData).startTime).toDateString())
     );
     
     // Calculate streaks
@@ -889,12 +896,12 @@ class HybridRollupManager {
     const errorRate = recentErrors / Math.max(1, this.performanceMetrics.computationTimes.length);
 
     const guardrailsStatus = {
-      computationTime: avgComputationTime < this.guardrails.maxComputationTime * 0.7 ? 'ok' :
-                       avgComputationTime < this.guardrails.maxComputationTime * 0.9 ? 'warning' : 'critical',
-      memoryUsage: avgMemoryUsage < this.guardrails.maxMemoryUsage * 0.7 ? 'ok' :
-                   avgMemoryUsage < this.guardrails.maxMemoryUsage * 0.9 ? 'warning' : 'critical',
-      errorRate: errorRate < this.guardrails.maxErrorRate * 0.7 ? 'ok' :
-                errorRate < this.guardrails.maxErrorRate * 0.9 ? 'warning' : 'critical'
+      computationTime: avgComputationTime < this.guardrails.maxComputationTime * 0.7 ? 'ok' as const :
+                       avgComputationTime < this.guardrails.maxComputationTime * 0.9 ? 'warning' as const : 'critical' as const,
+      memoryUsage: avgMemoryUsage < this.guardrails.maxMemoryUsage * 0.7 ? 'ok' as const :
+                   avgMemoryUsage < this.guardrails.maxMemoryUsage * 0.9 ? 'warning' as const : 'critical' as const,
+      errorRate: errorRate < this.guardrails.maxErrorRate * 0.7 ? 'ok' as const :
+                errorRate < this.guardrails.maxErrorRate * 0.9 ? 'warning' as const : 'critical' as const
     };
 
     return {

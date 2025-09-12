@@ -3,6 +3,8 @@
  * Implements client-side quotas, batching policies, and server guardrails
  */
 
+import { useState, useEffect, useCallback } from 'react';
+
 export interface SyncQuotaConfig {
   // Batch size limits
   maxBatchSizeBytes: number;        // 256 KB

@@ -242,9 +242,7 @@ describe('mockUsePWAUpdates hook', () => {
   });
 
   it('registers service worker and sets up update checking', () => {
-    const mockRegistration = {
-      update: jest.fn().mockResolvedValue(true)
-    };
+    const mockRegistration = createServiceWorkerRegistrationStub();
 
     (navigator.serviceWorker as any).getRegistration.mockResolvedValue(mockRegistration);
 
@@ -278,24 +276,7 @@ describe('mockUsePWAUpdates hook', () => {
   });
 
   it('checks for updates when registration exists', async () => {
-    const mockRegistration = {
-      active: null,
-      installing: null,
-      navigationPreload: null,
-      onupdatefound: null,
-      oncontrollerchange: null,
-      onerror: null,
-      pushManager: null,
-      sync: null,
-      periodicSync: null,
-      notifications: null,
-      paymentManager: null,
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-      dispatchEvent: jest.fn(),
-      update: jest.fn().mockResolvedValue(true),
-      unregister: jest.fn()
-    } as ServiceWorkerRegistration;
+    const mockRegistration = createServiceWorkerRegistrationStub();
 
     mockUsePWAUpdates.mockReturnValue({
       updateAvailable: false,
@@ -315,24 +296,8 @@ describe('mockUsePWAUpdates hook', () => {
   it('handles update check errors', async () => {
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     
-    const mockRegistration = {
-      active: null,
-      installing: null,
-      navigationPreload: null,
-      onupdatefound: null,
-      oncontrollerchange: null,
-      onerror: null,
-      pushManager: null,
-      sync: null,
-      periodicSync: null,
-      notifications: null,
-      paymentManager: null,
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-      dispatchEvent: jest.fn(),
-      update: jest.fn().mockRejectedValue(new Error('Update failed')),
-      unregister: jest.fn()
-    } as ServiceWorkerRegistration;
+    const mockRegistration = createServiceWorkerRegistrationStub();
+    mockRegistration.update.mockRejectedValue(new Error('Update failed'));
 
     mockUsePWAUpdates.mockReturnValue({
       updateAvailable: false,

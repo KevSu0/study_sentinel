@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 /**
  * iOS Storage Resilience Validator
  * Validates IndexedDB operations and low-storage handling on iOS devices
@@ -102,12 +104,12 @@ export class iOSStorageValidator {
   }
 
   private detectIOS(): boolean {
-    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
   }
 
   private detectA2HS(): boolean {
     return window.matchMedia('(display-mode: standalone)').matches ||
-           navigator.standalone === true;
+           (navigator as any).standalone === true;
   }
 
   private getIOSVersion(): string {
@@ -821,7 +823,7 @@ export class iOSStorageValidator {
   }
 
   private generateTestData(size: number): any {
-    const data = { test: true, size };
+    const data: any = { test: true, size };
     let currentSize = JSON.stringify(data).length;
     
     // Add padding to reach desired size
@@ -1408,7 +1410,7 @@ export class iOSStorageValidator {
           category: 'indexeddb',
           test: 'a2hs_mode',
           message: 'Running in A2HS mode',
-          details: { standalone: navigator.standalone, displayMode: window.matchMedia('(display-mode: standalone)').matches },
+          details: { standalone: (navigator as any).standalone, displayMode: window.matchMedia('(display-mode: standalone)').matches },
           duration: 0,
           timestamp: Date.now()
         });

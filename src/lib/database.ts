@@ -26,12 +26,13 @@ export interface StudySessionEvent extends BaseEvent {
 export interface TaskEvent extends BaseEvent {
   type: 'task_created' | 'task_updated' | 'task_completed' | 'task_deleted';
   data: {
-    title: string;
+    taskId?: string;
+    title?: string;
     description?: string;
     subject?: string;
     dueDate?: number;
-    priority: 'low' | 'medium' | 'high';
-    completed: boolean;
+    priority?: 'low' | 'medium' | 'high';
+    completed?: boolean;
     estimatedTime?: number;
   };
 }

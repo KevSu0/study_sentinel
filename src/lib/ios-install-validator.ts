@@ -1,3 +1,5 @@
+import { useState, useCallback } from 'react';
+
 /**
  * iOS Install & Icon Validator
  * Tests PWA installation, maskable icons, splash screens, and iOS-specific install behavior

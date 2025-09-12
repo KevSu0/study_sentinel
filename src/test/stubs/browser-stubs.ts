@@ -1,5 +1,28 @@
 // Test stubs for browser APIs that aren't available in Jest/jsdom environment
 
+// Type declarations for missing browser APIs
+declare global {
+  interface SyncManager {
+    register(tag: string): Promise<void>;
+    getTags(): Promise<string[]>;
+  }
+
+  interface PeriodicSyncManager {
+    register(tag: string, minInterval: number): Promise<void>;
+    getTags(): Promise<PeriodicSyncRegistration[]>;
+  }
+
+  interface PeriodicSyncRegistration {
+    tag: string;
+    minInterval: number;
+  }
+
+  interface Notifications {
+    getPermission(): Promise<NotificationPermission>;
+    requestPermission(): Promise<NotificationPermission>;
+  }
+}
+
 export interface ServiceWorkerTestStub extends ServiceWorker {
   postMessage: jest.Mock;
   state: ServiceWorkerState;

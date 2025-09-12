@@ -221,7 +221,7 @@ export class NotificationScheduler {
     completedTasks: number;
   }): Promise<void> {
     const duration = Math.round(sessionData.duration / 60000); // Convert to minutes
-    const body = `Great session! ${duration} min of ${sessionData.subject}`;
+    let body = `Great session! ${duration} min of ${sessionData.subject}`;
     
     if (sessionData.completedTasks > 0) {
       body += ` • ${sessionData.completedTasks} task${sessionData.completedTasks > 1 ? 's' : ''} completed`;

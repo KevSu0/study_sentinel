@@ -121,6 +121,9 @@ export class EventManager {
     estimatedTime?: number;
   }): Promise<string> {
     const event: TaskEvent = {
+      id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      version: 1,
       type: 'task_updated',
       deviceId: this.deviceId,
       sessionId: this.sessionId!,
@@ -135,10 +138,18 @@ export class EventManager {
 
   async completeTask(taskId: string): Promise<string> {
     const event: TaskEvent = {
+      id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      version: 1,
       type: 'task_completed',
       deviceId: this.deviceId,
       sessionId: this.sessionId!,
-      data: { taskId, completed: true }
+      data: { 
+        taskId, 
+        title: 'Task Completed',
+        priority: 'medium',
+        completed: true
+      }
     };
 
     const eventId = await db.addEvent(event);
@@ -149,10 +160,18 @@ export class EventManager {
 
   async deleteTask(taskId: string): Promise<string> {
     const event: TaskEvent = {
+      id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      version: 1,
       type: 'task_deleted',
       deviceId: this.deviceId,
       sessionId: this.sessionId!,
-      data: { taskId }
+      data: { 
+        taskId,
+        title: 'Task Deleted',
+        priority: 'medium',
+        completed: false
+      }
     };
 
     const eventId = await db.addEvent(event);
@@ -168,6 +187,9 @@ export class EventManager {
     criteria: string;
   }): Promise<string> {
     const event: BadgeEvent = {
+      id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      version: 1,
       type: 'badge_earned',
       deviceId: this.deviceId,
       sessionId: this.sessionId!,
@@ -182,10 +204,18 @@ export class EventManager {
 
   async revokeBadge(badgeId: string): Promise<string> {
     const event: BadgeEvent = {
+      id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      version: 1,
       type: 'badge_revoked',
       deviceId: this.deviceId,
       sessionId: this.sessionId!,
-      data: { badgeId, earnedAt: Date.now() }
+      data: { 
+        badgeId, 
+        badgeName: 'Unknown', 
+        criteria: 'Badge revoked',
+        earnedAt: Date.now() 
+      }
     };
 
     const eventId = await db.addEvent(event);

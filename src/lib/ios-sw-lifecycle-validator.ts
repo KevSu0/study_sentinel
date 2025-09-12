@@ -1,3 +1,5 @@
+import { useState, useCallback } from 'react';
+
 /**
  * iOS Service Worker Lifecycle Validator
  * Tests service worker update flow, navigateFallback, and iOS-specific SW behaviors
