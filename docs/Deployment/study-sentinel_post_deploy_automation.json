@@ -1,0 +1,258 @@
+{
+  "version": "1.0",
+  "generated_at": "2025-09-20T16:03:07.776234",
+  "plan_type": "post_deploy_operations_and_automation",
+  "context": {
+    "environment": "Vercel (Hobby) production with preview deployments",
+    "architecture": "Client-heavy PWA, no SSR/ISR, no Middleware, CSP-only serverless route",
+    "privacy": "Local-first, no analytics/cookies, export/import available"
+  },
+  "goals": [
+    "Keep usage comfortably below Hobby limits (<=60% for first two months).",
+    "Prevent regressions in artifact size and runtime bundles.",
+    "Maintain offline reliability and session safety.",
+    "Control AI costs while preserving UX quality.",
+    "Document and automate routine checks (no background servers)."
+  ],
+  "automations": [
+    {
+      "id": "OPS-1",
+      "title": "Weekly Vercel Usage Check",
+      "category": "quota_guard",
+      "prompt": "Search for Vercel usage metrics and summarize Fast Data Transfer, Edge Requests, Functions (invocations, memory-hrs, Active CPU). Notify if any exceed 60% or 80%.",
+      "schedule": "BEGIN:VEVENT\nRRULE:FREQ=WEEKLY;BYDAY=MO;BYHOUR=10;BYMINUTE=0;BYSECOND=0\nEND:VEVENT",
+      "thresholds": {
+        "warn": 0.6,
+        "limit": 0.8
+      },
+      "notify": [
+        "developer"
+      ]
+    },
+    {
+      "id": "OPS-2",
+      "title": "Per-PR Bundle Budget Gate",
+      "category": "ci_gate",
+      "prompt": "Tell me if initial JS, total JS, or fonts exceed budgets; list top 10 offenders and suggested lazy-load points.",
+      "schedule": "BEGIN:VEVENT\nRRULE:FREQ=DAILY;BYHOUR=9;BYMINUTE=0;BYSECOND=0\nEND:VEVENT",
+      "budgets_kb": {
+        "initial_js": 300,
+        "total_js": 1200,
+        "fonts": 300
+      },
+      "on_violation": [
+        "block_merge",
+        "post_comment_with_report"
+      ]
+    },
+    {
+      "id": "OPS-3",
+      "title": "Monthly Artifact Audit",
+      "category": "artifact_watch",
+      "prompt": "Search last production build logs for artifact size and serverless bundle sizes; compare month-over-month drift and flag >10% growth.",
+      "schedule": "BEGIN:VEVENT\nRRULE:FREQ=MONTHLY;BYDAY=MO;BYHOUR=11;BYMINUTE=0;BYSECOND=0\nEND:VEVENT",
+      "drift_threshold_pct": 10
+    },
+    {
+      "id": "OPS-4",
+      "title": "PWA Offline Health Self-Test",
+      "category": "reliability",
+      "prompt": "Tell me to run an offline smoke test: install SW, precache, toggle offline, verify dashboard/timer, check outbox replay.",
+      "schedule": "BEGIN:VEVENT\nRRULE:FREQ=WEEKLY;BYDAY=TU;BYHOUR=18;BYMINUTE=0;BYSECOND=0\nEND:VEVENT",
+      "acceptance": [
+        "No console errors",
+        "Offline read/write OK",
+        "Outbox replay OK"
+      ]
+    },
+    {
+      "id": "OPS-5",
+      "title": "SW Cache Pressure Test & Eviction",
+      "category": "reliability",
+      "prompt": "Tell me to simulate cache growth to cap per tier and verify eviction policies; report retained counts per tier.",
+      "schedule": "BEGIN:VEVENT\nRRULE:FREQ=MONTHLY;BYDAY=WE;BYHOUR=12;BYMINUTE=0;BYSECOND=0\nEND:VEVENT"
+    },
+    {
+      "id": "OPS-6",
+      "title": "AI Cost & Usage Guardrail",
+      "category": "cost_control",
+      "prompt": "Tell me daily prompt counts per device; if >N/day (configurable), show a banner enabling low-cost mode; apply exponential backoff and circuit breaker on repeated failures.",
+      "schedule": "BEGIN:VEVENT\nRRULE:FREQ=DAILY;BYHOUR=20;BYMINUTE=0;BYSECOND=0\nEND:VEVENT",
+      "parameters": {
+        "daily_prompt_cap_default": 3,
+        "backoff_base_seconds": 30,
+        "circuit_breaker_minutes": 120
+      }
+    },
+    {
+      "id": "OPS-7",
+      "title": "Backup Reminder (Local Export)",
+      "category": "data_safety",
+      "prompt": "Tell me to prompt the user to export a local backup (JSON) with integrity checksum and store safely.",
+      "schedule": "BEGIN:VEVENT\nRRULE:FREQ=MONTHLY;BYMONTHDAY=1;BYHOUR=9;BYMINUTE=30;BYSECOND=0\nEND:VEVENT"
+    },
+    {
+      "id": "OPS-8",
+      "title": "Security Header & CSP Audit",
+      "category": "security",
+      "prompt": "Tell me to verify CSP report volume, check for unsafe-inline/hash exceptions, and ensure headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy) are intact.",
+      "schedule": "BEGIN:VEVENT\nRRULE:FREQ=MONTHLY;BYDAY=FR;BYHOUR=16;BYMINUTE=0;BYSECOND=0\nEND:VEVENT"
+    },
+    {
+      "id": "OPS-9",
+      "title": "Dependency Hygiene",
+      "category": "maintenance",
+      "prompt": "Tell me to review dependency updates, remove unused deps, and check for large transitive packages inflating bundles.",
+      "schedule": "BEGIN:VEVENT\nRRULE:FREQ=WEEKLY;BYDAY=TH;BYHOUR=17;BYMINUTE=0;BYSECOND=0\nEND:VEVENT"
+    },
+    {
+      "id": "OPS-10",
+      "title": "Privacy & Terms Review",
+      "category": "compliance",
+      "prompt": "Tell me to re-validate that policies match current behavior (no cookies/analytics; local-first; AI usage noted).",
+      "schedule": "BEGIN:VEVENT\nRRULE:FREQ=QUARTERLY;BYHOUR=15;BYMINUTE=0;BYSECOND=0\nEND:VEVENT"
+    }
+  ],
+  "guardrails": {
+    "quota_thresholds": [
+      {
+        "metric": "storage_mb",
+        "warn": 600,
+        "limit": 800,
+        "block": 900
+      },
+      {
+        "metric": "data_transfer_gb",
+        "warn": 60,
+        "limit": 80,
+        "block": 95
+      },
+      {
+        "metric": "function_invocations",
+        "warn": 200000,
+        "limit": 800000,
+        "block": 950000
+      }
+    ],
+    "actions": {
+      "on_warn": [
+        "optimize_bundles",
+        "prune_assets",
+        "reduce_ai_frequency"
+      ],
+      "on_limit": [
+        "offload_heavy_ops",
+        "tighten_cache_policies",
+        "defer_noncritical_releases"
+      ],
+      "on_block": [
+        "freeze_feature_rollout",
+        "prepare_upgrade_to_pro"
+      ]
+    }
+  },
+  "runbooks": [
+    {
+      "id": "RB-DEPLOY",
+      "title": "Deploy/Promote Runbook",
+      "steps": [
+        "Merge PR after CI passes (type/lint/tests/budget).",
+        "Verify preview build metrics: build time, artifact size, serverless sizes.",
+        "Promote to production; run PWA smoke test; log metrics."
+      ],
+      "rollback": [
+        "Use Vercel Rollback to previous production.",
+        "Open incident note and capture timeline."
+      ]
+    },
+    {
+      "id": "RB-SW-UPDATE",
+      "title": "Service Worker Update Prompt Runbook",
+      "steps": [
+        "Detect waiting SW; show 'Update available' banner.",
+        "If active timer: defer activation until session end; else allow immediate refresh.",
+        "BroadcastChannel: notify all tabs to refresh."
+      ]
+    },
+    {
+      "id": "RB-AI-CIRCUIT",
+      "title": "AI Circuit Breaker Runbook",
+      "steps": [
+        "Track prompt errors; on N consecutive failures, open circuit for configured window.",
+        "Show low-cost-mode banner; fall back to cached summaries."
+      ]
+    }
+  ],
+  "metrics": {
+    "leading": [
+      {
+        "name": "build_time_minutes",
+        "target": "< 45 on Vercel"
+      },
+      {
+        "name": "artifact_drift_pct",
+        "target": "<= 10% WoW"
+      },
+      {
+        "name": "offline_rw_success_rate",
+        "target": ">= 99%"
+      }
+    ],
+    "lagging": [
+      {
+        "name": "storage_used_mb",
+        "target": "<= 100 (first month)"
+      },
+      {
+        "name": "data_transfer_gb",
+        "target": "<= 60"
+      },
+      {
+        "name": "function_invocations",
+        "target": "<= 200k"
+      }
+    ]
+  },
+  "risks": [
+    {
+      "id": "R1",
+      "risk": "Artifact creep",
+      "mitigation": "CI budgets; monthly audit"
+    },
+    {
+      "id": "R2",
+      "risk": "Accidental Middleware or SSR",
+      "mitigation": "Architecture policy; PR checklist"
+    },
+    {
+      "id": "R3",
+      "risk": "SW update disrupts sessions",
+      "mitigation": "Prompted updates; tab coordination"
+    },
+    {
+      "id": "R4",
+      "risk": "AI cost spike",
+      "mitigation": "Daily caps; low-cost mode; caching"
+    }
+  ],
+  "checklists": {
+    "pre_pr_checklist": [
+      "Types pass",
+      "ESLint passes",
+      "Tests pass",
+      "Bundle budgets within limits",
+      "No new server/edge routes added"
+    ],
+    "post_deploy_checklist": [
+      "PWA smoke test",
+      "CSP report route working",
+      "Record usage snapshot",
+      "No unexpected errors in logs"
+    ]
+  },
+  "success_criteria": [
+    "Two consecutive months with all Hobby metrics under 60%.",
+    "Zero incidents of mid-session disruption due to SW updates.",
+    "Zero user-reported data-loss incidents."
+  ]
+}

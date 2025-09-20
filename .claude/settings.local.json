@@ -22,7 +22,9 @@
       "Bash(curl:*)",
       "Bash(npm run start:*)",
       "WebSearch",
-      "WebFetch(domain:vercel.com)"
+      "WebFetch(domain:vercel.com)",
+      "Bash(sort:*)",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "ask": []

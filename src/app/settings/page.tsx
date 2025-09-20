@@ -22,7 +22,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PerformanceMonitor } from '@/components/pwa/performance-monitor';
-import { Settings, Database, Zap, Bell } from 'lucide-react';
+import { Settings, Database, Zap, Bell, FileText } from 'lucide-react';
 
 export default function SettingsPage() {
   const { state, setSoundSettings } = useGlobalState();
@@ -54,7 +54,7 @@ export default function SettingsPage() {
       </header>
       <main className="flex-1 p-2 sm:p-4 overflow-y-auto">
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="general" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               <span className="hidden sm:inline">General</span>
@@ -70,6 +70,10 @@ export default function SettingsPage() {
             <TabsTrigger value="storage" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
               <span className="hidden sm:inline">Storage</span>
+            </TabsTrigger>
+            <TabsTrigger value="legal" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Legal</span>
             </TabsTrigger>
           </TabsList>
           
@@ -173,6 +177,43 @@ export default function SettingsPage() {
                 <div className="text-sm text-muted-foreground">
                   <p>Study Sentinel is a Progressive Web App (PWA) that works offline.</p>
                   <p className="mt-2">Your data is stored locally and never leaves your device.</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="legal" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Legal Information</CardTitle>
+              <CardDescription>
+                Privacy policy and terms of service.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex flex-col gap-2">
+                  <a
+                    href="/privacy"
+                    className="text-sm text-primary hover:underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Privacy Policy
+                  </a>
+                  <a
+                    href="/terms"
+                    className="text-sm text-primary hover:underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Terms of Service
+                  </a>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  <p>Study Sentinel respects your privacy and stores all data locally.</p>
+                  <p className="mt-2">No personal information is collected or shared.</p>
                 </div>
               </div>
             </CardContent>

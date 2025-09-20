@@ -1,0 +1,492 @@
+{
+  "version": "1.0",
+  "generated_at": "2025-09-20T16:03:07.776234",
+  "plan_type": "vercel_migration_minimal",
+  "context": {
+    "app_name": "Study Sentinel",
+    "one_line_purpose": "AI-powered, offline-first PWA for study tracking, routines, and analytics.",
+    "deployment_target": "Vercel (Hobby) \u2014 minimal-change migration",
+    "vercel_plan": "Hobby (Free)",
+    "node_runtime_vercel": "18.x (default on Vercel)",
+    "node_runtime_local": "22.15.0",
+    "current_artifacts": {
+      "dev_build_dir_next": "902 MB (.next/)",
+      "prod_standalone_dir": "75 MB (.next/standalone/)",
+      "serverless_total": "\u2248 2.5 MB (across all routes)",
+      "largest_route_function_kb": 176,
+      "csp_route_kb": 1.7,
+      "build_cache": "820 MB (.next/cache/) \u2014 not deployed"
+    },
+    "fit_to_hobby": {
+      "storage_used_mb": 75,
+      "storage_quota_mb": 1000,
+      "serverless_invocations_month": "Minimal (CSP only)",
+      "fast_data_transfer_gb": "Expected << 100 GB/month",
+      "edge_requests": "Near-zero (no Middleware)"
+    }
+  },
+  "objectives": [
+    "Deploy current Next.js PWA to Vercel with minimal or zero functional changes.",
+    "Preserve offline-first behavior and privacy-by-default posture.",
+    "Avoid introducing server/edge compute; keep only CSP report route.",
+    "Establish guardrails to prevent regressions (artifact growth, accidental dynamic compute)."
+  ],
+  "assumptions": [
+    "No SSR/ISR and no global Middleware now or during migration.",
+    "AI (Gemini) and Firebase are lazy-loaded and not part of the critical path.",
+    "No user authentication and no file uploads for first release.",
+    "Vercel default Node 18.x is compatible (no native deps)."
+  ],
+  "constraints": [
+    "Hobby plan quotas (storage 1 GB, build 45 min, serverless limits).",
+    "No external analytics or cookies (privacy-by-default).",
+    "Minimal changes: no architectural shifts, no new infra."
+  ],
+  "scope_in": [
+    "Vercel project setup (Git integration).",
+    "Environment & build configuration for Next.js 15 (App Router).",
+    "CSP reporting route verification.",
+    "Preview and production deployments.",
+    "Minimal policy pages (Privacy & Terms) routed in-app."
+  ],
+  "scope_out": [
+    "SSR/ISR enablement.",
+    "Edge Middleware / Edge Functions.",
+    "Server-side AI/media processing.",
+    "User auth & multi-tenant features."
+  ],
+  "dependencies": {
+    "people_roles": [
+      "Solo developer (product, security, ops)"
+    ],
+    "process_governance": [
+      "CI checks for type/lint/tests; basic PR review"
+    ],
+    "technology_environment": [
+      "Next.js 15 App Router",
+      "Workbox SW",
+      "Node 18.x on Vercel"
+    ],
+    "data": [
+      "IndexedDB local-first; export/import available"
+    ],
+    "integrations": [
+      "Gemini (lazy-loaded)",
+      "Optional Firebase later"
+    ],
+    "security_compliance": [
+      "Strict CSP; no cookies; no analytics"
+    ],
+    "budget_timeline": [
+      "$0 target for 3\u20136 months (Hobby)"
+    ],
+    "stakeholders_users": [
+      "Small cohort; low concurrency"
+    ],
+    "external_factors": [
+      "Vercel Hobby quotas and fair-use"
+    ]
+  },
+  "milestones": [
+    {
+      "id": "M1",
+      "title": "Vercel project created & repo connected",
+      "definition_of_done": [
+        "Vercel project exists",
+        "Git auto-deploys enabled"
+      ]
+    },
+    {
+      "id": "M2",
+      "title": "Preview deploy passes checks",
+      "definition_of_done": [
+        "Build < 45 min",
+        "Artifact ~75 MB",
+        "No serverless bundle > 250 MB"
+      ]
+    },
+    {
+      "id": "M3",
+      "title": "Production deploy live",
+      "definition_of_done": [
+        "Public Vercel subdomain reachable",
+        "CSP report route OK",
+        "Offline works"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T1",
+      "title": "Create Vercel project and connect repository",
+      "owner_role": "Developer",
+      "effort": "S",
+      "risk": "L",
+      "prerequisites": [],
+      "description": "Initialize Vercel project, link Git repo, enable preview builds on PRs.",
+      "subtasks": [
+        {
+          "id": "T1.1",
+          "title": "Create Vercel project",
+          "steps": [
+            "Log in to Vercel and click 'New Project'.",
+            "Import Git repository for Study Sentinel.",
+            "Select framework = Next.js."
+          ]
+        },
+        {
+          "id": "T1.2",
+          "title": "Configure build settings",
+          "steps": [
+            "Ensure 'Build Command' uses Next.js defaults (`next build`).",
+            "Confirm 'Output' auto-detected; standalone output enabled in next.config.js.",
+            "Verify Node runtime target is default 18.x (no overrides needed)."
+          ]
+        },
+        {
+          "id": "T1.3",
+          "title": "Set environment variables (if any)",
+          "steps": [
+            "Add optional AI keys only if used in server-side contexts (not planned).",
+            "Leave Firebase variables unset unless server components require them."
+          ]
+        }
+      ],
+      "microtasks": [
+        "Ensure repo CI runs typecheck, lint, tests before deploy.",
+        "Restrict team access (if any) to least privilege."
+      ],
+      "acceptance_criteria": [
+        "Project created with Git integration and preview deployments enabled.",
+        "First preview deployment starts successfully."
+      ],
+      "rollback_plan": "If import fails, retry with minimal settings; temporarily disconnect repo and re-link."
+    },
+    {
+      "id": "T2",
+      "title": "Verify standalone output and artifact size on preview",
+      "owner_role": "Developer",
+      "effort": "S",
+      "risk": "L",
+      "prerequisites": [
+        "T1"
+      ],
+      "description": "Confirm production standalone output (~75 MB) is used; ensure build cache size doesn't block builds.",
+      "subtasks": [
+        {
+          "id": "T2.1",
+          "title": "Trigger preview build",
+          "steps": [
+            "Push a trivial change or open a PR to trigger build."
+          ]
+        },
+        {
+          "id": "T2.2",
+          "title": "Inspect build logs & artifacts",
+          "steps": [
+            "Record build time, artifact size, and any serverless bundles reported.",
+            "Verify no function exceeds 250 MB unzipped.",
+            "Confirm CSP route is present and tiny (~1.7 KB)."
+          ]
+        }
+      ],
+      "microtasks": [
+        "Screenshot successful build summary.",
+        "Save artifact size metrics into repo docs (docs/deploy-notes.md)."
+      ],
+      "acceptance_criteria": [
+        "Preview build completes < 45 minutes.",
+        "Total artifact ~75 MB; serverless footprint ~2.5 MB; no errors."
+      ],
+      "rollback_plan": "If artifact balloons, disable optional packs (AI/Firebase) and rebuild; verify tree-shaking."
+    },
+    {
+      "id": "T3",
+      "title": "CSP reporting route verification",
+      "owner_role": "Developer",
+      "effort": "S",
+      "risk": "L",
+      "prerequisites": [
+        "T2"
+      ],
+      "description": "Ensure CSP endpoint works and logs are visible in Vercel function logs when violations occur.",
+      "subtasks": [
+        {
+          "id": "T3.1",
+          "title": "Trigger a benign CSP report",
+          "steps": [
+            "Open preview URL with a dev-only inline script to trigger a report.",
+            "Check function logs for the CSP POST."
+          ]
+        }
+      ],
+      "microtasks": [
+        "Confirm 2xx response from /api/csp-report.",
+        "Verify no PII in CSP logs."
+      ],
+      "acceptance_criteria": [
+        "CSP route receives and logs violation reports without errors."
+      ],
+      "rollback_plan": "If failing, validate route path and JSON body parsing; redeploy."
+    },
+    {
+      "id": "T4",
+      "title": "Offline/PWA smoke test on preview",
+      "owner_role": "Developer",
+      "effort": "S",
+      "risk": "L",
+      "prerequisites": [
+        "T2"
+      ],
+      "description": "Validate service worker registration, precache, runtime caching, offline shell.",
+      "subtasks": [
+        {
+          "id": "T4.1",
+          "title": "Install SW and precache",
+          "steps": [
+            "Load preview URL, verify SW installed and caches populated."
+          ]
+        },
+        {
+          "id": "T4.2",
+          "title": "Offline mode test",
+          "steps": [
+            "Toggle offline in DevTools; navigate key routes; ensure content loads from cache/IndexedDB."
+          ]
+        }
+      ],
+      "microtasks": [
+        "Verify timer continues while offline.",
+        "Confirm outbox queues and replays on reconnect."
+      ],
+      "acceptance_criteria": [
+        "Offline read/write works; no console errors; caches respect strategy tiers."
+      ],
+      "rollback_plan": "If offline fails, check Workbox routes and scope settings; rebuild."
+    },
+    {
+      "id": "T5",
+      "title": "Minimal policy pages (Privacy & Terms)",
+      "owner_role": "Developer",
+      "effort": "S",
+      "risk": "L",
+      "prerequisites": [
+        "T2"
+      ],
+      "description": "Add minimal, truthful policy pages describing local-first storage, no analytics, export/import, and backup guidance.",
+      "subtasks": [
+        {
+          "id": "T5.1",
+          "title": "Create /privacy and /terms routes",
+          "steps": [
+            "Add static pages with plain content; link from app footer or settings."
+          ]
+        }
+      ],
+      "microtasks": [
+        "Confirm no cookies used; reflect in policy.",
+        "Mention optional AI usage and local caching behaviors."
+      ],
+      "acceptance_criteria": [
+        "Pages load and accurately reflect current behavior; linked in UI."
+      ],
+      "rollback_plan": "Revert pages if incorrect; update copy and redeploy."
+    },
+    {
+      "id": "T6",
+      "title": "Production deployment",
+      "owner_role": "Developer",
+      "effort": "S",
+      "risk": "L",
+      "prerequisites": [
+        "T3",
+        "T4",
+        "T5"
+      ],
+      "description": "Promote preview to production on Vercel subdomain.",
+      "subtasks": [
+        {
+          "id": "T6.1",
+          "title": "Deploy to production",
+          "steps": [
+            "Click 'Promote to Production' on the verified preview build."
+          ]
+        },
+        {
+          "id": "T6.2",
+          "title": "Post-deploy checks",
+          "steps": [
+            "Run PWA smoke tests on production URL.",
+            "Check CSP route and logs again."
+          ]
+        }
+      ],
+      "microtasks": [
+        "Capture production URL and share internally.",
+        "Confirm no accidental Middleware was introduced."
+      ],
+      "acceptance_criteria": [
+        "Production site reachable; offline works; CSP OK; no regressions."
+      ],
+      "rollback_plan": "Use Vercel 'Rollback' to previous production deployment."
+    },
+    {
+      "id": "T7",
+      "title": "Optional (post-launch): SW update UX prompt",
+      "owner_role": "Developer",
+      "effort": "M",
+      "risk": "L",
+      "prerequisites": [
+        "T6"
+      ],
+      "description": "Replace auto-activation with user-prompted update to avoid mid-session disruptions.",
+      "subtasks": [
+        {
+          "id": "T7.1",
+          "title": "Implement update prompt",
+          "steps": [
+            "Detect waiting SW, show banner; postpone activation until user confirms or timers complete."
+          ]
+        },
+        {
+          "id": "T7.2",
+          "title": "Multi-tab coordination",
+          "steps": [
+            "Use BroadcastChannel to coordinate refresh across tabs."
+          ]
+        }
+      ],
+      "microtasks": [
+        "Unit test cache eviction caps for each tier.",
+        "Document update behavior in settings/help."
+      ],
+      "acceptance_criteria": [
+        "No mid-session restarts; user sees clear update prompt; caches remain bounded."
+      ],
+      "rollback_plan": "Re-enable auto-activation if prompt causes issues."
+    }
+  ],
+  "automations": [
+    {
+      "id": "A1",
+      "title": "Bundle drift watch",
+      "type": "ci_gate",
+      "when": "on_pull_request",
+      "checks": {
+        "initial_js_kb_max": 300,
+        "total_js_kb_max": 1200,
+        "fonts_kb_max": 300
+      },
+      "on_fail": "block_merge_and_comment_with_top_offenders"
+    },
+    {
+      "id": "A2",
+      "title": "Monthly usage snapshot",
+      "type": "calendar_reminder",
+      "schedule_rrule": "RRULE:FREQ=MONTHLY;BYDAY=MO;BYHOUR=10;BYMINUTE=0;BYSECOND=0",
+      "message": "Record Vercel Usage (Data Transfer, Edge Requests, Functions, Active CPU) and compare to 60/80/90% thresholds."
+    }
+  ],
+  "guardrails": {
+    "thresholds": [
+      {
+        "metric": "storage_mb",
+        "levels": {
+          "warn": 600,
+          "limit": 800,
+          "block": 900
+        }
+      },
+      {
+        "metric": "data_transfer_gb",
+        "levels": {
+          "warn": 60,
+          "limit": 80,
+          "block": 95
+        }
+      },
+      {
+        "metric": "function_invocations",
+        "levels": {
+          "warn": 200000,
+          "limit": 800000,
+          "block": 950000
+        }
+      }
+    ],
+    "actions": [
+      {
+        "on": "warn",
+        "do": [
+          "optimize_bundles",
+          "prune_assets"
+        ]
+      },
+      {
+        "on": "limit",
+        "do": [
+          "offload_heavy_ops",
+          "tighten_cache_policies"
+        ]
+      },
+      {
+        "on": "block",
+        "do": [
+          "pause_feature_rollout",
+          "prepare_upgrade_to_pro"
+        ]
+      }
+    ]
+  },
+  "acceptance_criteria_overall": [
+    "Production deployed on Vercel subdomain with artifact ~75 MB.",
+    "Offline-first behavior verified (reads/writes) and CSP reporting operational.",
+    "Zero global Middleware; no SSR/ISR; AI/Firebase remain lazy-loaded."
+  ],
+  "risk_register": [
+    {
+      "id": "R1",
+      "risk": "Artifact growth over time",
+      "impact": "M",
+      "likelihood": "M",
+      "mitigation": "CI bundle budgets; monthly usage snapshot"
+    },
+    {
+      "id": "R2",
+      "risk": "Accidental dynamic compute",
+      "impact": "M",
+      "likelihood": "L",
+      "mitigation": "No new server routes without review; keep AI client-only"
+    },
+    {
+      "id": "R3",
+      "risk": "SW update mid-session",
+      "impact": "M",
+      "likelihood": "M",
+      "mitigation": "Post-launch user-prompted update (T7)"
+    }
+  ],
+  "success_metrics": [
+    {
+      "metric": "deploy_time_minutes",
+      "target": "<= 10 local; < 45 on Vercel"
+    },
+    {
+      "metric": "storage_used_mb",
+      "target": "<= 100 in first month"
+    },
+    {
+      "metric": "offline_success_rate",
+      "target": ">= 99% read/write under airplane mode tests"
+    }
+  ],
+  "deliverables": [
+    "Vercel project (preview + production)",
+    "docs/deploy-notes.md",
+    "Privacy & Terms pages",
+    "Monthly usage snapshot log"
+  ],
+  "signoffs": [
+    "Developer (product/ops/security)"
+  ]
+}
