@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -104,7 +104,7 @@ export function DiagnosticsPanel() {
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
-  const collectDiagnostics = async (): Promise<DiagnosticData> => {
+  const collectDiagnostics = useCallback(async (): Promise<DiagnosticData> => {
     // Service Worker Status
     const registrations = await navigator.serviceWorker?.getRegistrations() || [];
     const swRegistration = registrations[0];
@@ -161,7 +161,7 @@ export function DiagnosticsPanel() {
 
     // IndexedDB Information
     const databases = await indexedDB.databases();
-    const dbInfo = [];
+    const dbInfo: Array<{ name: string; size: number; objectStores: number }> = [];
     let totalIDBSize = 0;
 
     for (const db of databases) {
@@ -278,9 +278,9 @@ export function DiagnosticsPanel() {
       features,
       crossBrowser
     };
-  };
+  }, []);
 
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     setLoading(true);
     try {
       const diagnostics = await collectDiagnostics();
@@ -291,7 +291,7 @@ export function DiagnosticsPanel() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [collectDiagnostics]);
 
   const clearCache = async () => {
     if (confirm('Are you sure you want to clear all caches? This will force re-download of all assets.')) {
@@ -311,7 +311,7 @@ export function DiagnosticsPanel() {
 
   useEffect(() => {
     refreshData();
-  }, []);
+  }, [refreshData]);
 
   if (loading || !data) {
     return (
@@ -621,6 +621,24 @@ export function DiagnosticsPanel() {
               <Trash2 className="h-4 w-4 mr-2" />
               Unregister SW
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* CSP Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Security: Content Security Policy</CardTitle>
+          <CardDescription>
+            Shows current CSP mode and connect-src for transparency
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Lightweight status component */}
+          <div className="mb-2 text-sm text-muted-foreground">CSP reflects hosts.json via CI-generated header.</div>
+          {/* Inline render to avoid extra imports here to keep the panel lean */}
+          <div data-csp-status>
+            <div><strong>Mode:</strong> {process.env.CSP_REPORT_ONLY === 'true' ? 'report-only' : 'enforced'}</div>
           </div>
         </CardContent>
       </Card>

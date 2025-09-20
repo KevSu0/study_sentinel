@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -362,9 +362,10 @@ export default function SyncAndNotificationsPage() {
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <label className="text-sm font-medium">Study Reminders</label>
-                    <p className="text-xs text-muted-foreground">Get notified when it's time to study</p>
+                    <p className="text-xs text-muted-foreground">Get notified when it&apos;s time to study</p>
                   </div>
                   <Switch
+                    aria-label="Study reminders"
                     checked={notificationSettings?.channels?.studyReminders || false}
                     onCheckedChange={(enabled) => handleNotificationToggle('studyReminders', enabled)}
                   />
@@ -376,6 +377,7 @@ export default function SyncAndNotificationsPage() {
                     <p className="text-xs text-muted-foreground">Protect your study streak</p>
                   </div>
                   <Switch
+                    aria-label="Streak protection"
                     checked={notificationSettings?.channels?.streakProtection || false}
                     onCheckedChange={(enabled) => handleNotificationToggle('streakProtection', enabled)}
                   />
@@ -387,6 +389,7 @@ export default function SyncAndNotificationsPage() {
                     <p className="text-xs text-muted-foreground">Get summaries after study sessions</p>
                   </div>
                   <Switch
+                    aria-label="Session summaries"
                     checked={notificationSettings?.channels?.sessionSummaries || false}
                     onCheckedChange={(enabled) => handleNotificationToggle('sessionSummaries', enabled)}
                   />
@@ -405,6 +408,7 @@ export default function SyncAndNotificationsPage() {
                     </p>
                   </div>
                   <Switch
+                    aria-label="Quiet hours"
                     checked={notificationSettings?.quietHours?.enabled || false}
                     onCheckedChange={(enabled) => {
                       // This would open quiet hours configuration

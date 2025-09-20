@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 
 import React, {useState, useEffect} from 'react';
@@ -89,13 +89,13 @@ export default function DailyBriefingPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-3 text-2xl">
                 <Sparkles className="h-8 w-8 text-yellow-400" />
-                Here's Your Briefing for Today
+                Here&apos;s Your Briefing for Today
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6 text-base">
               <div>
                 <h3 className="font-semibold text-primary/90 text-lg mb-2">
-                  Yesterday's Performance Evaluation
+                  Yesterday&apos;s Performance Evaluation
                 </h3>
                 <p className="text-muted-foreground italic leading-relaxed">
                   {dailySummary.evaluation}
@@ -119,7 +119,7 @@ export default function DailyBriefingPage() {
                 No Activity Logged Yesterday
               </h2>
               <p className="text-muted-foreground mt-2">
-                Your daily briefing is generated based on your previous day's
+                Your daily briefing is generated based on your previous day&apos;s
                 work. Complete some tasks today to get your first briefing
                 tomorrow!
               </p>
@@ -131,3 +131,4 @@ export default function DailyBriefingPage() {
     </OfflineGate>
   );
 }
+

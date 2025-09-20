@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AddItemDialog } from '../add-task-dialog';
@@ -36,9 +36,9 @@ describe('AddItemDialog', () => {
     // 1. Find form elements
     const titleInput = screen.getByLabelText(/task title/i);
     const dateInput = screen.getByLabelText(/date/i);
-    const timeSelectTrigger = screen.getByRole('combobox', { name: /time/i });
-    const durationSelectTrigger = screen.getByRole('combobox', { name: /duration/i });
-    const prioritySelectTrigger = screen.getByRole('combobox', { name: /priority/i });
+    const timeSelectTrigger = screen.getByRole('combobox', { name: /task time/i });
+    const durationSelectTrigger = screen.getByRole('combobox', { name: /task duration/i });
+    const prioritySelectTrigger = screen.getByRole('combobox', { name: /task priority/i });
     const submitButton = screen.getByRole('button', { name: /add task/i });
 
     // 2. Fill out the form
@@ -152,6 +152,8 @@ describe('AddItemDialog', () => {
       />
     );
 
+    await screen.findByTestId('add-item-dialog');
+
     // 1. Find form elements and verify they are pre-filled
     const titleInput = screen.getByLabelText(/task title/i);
     expect(titleInput).toHaveValue('Initial Task Title');
@@ -205,6 +207,8 @@ describe('AddItemDialog', () => {
       />
     );
 
+    await screen.findByTestId('add-item-dialog');
+
     // 1. Verify form is pre-filled
     const titleInput = screen.getByLabelText(/title/i);
     expect(titleInput).toHaveValue('Initial Routine Title');
@@ -237,3 +241,7 @@ describe('AddItemDialog', () => {
     expect(mockOnOpenChange).toHaveBeenCalledWith(false);
   }, 10000);
 });
+
+
+
+

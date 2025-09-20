@@ -1,55 +1,33 @@
-'use client';
+﻿'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AlertCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wifi, WifiOff, RefreshCw, AlertCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 interface OfflineGateProps {
   children: React.ReactNode;
   featureName: string;
   fallback?: React.ReactNode;
+  className?: string;
 }
 
-export function OfflineGate({ children, featureName, fallback }: OfflineGateProps) {
-  const [isOnline, setIsOnline] = useState(true);
-  const [isChecking, setIsChecking] = useState(false);
+interface AIFeatureState {
+  isOnline: boolean;
+  lastCheck: Date | null;
+  checkConnectivity: () => Promise<boolean>;
+  canUseAI: boolean;
+  isAIEnabled: boolean;
+  disableAI: () => void;
+  isChecking: boolean;
+}
 
-  useEffect(() => {
-    // Update online status
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+const CONNECTIVITY_PROBE = '/offline-check.txt';
 
-    // Set initial state
-    setIsOnline(navigator.onLine);
-
-    // Listen for online/offline events
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    // Cleanup
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  const checkConnection = async () => {
-    setIsChecking(true);
-    try {
-      // Try to fetch a small resource to test connectivity
-      const response = await fetch('/offline.html', { 
-        method: 'HEAD',
-        cache: 'no-store'
-      });
-      setIsOnline(response.ok);
-    } catch (error) {
-      setIsOnline(false);
-    } finally {
-      setIsChecking(false);
-    }
-  };
+export function OfflineGate({ children, featureName, fallback, className }: OfflineGateProps) {
+  const { isOnline, isChecking, checkConnectivity } = useAIFeature();
 
   if (isOnline) {
     return <>{children}</>;
@@ -60,62 +38,56 @@ export function OfflineGate({ children, featureName, fallback }: OfflineGateProp
   }
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh] p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4">
-            <WifiOff className="h-12 w-12 text-muted-foreground" />
+    <section role="status" aria-live="polite" aria-label={`${featureName} offline status`}
+      className={cn('flex min-h-[60vh] items-center justify-center p-4', className)}
+    >
+      <Card className="w-full max-w-lg">
+        <CardHeader className="text-center space-y-4">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <WifiOff className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
           </div>
-          <CardTitle className="text-xl">{featureName} Unavailable</CardTitle>
+          <CardTitle className="text-xl">{featureName} is offline</CardTitle>
           <CardDescription>
-            This feature requires an internet connection to function properly.
+            We could not reach the network. Check your connection and try again.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="text-sm text-muted-foreground space-y-2">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" />
-              <span>You appear to be offline</span>
-            </div>
-            <p className="text-xs">
-              Study Sentinel&apos;s AI features need to connect to our servers to provide
-              personalized insights and responses.
-            </p>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <AlertCircle className="h-4 w-4" aria-hidden="true" />
+            <span>Study Sentinel will retry automatically once you are back online.</span>
           </div>
-          
-          <Button 
-            onClick={checkConnection} 
+          <Button
+            onClick={checkConnectivity}
             disabled={isChecking}
             className="w-full"
+            aria-live="polite"
           >
             {isChecking ? (
               <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Checking...
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                Checking connection…
               </>
             ) : (
               <>
-                <Wifi className="mr-2 h-4 w-4" />
-                Retry Connection
+                <Wifi className="mr-2 h-4 w-4" aria-hidden="true" />
+                Retry connection
               </>
             )}
           </Button>
-          
-          <div className="text-xs text-muted-foreground text-center pt-2 border-t">
-            <p>Other features like stats, tasks, and timers work offline!</p>
-          </div>
+          <p className="text-xs text-muted-foreground text-center">
+            Core features like timers and tasks continue to work offline.
+          </p>
         </CardContent>
       </Card>
-    </div>
+    </section>
   );
 }
 
-// Component for loading state while checking AI features
 export function AILoadingState() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" aria-label="AI loading state">
       <div className="flex items-center justify-between">
-        <Skeleton className="h-4 w-20" />
+        <Skeleton className="h-4 w-24" />
         <Skeleton className="h-4 w-16" />
       </div>
       <Skeleton className="h-32 w-full" />
@@ -127,25 +99,25 @@ export function AILoadingState() {
   );
 }
 
-// Hook for managing AI feature state with zero-network guarantee
-export function useAIFeature() {
-  const [isOnline, setIsOnline] = useState(true);
+export function useAIFeature(): AIFeatureState {
+  const onlineRef = useRef(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [isOnline, setIsOnline] = useState(onlineRef.current);
+  const [isAIEnabled, setIsAIEnabled] = useState(onlineRef.current);
   const [lastCheck, setLastCheck] = useState<Date | null>(null);
-  const [isAIEnabled, setIsAIEnabled] = useState(true);
+  const [isChecking, setIsChecking] = useState(false);
 
   useEffect(() => {
     const handleOnline = () => {
+      onlineRef.current = true;
       setIsOnline(true);
-      // AI remains disabled until explicitly re-enabled
-    };
-    
-    const handleOffline = () => {
-      setIsOnline(false);
-      setIsAIEnabled(false); // Hard-disable AI when offline
+      setIsAIEnabled(true);
     };
 
-    setIsOnline(navigator.onLine);
-    setIsAIEnabled(navigator.onLine); // Initial state based on connectivity
+    const handleOffline = () => {
+      onlineRef.current = false;
+      setIsOnline(false);
+      setIsAIEnabled(false);
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -156,31 +128,42 @@ export function useAIFeature() {
     };
   }, []);
 
-  const checkConnectivity = async () => {
+  const checkConnectivity = useCallback(async () => {
+    setIsChecking(true);
     try {
-      await fetch('/offline.html', { method: 'HEAD', cache: 'no-store' });
-      setIsOnline(true);
-      setLastCheck(new Date());
-      return true;
+      const response = await fetch(CONNECTIVITY_PROBE, {
+        method: 'HEAD',
+        cache: 'no-store',
+      });
+      const online = response.ok;
+      onlineRef.current = online;
+      setIsOnline(online);
+      setIsAIEnabled(online);
+      return online;
     } catch {
+      onlineRef.current = false;
       setIsOnline(false);
-      setIsAIEnabled(false); // Ensure AI is disabled when check fails
-      setLastCheck(new Date());
+      setIsAIEnabled(false);
       return false;
+    } finally {
+      setLastCheck(new Date());
+      setIsChecking(false);
     }
-  };
+  }, []);
 
-  // Hard disable AI - cannot be re-enabled manually when offline
-  const disableAI = () => {
+  const disableAI = useCallback(() => {
     setIsAIEnabled(false);
-  };
+  }, []);
 
   return {
     isOnline,
     lastCheck,
     checkConnectivity,
-    canUseAI: isAIEnabled && isOnline,
+    canUseAI: isOnline && isAIEnabled,
     isAIEnabled,
-    disableAI
+    disableAI,
+    isChecking,
   };
 }
+
+

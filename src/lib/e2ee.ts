@@ -374,7 +374,7 @@ export class E2EEManager {
       'alter', 'always', 'amateur', 'amazing', 'among', 'amount', 'amused', 'analyst', 'anchor', 'ancient'
     ];
 
-    const phrase = [];
+    const phrase: string[] = [];
     for (let i = 0; i < 12; i++) {
       const wordIndex = Math.floor(Math.random() * words.length);
       phrase.push(words[wordIndex]);
@@ -516,7 +516,7 @@ export class SyncDataEncryptor {
       return {
         encrypted: true,
         data: encrypted,
-        keyId: await this.getCurrentKeyId()
+        keyId: await this.getCurrentKeyId() || undefined
       };
     }
 

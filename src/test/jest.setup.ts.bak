@@ -1,0 +1,10 @@
+﻿import '@testing-library/jest-dom';
+import { setConfig } from 'next/config';
+
+setConfig({ publicRuntimeConfig: {} });
+
+// Mock network resilience helper globally for tests that depend on it
+const { getOfflineResilienceManager } = require('@/lib/offline-resilience-manager');
+const offlineManager = getOfflineResilienceManager({ enableQueue: true, enableRetry: true });
+
+(global as any).__offlineResilienceManager = offlineManager;

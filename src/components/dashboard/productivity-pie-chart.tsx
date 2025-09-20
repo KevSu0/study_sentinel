@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 import React, {useMemo, useState, useCallback} from 'react';
 import {
@@ -40,7 +40,7 @@ const formatTime = (totalSeconds: number) => {
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
 
-  const parts = [];
+  const parts: string[] = [];
   if (hours > 0) parts.push(`${hours}h`);
   if (minutes > 0) parts.push(`${minutes}m`);
 
@@ -121,7 +121,7 @@ export default function ProductivityPieChart({
     return (
       <Card className="h-full min-h-[260px] flex flex-col">
         <CardHeader>
-          <CardTitle>Today's Productivity</CardTitle>
+          <CardTitle>Today&apos;s Productivity</CardTitle>
           <CardDescription>
             Time spent on tasks and routines today.
           </CardDescription>
@@ -136,7 +136,7 @@ export default function ProductivityPieChart({
   return (
     <Card className="h-full min-h-[260px] flex flex-col">
       <CardHeader>
-        <CardTitle>Today's Productivity</CardTitle>
+        <CardTitle>Today&apos;s Productivity</CardTitle>
         <CardDescription>
           Hover over a slice to see detailed info.
         </CardDescription>
@@ -182,3 +182,4 @@ export default function ProductivityPieChart({
     </Card>
   );
 }
+

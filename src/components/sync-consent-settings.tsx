@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -69,9 +69,16 @@ export function SyncConsentSettings() {
 
   // Load consent state
   useEffect(() => {
-    loadConsentState();
-    loadDeletionRequests();
-    loadPrivacyPolicy();
+    const bootstrap = async () => {
+      await Promise.all([
+        loadConsentState(),
+        loadDeletionRequests(),
+        loadPrivacyPolicy(),
+      ]);
+      setLoading(false);
+    };
+
+    void bootstrap();
   }, []);
 
   const loadConsentState = async () => {
@@ -333,6 +340,7 @@ export function SyncConsentSettings() {
                   <span>Sync Uplink</span>
                 </div>
                 <Switch
+                  aria-label="Sync uplink"
                   checked={consent.syncUplink}
                   onCheckedChange={(checked) => updateConsent({ syncUplink: checked })}
                   disabled={updating !== null}
@@ -345,6 +353,7 @@ export function SyncConsentSettings() {
                   <span>Sync Downlink</span>
                 </div>
                 <Switch
+                  aria-label="Sync downlink"
                   checked={consent.syncDownlink}
                   onCheckedChange={(checked) => updateConsent({ syncDownlink: checked })}
                   disabled={updating !== null}
@@ -357,6 +366,7 @@ export function SyncConsentSettings() {
                   <span>Analytics</span>
                 </div>
                 <Switch
+                  aria-label="Analytics"
                   checked={consent.analytics}
                   onCheckedChange={(checked) => updateConsent({ analytics: checked })}
                   disabled={updating !== null}
@@ -369,6 +379,7 @@ export function SyncConsentSettings() {
                   <span>Marketing</span>
                 </div>
                 <Switch
+                  aria-label="Marketing"
                   checked={consent.marketing}
                   onCheckedChange={(checked) => updateConsent({ marketing: checked })}
                   disabled={updating !== null}
@@ -593,7 +604,7 @@ export function SyncConsentSettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Info className="h-5 w-5" />
-            What You're Opting Into
+            What You&apos;re Opting Into
           </CardTitle>
           <CardDescription>
             Detailed explanations of each consent option

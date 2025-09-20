@@ -1,0 +1,9 @@
+{
+  "env": "development",
+  "connectSrc": [
+    "'self'",
+    "http://localhost:*",
+    "ws://localhost:*"
+  ],
+  "value": "connect-src 'self' http://localhost:* ws://localhost:*; img-src 'self' data:; font-src 'self'; media-src 'self' https://actions.google.com; worker-src 'self'; report-uri /api/csp-report"
+}

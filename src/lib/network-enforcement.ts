@@ -1,4 +1,7 @@
-import { diagnosticsManager } from '@/lib/diagnostics';
+﻿import { diagnosticsManager } from '@/lib/diagnostics';
+import { thirdPartyGate } from '@/lib/third-party/third-party-gate';
+import { getOfflineResilienceManager } from '@/lib/offline-resilience-manager';
+import { remoteApiPaths } from './remote-api-paths';
 
 /**
  * Network Request Enforcement
@@ -216,23 +219,24 @@ export class NetworkEnforcement {
     }
 
     // For AI endpoints, never queue - hard disable when offline
-    if (url.includes('/api/ai/') && !navigator.onLine) {
+    if (url.includes(remoteApiPaths.aiPrefix()) && !navigator.onLine) {
       throw new Error('AI features require an internet connection and are not available offline');
     }
 
     // Use resilient fetch for queueable requests
     if (check.shouldQueue) {
-      // Import dynamically to avoid circular dependency
-      const { useOfflineResilience } = await import('@/hooks/use-offline-resilience');
-      const { resilientFetch } = useOfflineResilience({
+      const manager = getOfflineResilienceManager({
         enableQueue: true,
-        enableRetry: true
+        enableRetry: true,
       });
-      
-      return resilientFetch(url, options);
+
+      return manager.resilientFetch(url, options);
     }
 
     // Standard fetch
+    if (/^https?:\/\//.test(url)) {
+      return thirdPartyGate.fetchRaw(url, options);
+    }
     return fetch(url, options);
   }
 
@@ -331,3 +335,4 @@ export function useNetworkEnforcement() {
     getNetworkStatus: () => networkEnforcement.getNetworkStatus()
   };
 }
+

@@ -66,3 +66,7 @@ npm test -- --testPathPatterns=storage
 # Validate schema consistency
 node scripts/validate-schema-manifest.js
 ```
+
+- [Testing Guide](docs/testing-guide.md) - overview of shared harnesses and policy baselines.
+- [Service Worker Test Harness](src/test/sw-test-harness.ts) - lifecycle helpers for navigator.serviceWorker.
+- [Sync Fixtures](src/test/mocks/sync-fixtures.ts) - canonical mocks for sync diagnostics and managers.

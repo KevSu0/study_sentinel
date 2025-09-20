@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -57,12 +57,12 @@ const ComparisonCard = ({ title, value, comparison, unit }: { title: string; val
 
   if (diff !== 0) {
     if (unit === 'duration') {
-      diffText = `${isGood ? '+' : '−'}${formatDuration(absDiff)}`;
+      diffText = `${isGood ? '+' : 'âˆ’'}${formatDuration(absDiff)}`;
     } else if (unit === 'points') {
-      diffText = `${isGood ? '+' : '−'}${Math.round(absDiff)}`;
+      diffText = `${isGood ? '+' : 'âˆ’'}${Math.round(absDiff)}`;
     } else if (unit === 'time' && value > 0 && comparison > 0) {
       const diffSeconds = Math.round(absDiff / 1000);
-      diffText = `${isGood ? '+' : '−'}${formatDuration(diffSeconds)}`;
+      diffText = `${isGood ? '+' : 'âˆ’'}${formatDuration(diffSeconds)}`;
     }
   }
 
@@ -105,7 +105,7 @@ export const StatComparison = ({ stats, selectedDate }: StatComparisonProps) => 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Today's Performance Snapshot</CardTitle>
+        <CardTitle>Today&apos;s Performance Snapshot</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-2">
@@ -135,3 +135,4 @@ export const StatComparison = ({ stats, selectedDate }: StatComparisonProps) => 
     </Card>
   );
 };
+

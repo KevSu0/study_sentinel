@@ -1,342 +1,177 @@
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { PWAUpdateNotification, PWAInstallPrompt, usePWAUpdates } from '../update-notification';
-import { toast } from 'react-hot-toast';
-import { createServiceWorkerRegistrationStub } from '@/test/stubs/browser-stubs';
+﻿import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { PWAInstallPrompt, PWAUpdateNotification, usePWAUpdates } from '../update-notification';
+import { swTestHarness } from '@/test/sw-test-harness';
 
-// Mock dependencies
-jest.mock('react-hot-toast', () => ({
-  toast: jest.fn()
-}));
+const success = jest.fn();
+const error = jest.fn();
 
-const mockUsePWAUpdates = usePWAUpdates as jest.MockedFunction<typeof usePWAUpdates>;
+jest.mock('react-hot-toast', () => {
+  const toast = {
+    success: (...args: unknown[]) => success(...args),
+    error: (...args: unknown[]) => error(...args),
+  };
+  return {
+    __esModule: true,
+    default: toast,
+    toast,
+  };
+});
 
 describe('PWAUpdateNotification', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    
-    // Mock service worker registration
-    Object.defineProperty(navigator, 'serviceWorker', {
-      value: {
-        addEventListener: jest.fn(),
-        removeEventListener: jest.fn(),
-        getRegistration: jest.fn()
-      },
-      configurable: true
-    });
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
+    success.mockClear();
+    error.mockClear();
   });
 
   it('does not render when no update is available', () => {
     render(<PWAUpdateNotification />);
-    
-    expect(screen.queryByText('App Update')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: /application update status/i })).toBeNull();
   });
 
-  it('renders update available notification', () => {
-    render(<PWAUpdateNotification />);
-    
-    // Simulate update available state by directly setting internal state
-    const component = screen.queryByText('App Update');
-    expect(component).not.toBeInTheDocument();
-  });
-
-  it('handles update download', async () => {
-    const mockRegistration = createServiceWorkerRegistrationStub();
-
-    (navigator.serviceWorker as any).getRegistration.mockResolvedValue(mockRegistration);
-
-    render(<PWAUpdateNotification />);
-
-    // Test the download functionality
-    expect(mockRegistration.active?.postMessage).not.toHaveBeenCalled();
-  });
-
-  it('handles dismiss action', () => {
-    const { container } = render(<PWAUpdateNotification />);
-    
-    // Component should be present but not visible when no update
-    expect(container.firstChild).toBeNull();
-  });
-
-  it('handles refresh action', () => {
-    const mockReload = jest.fn();
-    Object.defineProperty(window, 'location', {
-      value: { reload: mockReload },
-      configurable: true
+  it('renders an update banner when a waiting worker is present', async () => {
+    await act(async () => {
+      swTestHarness.simulateWaitingWorker();
     });
 
     render(<PWAUpdateNotification />);
-    
-    expect(mockReload).not.toHaveBeenCalled();
+
+    expect(await screen.findByRole('status', { name: /application update status/i })).toHaveTextContent(/update available/i);
+    expect(success).toHaveBeenCalledWith('A new update is ready');
   });
 
-  it('shows loading state during download', () => {
-    render(<PWAUpdateNotification />);
-    
-    // Should show downloading state
-    const downloadButton = screen.queryByRole('button', { name: /update/i });
-    expect(downloadButton).not.toBeInTheDocument();
-  });
-
-  it('handles service worker message events', () => {
-    const addEventListenerSpy = jest.spyOn(navigator.serviceWorker, 'addEventListener');
-    const removeEventListenerSpy = jest.spyOn(navigator.serviceWorker, 'removeEventListener');
+  it('sends SKIP_WAITING when the refresh button is clicked', async () => {
+    let waiting: any = null;
+    await act(async () => {
+      waiting = swTestHarness.simulateWaitingWorker();
+    });
 
     render(<PWAUpdateNotification />);
 
-    expect(addEventListenerSpy).toHaveBeenCalledWith('message', expect.any(Function));
-    expect(removeEventListenerSpy).toHaveBeenCalledWith('message', expect.any(Function));
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /refresh now/i }));
+
+    expect(waiting?.postMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
   });
 
-  it('shows toast notification when update is available', () => {
-    render(<PWAUpdateNotification />);
-    
-    // Simulate message event
-    const messageEvent = new MessageEvent('message', {
-      data: { type: 'UPDATE_AVAILABLE' }
-    });
-    
-    act(() => {
-      navigator.serviceWorker.dispatchEvent(messageEvent);
+  it('hides the banner after controllerchange', async () => {
+    await act(async () => {
+      swTestHarness.simulateWaitingWorker();
     });
 
-    expect(toast).toHaveBeenCalledWith('Update available!', {
-      icon: '📱',
-      duration: 4000
+    render(<PWAUpdateNotification />);
+
+    expect(await screen.findByRole('status', { name: /application update status/i })).toBeInTheDocument();
+
+    await act(async () => {
+      swTestHarness.activateWaitingWorker();
     });
+
+    await waitFor(() => expect(screen.queryByRole('status', { name: /application update status/i })).toBeNull());
+    expect(success).toHaveBeenCalledWith('Update applied successfully');
+  });
+
+  it('invokes registration.update when checking for updates', async () => {
+    const registration = await swTestHarness.getRegistration();
+    await act(async () => {
+      swTestHarness.simulateWaitingWorker();
+    });
+
+    render(<PWAUpdateNotification />);
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /check again/i }));
+
+    await waitFor(() => expect(registration.update).toHaveBeenCalled());
+  });
+
+  it('allows the banner to be dismissed', async () => {
+    await act(async () => {
+      swTestHarness.simulateWaitingWorker();
+    });
+
+    render(<PWAUpdateNotification />);
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: /dismiss update banner/i }));
+
+    expect(screen.queryByRole('status', { name: /application update status/i })).toBeNull();
+  });
+});
+
+describe('usePWAUpdates', () => {
+  it('exposes helper functions from the hook', async () => {
+    await act(async () => {
+      swTestHarness.simulateWaitingWorker();
+    });
+
+    const { result } = renderHook(() => usePWAUpdates());
+
+    await waitFor(() => expect(result.current.updateAvailable).toBe(true));
+    expect(typeof result.current.checkForUpdates).toBe('function');
+    expect(typeof result.current.skipWaiting).toBe('function');
   });
 });
 
 describe('PWAInstallPrompt', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    
-    // Mock window events
-    Object.defineProperty(window, 'addEventListener', {
-      value: jest.fn(),
-      configurable: true
+    success.mockClear();
+    error.mockClear();
+  });
+
+  const createBeforeInstallPromptEvent = () => {
+    const event = new Event('beforeinstallprompt') as BeforeInstallPromptEvent;
+    Object.defineProperty(event, 'prompt', {
+      configurable: true,
+      value: jest.fn(() => Promise.resolve()),
     });
-    
-    Object.defineProperty(window, 'removeEventListener', {
-      value: jest.fn(),
-      configurable: true
+    Object.defineProperty(event, 'userChoice', {
+      configurable: true,
+      value: Promise.resolve({ outcome: 'accepted' as const }),
     });
-    
-    // Mock matchMedia
-    Object.defineProperty(window, 'matchMedia', {
-      value: jest.fn().mockReturnValue({ matches: false }),
-      configurable: true
-    });
-  });
+    return event;
+  };
 
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
-  it('does not render when no install prompt is available', () => {
+  it('does not render without an install prompt', () => {
     render(<PWAInstallPrompt />);
-    
-    expect(screen.queryByText('Install App')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /install app/i })).toBeNull();
   });
 
-  it('renders install prompt when available', () => {
+  it('shows the install prompt when the browser fires beforeinstallprompt', () => {
     render(<PWAInstallPrompt />);
-    
-    // Component should be present but not visible when no prompt
-    const component = screen.queryByText('Install App');
-    expect(component).not.toBeInTheDocument();
-  });
-
-  it('does not render when app is already installed', () => {
-    Object.defineProperty(window, 'matchMedia', {
-      value: jest.fn().mockReturnValue({ matches: true }),
-      configurable: true
-    });
-
-    render(<PWAInstallPrompt />);
-    
-    expect(screen.queryByText('Install App')).not.toBeInTheDocument();
-  });
-
-  it('handles install action', async () => {
-    const mockPrompt = {
-      prompt: jest.fn().mockResolvedValue(true)
-    };
-
-    // Mock beforeinstallprompt event
-    const installPrompt = new Event('beforeinstallprompt') as any;
-    installPrompt.preventDefault = jest.fn();
-    installPrompt.prompt = mockPrompt.prompt;
-
-    render(<PWAInstallPrompt />);
-    
-    // Simulate install prompt event
+    const event = createBeforeInstallPromptEvent();
     act(() => {
-      window.dispatchEvent(installPrompt);
+      window.dispatchEvent(event);
     });
-
-    expect(installPrompt.preventDefault).toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /install app/i })).toBeInTheDocument();
   });
 
-  it('shows toast when app is installed', () => {
+  it('triggers the stored prompt when installing', async () => {
     render(<PWAInstallPrompt />);
-    
-    // Simulate appinstalled event
+    const event = createBeforeInstallPromptEvent();
+    act(() => {
+      window.dispatchEvent(event);
+    });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /install app/i }));
+    await waitFor(() => expect((event as BeforeInstallPromptEvent).prompt).toHaveBeenCalled());
+  });
+
+  it('hides the prompt after installation completes', () => {
+    render(<PWAInstallPrompt />);
+    const event = createBeforeInstallPromptEvent();
+    act(() => {
+      window.dispatchEvent(event);
+    });
+    expect(screen.getByRole('button', { name: /install app/i })).toBeInTheDocument();
     act(() => {
       window.dispatchEvent(new Event('appinstalled'));
     });
-
-    expect(toast).toHaveBeenCalledWith('Study Sentinel installed successfully!', {
-      icon: '📱',
-      duration: 4000
-    });
-  });
-
-  it('checks for standalone mode on mount', () => {
-    const mockMatchMedia = jest.fn().mockReturnValue({ matches: true });
-    Object.defineProperty(window, 'matchMedia', {
-      value: mockMatchMedia,
-      configurable: true
-    });
-
-    render(<PWAInstallPrompt />);
-    
-    expect(mockMatchMedia).toHaveBeenCalledWith('(display-mode: standalone)');
+    expect(screen.queryByRole('button', { name: /install app/i })).toBeNull();
   });
 });
 
-describe('mockUsePWAUpdates hook', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    
-    // Mock service worker
-    Object.defineProperty(navigator, 'serviceWorker', {
-      value: {
-        addEventListener: jest.fn(),
-        removeEventListener: jest.fn(),
-        getRegistration: jest.fn()
-      },
-      configurable: true
-    });
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
-  it('returns correct initial state', () => {
-    mockUsePWAUpdates.mockReturnValue({
-      updateAvailable: false,
-      checkForUpdates: jest.fn().mockResolvedValue(true),
-      registration: null
-    });
-
-    const { result } = renderHook(() => mockUsePWAUpdates());
-
-    expect(result.current.updateAvailable).toBe(false);
-    expect(result.current.registration).toBeNull();
-    expect(typeof result.current.checkForUpdates).toBe('function');
-  });
-
-  it('registers service worker and sets up update checking', () => {
-    const mockRegistration = createServiceWorkerRegistrationStub();
-
-    (navigator.serviceWorker as any).getRegistration.mockResolvedValue(mockRegistration);
-
-    mockUsePWAUpdates.mockReturnValue({
-      updateAvailable: false,
-      checkForUpdates: jest.fn().mockResolvedValue(true),
-      registration: mockRegistration
-    });
-
-    const { result } = renderHook(() => mockUsePWAUpdates());
-
-    expect((navigator.serviceWorker as any).getRegistration).toHaveBeenCalled();
-  });
-
-  it('handles service worker registration errors', async () => {
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    
-    (navigator.serviceWorker as any).getRegistration.mockRejectedValue(new Error('Registration failed'));
-
-    mockUsePWAUpdates.mockReturnValue({
-      updateAvailable: false,
-      checkForUpdates: jest.fn().mockResolvedValue(false),
-      registration: null
-    });
-
-    const { result } = renderHook(() => mockUsePWAUpdates());
-
-    expect(consoleSpy).toHaveBeenCalledWith('Service worker registration failed:', expect.any(Error));
-    
-    consoleSpy.mockRestore();
-  });
-
-  it('checks for updates when registration exists', async () => {
-    const mockRegistration = createServiceWorkerRegistrationStub();
-
-    mockUsePWAUpdates.mockReturnValue({
-      updateAvailable: false,
-      checkForUpdates: jest.fn().mockResolvedValue(true),
-      registration: mockRegistration
-    });
-
-    const { result } = renderHook(() => mockUsePWAUpdates());
-
-    await act(async () => {
-      await result.current.checkForUpdates();
-    });
-
-    expect(mockRegistration.update).toHaveBeenCalled();
-  });
-
-  it('handles update check errors', async () => {
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    
-    const mockRegistration = createServiceWorkerRegistrationStub();
-    mockRegistration.update.mockRejectedValue(new Error('Update failed'));
-
-    mockUsePWAUpdates.mockReturnValue({
-      updateAvailable: false,
-      checkForUpdates: jest.fn().mockResolvedValue(false),
-      registration: mockRegistration
-    });
-
-    const { result } = renderHook(() => mockUsePWAUpdates());
-
-    await act(async () => {
-      const checkResult = await result.current.checkForUpdates();
-      expect(checkResult).toBe(false);
-    });
-
-    expect(consoleSpy).toHaveBeenCalledWith('Failed to check for updates:', expect.any(Error));
-    
-    consoleSpy.mockRestore();
-  });
-
-  it('listens for controller changes', () => {
-    const addEventListenerSpy = jest.spyOn(navigator.serviceWorker, 'addEventListener');
-    const removeEventListenerSpy = jest.spyOn(navigator.serviceWorker, 'removeEventListener');
-
-    mockUsePWAUpdates.mockReturnValue({
-      updateAvailable: false,
-      checkForUpdates: jest.fn().mockResolvedValue(true),
-      registration: null
-    });
-
-    renderHook(() => mockUsePWAUpdates());
-
-    expect(addEventListenerSpy).toHaveBeenCalledWith('controllerchange', expect.any(Function));
-    expect(removeEventListenerSpy).toHaveBeenCalledWith('controllerchange', expect.any(Function));
-  });
-});
-
-// Helper function to test hooks
-function renderHook<T>(hook: () => T) {
-  return {
-    result: { current: hook() }
-  };
-}
+type BeforeInstallPromptEvent = Event & {
+  prompt: jest.Mock;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+};

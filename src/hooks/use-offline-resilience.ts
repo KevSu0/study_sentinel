@@ -1,187 +1,63 @@
-'use client';
+﻿'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import {
+  getOfflineResilienceManager,
+  type OfflineResilienceOptions,
+  type QueuedRequest,
+} from '@/lib/offline-resilience-manager';
 
-interface OfflineResilienceOptions {
-  enableRetry?: boolean;
-  retryDelay?: number;
-  maxRetries?: number;
-  enableQueue?: boolean;
-}
+export type { OfflineResilienceOptions, QueuedRequest } from '@/lib/offline-resilience-manager';
 
-interface QueuedRequest {
-  id: string;
-  url: string;
-  options: RequestInit;
-  timestamp: number;
-  retryCount: number;
-}
+type QueueState = {
+  queue: readonly QueuedRequest[];
+  isRetrying: boolean;
+};
 
 export function useOfflineResilience(options: OfflineResilienceOptions = {}) {
-  const {
-    enableRetry = true,
-    retryDelay = 5000,
-    maxRetries = 3,
-    enableQueue = true
-  } = options;
+  const { enableQueue, enableRetry, retryDelay, maxRetries } = options;
 
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [queue, setQueue] = useState<QueuedRequest[]>([]);
-  const [isRetrying, setIsRetrying] = useState(false);
+  const manager = getOfflineResilienceManager(options);
+
+  const [isOnline, setIsOnline] = useState<boolean>(manager.getOnlineStatus());
+  const [queueState, setQueueState] = useState<QueueState>(() => ({
+    queue: manager.getQueueSnapshot(),
+    isRetrying: manager.isRetryingQueue(),
+  }));
 
   useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      if (enableQueue && queue.length > 0) {
-        processQueue();
-      }
-    };
+    manager.configure({
+      enableQueue,
+      enableRetry,
+      retryDelay,
+      maxRetries,
+    });
+  }, [manager, enableQueue, enableRetry, retryDelay, maxRetries]);
 
-    const handleOffline = () => {
-      setIsOnline(false);
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+  useEffect(() => {
+    const unsubscribeStatus = manager.onStatusChange(setIsOnline);
+    const unsubscribeQueue = manager.onQueueChange((queue, meta) => {
+      setQueueState({ queue, isRetrying: meta.isRetrying });
+    });
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      unsubscribeStatus();
+      unsubscribeQueue();
     };
-  }, [queue, enableQueue]);
-
-  const processQueue = async () => {
-    if (!isOnline || isRetrying || queue.length === 0) return;
-
-    setIsRetrying(true);
-    
-    for (const request of [...queue]) {
-      try {
-        const response = await fetch(request.url, request.options);
-        if (response.ok) {
-          setQueue(prev => prev.filter(q => q.id !== request.id));
-        }
-      } catch (error) {
-        console.error(`Failed to process queued request ${request.id}:`, error);
-        
-        if (request.retryCount >= maxRetries) {
-          setQueue(prev => prev.filter(q => q.id !== request.id));
-        } else {
-          setQueue(prev => prev.map(q => 
-            q.id === request.id 
-              ? { ...q, retryCount: q.retryCount + 1 }
-              : q
-          ));
-        }
-      }
-    }
-
-    setIsRetrying(false);
-  };
-
-  const resilientFetch = async (
-    url: string, 
-    options: RequestInit = {}
-  ): Promise<Response> => {
-    if (isOnline) {
-      try {
-        return await fetch(url, options);
-      } catch (error) {
-        console.error('Network request failed:', error);
-        
-        if (enableQueue) {
-          const id = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          const queuedRequest: QueuedRequest = {
-            id,
-            url,
-            options,
-            timestamp: Date.now(),
-            retryCount: 0
-          };
-          
-          setQueue(prev => [...prev, queuedRequest]);
-          throw new Error('Request queued for retry when online');
-        } else {
-          throw error;
-        }
-      }
-    } else {
-      if (enableQueue) {
-        const id = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        const queuedRequest: QueuedRequest = {
-          id,
-          url,
-          options,
-          timestamp: Date.now(),
-          retryCount: 0
-        };
-        
-        setQueue(prev => [...prev, queuedRequest]);
-        throw new Error('Request queued for retry when online');
-      } else {
-        throw new Error('Device is offline');
-      }
-    }
-  };
-
-  const clearQueue = () => {
-    setQueue([]);
-  };
-
-  const getQueueStatus = () => ({
-    length: queue.length,
-    oldestRequest: queue.length > 0 ? Math.min(...queue.map(q => q.timestamp)) : null,
-    newestRequest: queue.length > 0 ? Math.max(...queue.map(q => q.timestamp)) : null,
-    isRetrying
-  });
+  }, [manager]);
 
   return {
     isOnline,
-    queue,
-    resilientFetch,
-    clearQueue,
-    getQueueStatus,
-    isRetrying
+    queue: queueState.queue,
+    resilientFetch: (url: string, init: RequestInit = {}) =>
+      manager.resilientFetch(url, init),
+    clearQueue: () => manager.clearQueue(),
+    getQueueStatus: () => manager.getQueueStatus(),
+    isRetrying: queueState.isRetrying,
   };
 }
 
-// Hook for offline data persistence
-export function useOfflinePersistence<T>(key: string, initialValue: T) {
-  const [value, setValue] = useState<T>(() => {
-    if (typeof window === 'undefined') return initialValue;
-    
-    try {
-      const item = localStorage.getItem(`offline_${key}`);
-      return item ? JSON.parse(item) : initialValue;
-    } catch (error) {
-      console.error(`Error reading from localStorage:`, error);
-      return initialValue;
-    }
-  });
 
-  const setOfflineValue = (newValue: T | ((prev: T) => T)) => {
-    try {
-      const valueToStore = newValue instanceof Function ? newValue(value) : newValue;
-      setValue(valueToStore);
-      
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(`offline_${key}`, JSON.stringify(valueToStore));
-      }
-    } catch (error) {
-      console.error(`Error writing to localStorage:`, error);
-    }
-  };
 
-  const clearOfflineValue = () => {
-    try {
-      setValue(initialValue);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem(`offline_${key}`);
-      }
-    } catch (error) {
-      console.error(`Error clearing localStorage:`, error);
-    }
-  };
 
-  return [value, setOfflineValue, clearOfflineValue] as const;
-}
+

@@ -269,7 +269,7 @@ export class iOSLifecycleValidator {
       testId: 'life-002',
       testFn: async () => {
         const registration = await navigator.serviceWorker.getRegistration();
-        if (!registration.active) return false;
+        if (!registration?.active) return false;
         
         try {
           return new Promise((resolve) => {
@@ -389,7 +389,7 @@ export class iOSLifecycleValidator {
       testId: 'nav-002',
       testFn: async () => {
         const registration = await navigator.serviceWorker.getRegistration();
-        if (!registration.active) return false;
+        if (!registration?.active) return false;
         
         try {
           // Test if service worker can handle navigation events

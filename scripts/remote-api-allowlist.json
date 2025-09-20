@@ -1,0 +1,16 @@
+{
+  "exact": [
+    "src/lib/remote-api-gate.ts",
+    "src/lib/remote-api-paths.ts",
+    "jest.setup.js"
+  ],
+  "prefix": [
+    "src/test/",
+    "scripts/",
+    "src/worker/"
+  ],
+  "contains": [
+    "/__tests__/",
+    "/__mocks__/"
+  ]
+}

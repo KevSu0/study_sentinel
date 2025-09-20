@@ -428,7 +428,7 @@ describe('Event Sourcing System', () => {
       const notification = {
         title: 'Study Reminder',
         body: 'Time to study!',
-        icon: '/icon.png',
+        icon: '/icons/icon.png',
         tag: 'study-reminder'
       };
 

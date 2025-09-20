@@ -16,6 +16,25 @@ jest.mock('@/components/tasks/manual-log-dialog', () => ({
 const mockUseGlobalState = useGlobalState as jest.Mock;
 const mockStartTimer = jest.fn();
 
+const ALERT_DIALOG_A11Y_WARNING = 'requires a description for the component to be accessible';
+const originalConsoleWarn = console.warn;
+let consoleWarnSpy: jest.SpyInstance<void, Parameters<typeof console.warn>>;
+
+beforeAll(() => {
+  consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation((message?: unknown, ...args: unknown[]) => {
+    const text = typeof message === 'string' ? message : String(message);
+    if (text.includes(ALERT_DIALOG_A11Y_WARNING)) {
+      // Temporary: the Radix adapter omits aria-describedby; tracked in PWA governance backlog.
+      return;
+    }
+    originalConsoleWarn.call(console, message, ...args);
+  });
+});
+
+afterAll(() => {
+  consoleWarnSpy?.mockRestore();
+});
+
 const mockTask: StudyTask = {
   id: 'task1',
   shortId: 'T1',
@@ -247,3 +266,4 @@ describe('PlanItemCard', () => {
     expect(screen.getByTestId('plan-item-card').querySelector('.ring-2')).toBeInTheDocument();
   });
 });
+

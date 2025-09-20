@@ -1,3 +1,5 @@
+import { remoteApiPaths } from '@/lib/remote-api-paths';
+import { thirdPartyGate } from '@/lib/third-party/third-party-gate';
 import { db, OutboxEvent, SyncCheckpoint, AppEvent, TaskEvent } from './database';
 import { getDeviceId } from './event-sourcing';
 
@@ -11,7 +13,7 @@ export class SyncEngine {
   private baseUrl: string;
   private syncInterval?: NodeJS.Timeout;
 
-  constructor(baseUrl: string = '/api/sync') {
+  constructor(baseUrl: string = remoteApiPaths.syncBase()) {
     this.deviceId = getDeviceId();
     this.isOnline = navigator.onLine;
     this.syncInProgress = false;
@@ -81,8 +83,11 @@ export class SyncEngine {
       }
 
       // Update checkpoint on successful sync
-      if (uploadResult.uploadedCount > 0 || downloadResult.downloadedCount > 0) {
-        await this.updateCheckpoint(downloadResult.lastEventId || checkpoint?.lastSyncedEventId);
+      if (uploadResult.uploadedCount > 0 || (downloadResult.downloadedCount || 0) > 0) {
+        const lastEventId = downloadResult.lastEventId || checkpoint?.lastSyncedEventId;
+        if (lastEventId) {
+          await this.updateCheckpoint(lastEventId);
+        }
       }
 
       return {
@@ -114,7 +119,7 @@ export class SyncEngine {
 
     for (const event of pendingEvents) {
       try {
-        const response = await fetch(`${this.baseUrl}/upload`, {
+        const response = await thirdPartyGate.fetchRaw(`${this.baseUrl}/upload`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -167,7 +172,7 @@ export class SyncEngine {
     const lastSyncedEventId = checkpoint?.lastSyncedEventId || null;
     
     try {
-      const response = await fetch(`${this.baseUrl}/download?lastEventId=${lastSyncedEventId || ''}`, {
+      const response = await thirdPartyGate.fetchRaw(`${this.baseUrl}/download?lastEventId=${lastSyncedEventId || ''}`, {
         method: 'GET',
         headers: {
           'X-Device-ID': this.deviceId
@@ -269,10 +274,11 @@ export class SyncEngine {
 
   // Checkpoint management
   private async getCurrentCheckpoint(): Promise<SyncCheckpoint | null> {
-    return await db.checkpoints
+    const checkpoint = await db.checkpoints
       .where('deviceId')
       .equals(this.deviceId)
       .first();
+    return checkpoint || null;
   }
 
   private async updateCheckpoint(lastEventId: string): Promise<void> {

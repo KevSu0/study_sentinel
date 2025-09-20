@@ -1,0 +1,52 @@
+﻿name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_ENABLE_REMOTE_APIS: 'false'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.15.0'
+
+      - name: Show environment info
+        run: |
+          node -v
+          npm -v
+          uname -a
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify service worker artifacts
+        run: npm run lint:sw
+
+      - name: Enforce remote API literal policy
+        run: npm run scan:remote-apis
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test -- --runInBand
+
+      - name: CSP sync check
+        run: |
+          node scripts/generate-csp.js
+          node scripts/check-csp-sync.js
+      - name: Build
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: node scripts/generate-csp.js && npm run build

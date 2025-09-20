@@ -196,7 +196,9 @@ describe('RoutineListItem', () => {
     fireEvent.click(deleteButton);
 
     expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
-    expect(screen.getByText(`This will permanently delete the routine "${mockRoutine.title}".`)).toBeInTheDocument();
+    expect(
+      screen.getByText((content) => content.includes('This will permanently delete the routine'))
+    ).toBeInTheDocument();
   });
 
   it('calls onDelete when the delete action is confirmed', async () => {

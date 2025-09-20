@@ -528,7 +528,7 @@ class MigrationManager {
         progress: Math.max(0, Math.min(100, progress)),
         currentStep,
         error,
-        startTime: this.progressCallback ? Date.now() : Date.now()
+        startTime: Date.now()
       });
     }
   }

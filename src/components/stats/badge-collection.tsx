@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import {
   Card,
   CardContent,
@@ -31,7 +31,7 @@ export function BadgeCollection({
       <CardHeader>
         <CardTitle>Badge Collection</CardTitle>
         <CardDescription>
-          You've earned {badgeStats.earnedCount} out of {badgeStats.totalCount}{' '}
+          You&apos;ve earned {badgeStats.earnedCount} out of {badgeStats.totalCount}{' '}
           possible badges. Keep it up!
         </CardDescription>
       </CardHeader>
@@ -74,3 +74,4 @@ export function BadgeCollection({
     </Card>
   );
 }
+

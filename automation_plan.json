@@ -1,0 +1,107 @@
+{
+  "tasks": [
+    {
+      "task": "PWA and Asset Hygiene Automation",
+      "subTasks": [
+        {
+          "name": "Service Worker Source Control",
+          "microTasks": [
+            "Add lint rule/CI job that fails when generated sw artifacts exist under public/",
+            "Configure repository gitignore and pre-commit hook to block sw.js, worker-*.js, workbox-*.js",
+            "Create script to verify Service-Worker-Allowed header and scope from deployment"
+          ]
+        },
+        {
+          "name": "Precache Hash Alignment",
+          "microTasks": [
+            "Write build script to export list of precached asset hashes from sw manifest",
+            "Write deploy smoke test that fetches _next/static manifest and compares hashes",
+            "Fail CI pipeline if mismatch is detected"
+          ]
+        },
+        {
+          "name": "Asset Integrity Preflight",
+          "microTasks": [
+            "Create script to enumerate manifest, icon, and font references across repo",
+            "Validate existence and MIME type of each referenced asset",
+            "Publish report artifact and gate release on passing status"
+          ]
+        },
+        {
+          "name": "Cache Budget Enforcement",
+          "microTasks": [
+            "Instrument diagnostics endpoint to report cache names and byte sizes",
+            "Add automated browser test that clears caches, loads app, and verifies total size <= 60MB",
+            "Trigger kill switch automatically when cache drift exceeds budget"
+          ]
+        }
+      ]
+    },
+    {
+      "task": "Local-First Hardening Automation",
+      "subTasks": [
+        {
+          "name": "Ghost API Elimination",
+          "microTasks": [
+            "Search repository for fetch calls to /api/* and flag in CI",
+            "Wrap remaining endpoints behind feature flags defaulting to false",
+            "Document automated report of network requests during zero-network tests"
+          ]
+        },
+        {
+          "name": "Zero-404 Crawl",
+          "microTasks": [
+            "Implement Playwright suite covering fresh install, post-activate, and offline flows",
+            "Whitelist intentional /not-found route and assert 404 status with custom page",
+            "Integrate crawl results into CI gate and release checklist"
+          ]
+        },
+        {
+          "name": "Diagnostics Automation",
+          "microTasks": [
+            "Expose build SHA, SW version, cache footprint, and flag states via diagnostics API",
+            "Add periodic telemetry (or log upload) to capture SW adoption >= 90 percent within 24h",
+            "Surface diagnostics data in release dashboard"
+          ]
+        },
+        {
+          "name": "CSP and Permission Policy",
+          "microTasks": [
+            "Define baseline CSP and Permission-Policy headers as config artifacts",
+            "Automate header verification in integration tests against staging deployment",
+            "Fail release if headers missing or differ from baseline"
+          ]
+        }
+      ]
+    },
+    {
+      "task": "Release Governance Automation",
+      "subTasks": [
+        {
+          "name": "Go-NoGo Checklist",
+          "microTasks": [
+            "Encode go/no-go criteria into CI pipeline summary with pass/fail toggles",
+            "Require DRI approvals captured via pull request template",
+            "Archive artifact bundle (preflight report, zero-404 logs, cache inventory, adoption chart)"
+          ]
+        },
+        {
+          "name": "Canary Rollout",
+          "microTasks": [
+            "Automate staged rollout on hosting (10 percent then 100 percent) via scripts",
+            "Collect metrics during canary window and auto-block promotion on anomalies",
+            "Provide rollback script to redeploy N-1 build and bump cache prefix"
+          ]
+        },
+        {
+          "name": "ADR and Documentation",
+          "microTasks": [
+            "Generate ADR template covering SW scope, cache budgets, zero-404 gate, local-only posture",
+            "Set up docs pipeline that verifies ADR index includes latest decisions",
+            "Sync privacy/export copy automatically when feature flags change"
+          ]
+        }
+      ]
+    }
+  ]
+}

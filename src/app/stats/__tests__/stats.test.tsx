@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+﻿import React, { Suspense } from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import StatsPage from '../page';
@@ -230,8 +230,8 @@ describe('StatsPage', () => {
         describe('Date Navigation', () => {
             it('should navigate to the previous day', async () => {
                 renderComponent();
-                const prevButton = screen.getByTestId('chevron-left-icon').parentElement;
-                fireEvent.click(prevButton!);
+                const prevButton = screen.getByRole('button', { name: /previous day/i });
+                fireEvent.click(prevButton);
 
                 await waitFor(() => {
                     const expectedDate = subDays(getSessionDate(), 1);
@@ -245,8 +245,8 @@ describe('StatsPage', () => {
 
             it('should navigate to the next day', async () => {
                 renderComponent();
-                const nextButton = screen.getByTestId('chevron-right-icon').parentElement;
-                fireEvent.click(nextButton!);
+                const nextButton = screen.getByRole('button', { name: /next day/i });
+                fireEvent.click(nextButton);
 
                 await waitFor(() => {
                     const expectedDate = addDays(getSessionDate(), 1);
@@ -257,8 +257,8 @@ describe('StatsPage', () => {
 
             it('should display the formatted date when not today', async () => {
                 renderComponent();
-                const prevButton = screen.getByTestId('chevron-left-icon').parentElement;
-                fireEvent.click(prevButton!);
+                const prevButton = screen.getByRole('button', { name: /previous day/i });
+                fireEvent.click(prevButton);
 
                 await waitFor(() => {
                     const expectedDate = subDays(getSessionDate(), 1);

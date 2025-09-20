@@ -3,7 +3,23 @@ import { StorageManagerV2 } from '../lib/storage-v2';
 describe('Storage Performance Metrics', () => {
   let storage: StorageManagerV2;
   const testDeviceId = 'metrics-test-device';
+  let consoleLogs: string[] = [];
+  let consoleLogSpy: jest.SpyInstance<void, Parameters<typeof console.log>>;
 
+  beforeAll(() => {
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation((message?: unknown, ...args: unknown[]) => {
+      const text = typeof message === 'string' ? message : String(message);
+      consoleLogs.push(text);
+    });
+  });
+
+  afterAll(() => {
+    consoleLogSpy?.mockRestore();
+  });
+
+  afterEach(() => {
+    consoleLogs = [];
+  });
   beforeAll(async () => {
     // Set development environment for testing
     (process.env as any).NODE_ENV = 'development';
@@ -44,7 +60,8 @@ describe('Storage Performance Metrics', () => {
     await storage.getEvents({ type: 'study_session_created' as any });
 
     const metrics = storage.getPerformanceMetrics();
-
+    expect(consoleLogs.some(line => line.includes('Storage v2 initialized successfully'))).toBe(true);
+    expect(consoleLogs.some(line => line.includes('No v1 database found'))).toBe(true);
     // Should have metrics for the operations we performed
     expect(metrics).toHaveProperty('addEvent');
     expect(metrics).toHaveProperty('getEvents');
@@ -122,3 +139,4 @@ describe('Storage Performance Metrics', () => {
     }
   });
 });
+

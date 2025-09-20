@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, {useState, useEffect} from 'react';
 import {format} from 'date-fns';
 import {Skeleton} from '@/components/ui/skeleton';
@@ -85,7 +85,7 @@ export const DailyBriefingWidget = ({
         <CardContent className="space-y-4">
           <div>
             <h3 className="font-semibold text-primary/90">
-              Yesterday's Evaluation
+              Yesterday&apos;s Evaluation
             </h3>
             <p className="text-sm text-muted-foreground italic">
               {dailySummary.evaluation}
@@ -93,7 +93,7 @@ export const DailyBriefingWidget = ({
           </div>
           <div>
             <h3 className="font-semibold text-primary/90">
-              Today's Motivation
+              Today&apos;s Motivation
             </h3>
             <p className="text-sm text-muted-foreground italic">
               {dailySummary.motivationalParagraph}
@@ -112,3 +112,4 @@ export const DailyBriefingWidget = ({
     </Card>
   );
 };
+

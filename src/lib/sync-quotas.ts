@@ -1,9 +1,11 @@
-/**
+﻿/**
  * Sync Quotas and Batching Configuration
  * Implements client-side quotas, batching policies, and server guardrails
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { safeApiFetch } from '@/lib/remote-api-gate';
+import { remoteApiPaths } from './remote-api-paths';
 
 export interface SyncQuotaConfig {
   // Batch size limits
@@ -20,7 +22,7 @@ export interface SyncQuotaConfig {
   backoffInitialMs: number;         // 1 second
   backoffMultiplier: number;        // 2x
   backoffMaxMs: number;             // 2 minutes
-  backoffJitterMs: number;          // ±100ms jitter
+  backoffJitterMs: number;          // Â±100ms jitter
   
   // Flush triggers
   flushOnBackground: boolean;      // Flush when app backgrounds
@@ -348,7 +350,7 @@ export class SyncQuotaManager {
   private async sendToServer(batch: { events: SyncEvent[]; sizeBytes: number }): Promise<{ success: boolean; error?: any }> {
     // Simulate server call - replace with actual implementation
     try {
-      const response = await fetch('/api/sync/uplink', {
+      const response = await safeApiFetch(remoteApiPaths.syncUplink(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -493,3 +495,4 @@ export function useSyncQuotas() {
     updateConfig: (newConfig: Partial<SyncQuotaConfig>) => quotaManager.updateConfig(newConfig)
   };
 }
+

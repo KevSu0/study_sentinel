@@ -30,7 +30,7 @@ export interface ServiceWorkerTestStub extends ServiceWorker {
   scriptURL: string;
 }
 
-export interface ServiceWorkerRegistrationTestStub extends ServiceWorkerRegistration {
+export interface ServiceWorkerRegistrationTestStub extends Omit<ServiceWorkerRegistration, 'navigationPreload' | 'sync' | 'pushManager'> {
   active: ServiceWorkerTestStub | null;
   installing: ServiceWorkerTestStub | null;
   waiting: ServiceWorkerTestStub | null;

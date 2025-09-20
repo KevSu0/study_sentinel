@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, {useState, useEffect, useMemo} from 'react';
 import {Card, CardContent} from '@/components/ui/card';
@@ -101,7 +101,7 @@ export const AchievementCountdownWidget = () => {
               Your Goal is in Sight!
             </h3>
             <p className="text-xs sm:text-sm text-foreground/80">
-              Keep up the momentum. You're almost there!
+              Keep up the momentum. You&apos;re almost there!
             </p>
           </div>
 
@@ -119,10 +119,12 @@ export const AchievementCountdownWidget = () => {
             animate={{opacity: 1}}
             transition={{duration: 1}}
           >
-            <p className="text-sm italic text-foreground/90">"{dailyMessage}"</p>
+            <p className="text-sm italic text-foreground/90">&ldquo;{dailyMessage}&rdquo;</p>
           </motion.div>
         </CardContent>
       </Card>
     </motion.div>
   );
 };
+
+

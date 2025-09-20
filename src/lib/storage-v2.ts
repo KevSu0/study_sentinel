@@ -279,7 +279,7 @@ class StorageManagerV2 {
     try {
       this.db = await openDB<StudySentinelDBV2>(this.dbName, this.dbVersion, {
         upgrade: (db, oldVersion, newVersion) => {
-          this.handleDatabaseUpgrade(db, oldVersion, newVersion);
+          this.handleDatabaseUpgrade(db, oldVersion, newVersion || 0);
         },
         blocked: () => {
           console.warn('Database upgrade blocked by other tabs');
@@ -396,8 +396,8 @@ class StorageManagerV2 {
     const defaults = createEventDefaults();
     const eventRecord: EventRecord = {
       id: generateEventId(),
-      deviceId: this.deviceId,
       ...event,
+      deviceId: event.deviceId || this.deviceId,
       timestamp: defaults.timestamp!,
       version: defaults.version!,
       synced: defaults.synced
@@ -525,7 +525,13 @@ class StorageManagerV2 {
 
   async updateOutboxItem(id: string, updates: Partial<OutboxRecord>): Promise<void> {
     this.ensureInitialized();
-    await this.db!.put('outbox', { ...await this.db!.get('outbox', id), ...updates });
+    const existing = await this.db!.get('outbox', id);
+    if (existing) {
+      await this.db!.put('outbox', { ...existing, ...updates });
+    } else {
+      // If item doesn't exist, create a new one with the required id
+      await this.db!.put('outbox', { id, ...updates } as OutboxRecord);
+    }
   }
 
   async deleteOutboxItem(id: string): Promise<void> {
@@ -608,8 +614,9 @@ class StorageManagerV2 {
       ? 'rollups_extended' 
       : `rollups_${period}`;
 
-    if (subject) {
-      return this.db!.getAllFromIndex(storeName as any, 'by_period_subject' as any, 
+    if (subject && storeName === 'rollups_extended') {
+      // Only rollups_extended has the by_period_subject index
+      return this.db!.getAllFromIndex('rollups_extended', 'by_period_subject',
         IDBKeyRange.only([period, subject])) as Promise<RollupRecord[]>;
     }
 

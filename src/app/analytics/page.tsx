@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,11 +30,7 @@ export default function AnalyticsDashboard() {
     end: new Date().toISOString()
   });
 
-  useEffect(() => {
-    loadData();
-  }, [selectedTimeRange]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setIsLoading(true);
       const analyticsEngine = initializeAnalyticsEngine();
@@ -52,7 +48,11 @@ export default function AnalyticsDashboard() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedTimeRange]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const formatDuration = (milliseconds: number): string => {
     const hours = Math.floor(milliseconds / (1000 * 60 * 60));

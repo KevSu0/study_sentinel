@@ -47,7 +47,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/:path*',
-        headers: [
+        headers: [ 
           {
             key: 'X-Content-Type-Options',
             value: 'nosniff',
@@ -59,6 +59,18 @@ const nextConfig: NextConfig = {
           {
             key: 'X-XSS-Protection',
             value: '1; mode=block',
+          },
+          {
+            key: process.env.CSP_REPORT_ONLY === 'true' ? 'Content-Security-Policy-Report-Only' : 'Content-Security-Policy',
+            value: (() => {
+              try {
+                const { value } = require('./scripts/generated-csp.json');
+                return value;
+              } catch {
+                // Fallback for dev before generation
+                return "connect-src 'self' http://localhost:* ws://localhost:*; img-src 'self' data:; font-src 'self'; media-src 'self' https://actions.google.com; worker-src 'self'";
+              }
+            })(),
           },
         ],
       },

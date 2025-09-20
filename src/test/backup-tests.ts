@@ -286,8 +286,8 @@ export class MigrationBackupTester {
     try {
       console.log(`  📋 Testing: ${testName}`);
       
-      const backups = [];
-      
+      const backups: any[] = [];
+
       // Create multiple backups
       for (let i = 0; i < 5; i++) {
         const testData = this.generateTestData(20 + i * 10);
@@ -443,8 +443,8 @@ export class MigrationBackupTester {
 
   // Helper methods
   private generateTestData(eventCount = 100) {
-    const events = [];
-    const settings = [];
+    const events: any[] = [];
+    const settings: any[] = [];
     
     for (let i = 0; i < eventCount; i++) {
       events.push({

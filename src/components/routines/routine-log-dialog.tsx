@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 import { useState, useEffect } from 'react';
 import { useGlobalState } from '@/hooks/use-global-state';
@@ -45,7 +45,7 @@ export function RoutineLogDialog() {
         <DialogHeader>
           <DialogTitle>Log Your Study Session</DialogTitle>
           <DialogDescription>
-            You've finished your session for "{activeItem.item.title}". Briefly describe what you studied or accomplished.
+            You&apos;ve finished your session for &ldquo;{activeItem.item.title}&rdquo;. Briefly describe what you studied or accomplished.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
@@ -68,3 +68,4 @@ export function RoutineLogDialog() {
     </Dialog>
   );
 }
+

@@ -1,4 +1,6 @@
-import { db } from './database';
+﻿import { db } from './database';
+import { safeApiFetch } from '@/lib/remote-api-gate';
+import { remoteApiPaths } from './remote-api-paths';
 
 // Push notification manager
 export class PushNotificationManager {
@@ -65,11 +67,14 @@ export class PushNotificationManager {
     }
 
     try {
-      const result = await this.subscription.unsubscribe();
+      const subscription = this.subscription;
+      const result = await subscription.unsubscribe();
       this.subscription = null;
-      
+
       // Remove subscription from server
-      await this.removeSubscriptionFromServer(this.subscription);
+      if (subscription) {
+        await this.removeSubscriptionFromServer(subscription);
+      }
       
       return result;
     } catch (error) {
@@ -107,8 +112,8 @@ export class PushNotificationManager {
     }
 
     const notification = new Notification(title, {
-      icon: '/icon.png',
-      badge: '/badge.png',
+      icon: '/icons/icon.png',
+      badge: '/icons/badge.png',
       ...options
     });
 
@@ -138,7 +143,7 @@ export class PushNotificationManager {
   // Save subscription to server
   private async saveSubscriptionToServer(subscription: PushSubscription): Promise<void> {
     try {
-      const response = await fetch('/api/notifications/subscribe', {
+      const response = await safeApiFetch(remoteApiPaths.notificationsSubscribe(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -158,7 +163,7 @@ export class PushNotificationManager {
   // Remove subscription from server
   private async removeSubscriptionFromServer(subscription: PushSubscription): Promise<void> {
     try {
-      const response = await fetch('/api/notifications/unsubscribe', {
+      const response = await safeApiFetch(remoteApiPaths.notificationsUnsubscribe(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -224,7 +229,7 @@ export class NotificationScheduler {
     let body = `Great session! ${duration} min of ${sessionData.subject}`;
     
     if (sessionData.completedTasks > 0) {
-      body += ` • ${sessionData.completedTasks} task${sessionData.completedTasks > 1 ? 's' : ''} completed`;
+      body += ` â€¢ ${sessionData.completedTasks} task${sessionData.completedTasks > 1 ? 's' : ''} completed`;
     }
 
     await this.scheduler.scheduleNotification({
@@ -301,7 +306,7 @@ class NotificationChannelScheduler {
       new Notification(notification.title, {
         body: notification.body,
         icon: notification.icon,
-        badge: '/badge.png',
+        badge: '/icons/badge.png',
         tag: notification.tag,
         requireInteraction: false
       });
@@ -475,3 +480,6 @@ export function initializeNotifications(vapidPublicKey: string): {
 export function getNotificationManager() {
   return { pushManager, scheduler, settingsManager };
 }
+
+
+

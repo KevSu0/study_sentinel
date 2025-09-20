@@ -9,7 +9,25 @@ import { EventType, StudyEventData, TaskEventData, BadgeEventData } from '../lib
 describe('Storage Smoke Tests', () => {
   let storage: StorageManagerV2;
   const testDeviceId = 'smoke-test-device';
-  
+
+  let consoleLogs: string[] = [];
+  let consoleLogSpy: jest.SpyInstance<void, Parameters<typeof console.log>>;
+
+  beforeAll(() => {
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation((message?: unknown, ...args: unknown[]) => {
+      const text = typeof message === 'string' ? message : String(message);
+      consoleLogs.push(text);
+    });
+  });
+
+  afterAll(() => {
+    consoleLogSpy?.mockRestore();
+  });
+
+  afterEach(() => {
+    consoleLogs = [];
+  });
+
   beforeAll(async () => {
     // Clean up any existing test database
     await indexedDB.deleteDatabase('StudySentinelDB');
@@ -35,8 +53,8 @@ describe('Storage Smoke Tests', () => {
     test('should return events within time window', async () => {
       // Create events with 1 second intervals to ensure different timestamps
       const baseTime = Date.now();
-      const events = [];
-      
+      const events: any[] = [];
+
       // Create events with 1 second intervals for different normalized timestamps
       for (let i = 0; i < 6; i++) {
         await new Promise(resolve => setTimeout(resolve, 1100)); // 1.1 second intervals
@@ -343,7 +361,7 @@ describe('Storage Smoke Tests', () => {
       await storage.clearAllData();
       
       // Seed test data
-      const eventIds = [];
+      const eventIds: string[] = [];
       for (let i = 0; i < eventCount; i++) {
         await new Promise(resolve => setTimeout(resolve, 10)); // 10ms delay for different timestamps
         const eventId = await storage.addEvent({
@@ -380,8 +398,12 @@ describe('Storage Smoke Tests', () => {
       expect(results.length).toBe(eventCount);
       expect(queryTime).toBeLessThan(100); // Should be much faster than 100ms
       
-      console.log(`Performance baseline: ${queryTime.toFixed(2)}ms for ${eventCount} events`);
+      const baselineMessage = `Performance baseline: ${queryTime.toFixed(2)}ms for ${eventCount} events`;
+      consoleLogs.push(baselineMessage);
+      expect(baselineMessage).toContain('Performance baseline:');
     });
   });
 });
+
+
 

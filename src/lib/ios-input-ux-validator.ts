@@ -177,10 +177,10 @@ export class iOSInputUXValidator {
         // Test iOS-specific keyboard behaviors
         const hasVisualViewport = 'visualViewport' in window;
         
-        if (hasVisualViewport) {
+        if (hasVisualViewport && window.visualViewport) {
           const viewport = window.visualViewport;
           const hasViewportEvents = typeof viewport.addEventListener === 'function';
-          
+
           // Test if we can detect keyboard-induced viewport changes
           return hasViewportEvents;
         }
@@ -206,7 +206,7 @@ export class iOSInputUXValidator {
         const hasProperViewport = viewportMeta && 
           viewportMeta.getAttribute('content')?.includes('viewport-fit=cover');
         
-        return hasProperViewport;
+        return hasProperViewport || false;
       },
       iosSpecific: true
     });
@@ -358,10 +358,12 @@ export class iOSInputUXValidator {
         }
         
         const viewport = window.visualViewport;
+        if (!viewport) return false;
+
         const hasBasicProperties = typeof viewport.width === 'number' &&
                                  typeof viewport.height === 'number' &&
                                  typeof viewport.scale === 'number';
-        
+
         return hasBasicProperties;
       },
       iosSpecific: true

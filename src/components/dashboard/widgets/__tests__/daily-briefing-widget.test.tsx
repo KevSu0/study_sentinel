@@ -17,6 +17,30 @@ jest.mock('@/lib/motivation', () => ({
   motivationalQuotes: ['Mocked motivational message'],
 }));
 
+const DAILY_SUMMARY_ERROR = 'Failed to fetch daily summary:';
+const originalConsoleError = console.error;
+let consoleErrorSpy: jest.SpyInstance<void, Parameters<typeof console.error>>;
+let capturedErrors: string[] = [];
+
+beforeAll(() => {
+  consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation((message?: unknown, ...args: unknown[]) => {
+    const text = typeof message === 'string' ? message : String(message);
+    if (text.includes(DAILY_SUMMARY_ERROR)) {
+      capturedErrors.push(text);
+      return;
+    }
+    originalConsoleError.call(console, message, ...args);
+  });
+});
+
+afterAll(() => {
+  consoleErrorSpy?.mockRestore();
+});
+
+afterEach(() => {
+  capturedErrors = [];
+});
+
 describe('DailyBriefingWidget', () => {
   const mockGetDailySummary = getDailySummary as jest.Mock;
   const mockUseGlobalState = useGlobalState as jest.Mock;
@@ -104,6 +128,8 @@ describe('DailyBriefingWidget', () => {
       await waitFor(() => {
         expect(screen.getByText('Mocked motivational message')).toBeInTheDocument();
       });
+
+      expect(capturedErrors).toEqual(expect.arrayContaining([expect.stringContaining(DAILY_SUMMARY_ERROR)]));
 
       // It should still try to fetch once
       expect(mockGetDailySummary).toHaveBeenCalledTimes(1);

@@ -1,0 +1,33 @@
+﻿{
+  "extends": ["next/core-web-vitals"],
+  "plugins": ["local"],
+  "overrides": [
+    {
+      "files": ["src/worker/**/*.{ts,tsx,js,jsx}"],
+      "env": {
+        "browser": true,
+        "serviceworker": true
+      },
+      "rules": {
+        "react-hooks/rules-of-hooks": "off",
+        "react-hooks/exhaustive-deps": "off",
+        "react/display-name": "off",
+        "react/no-unescaped-entities": "off"
+      }
+    },
+    {
+      "files": ["**/__tests__/**/*.{ts,tsx,js,jsx}", "**/*.test.{ts,tsx,js,jsx}"],
+      "env": {
+        "jest": true
+      },
+      "rules": {
+        "react/display-name": "off",
+        "react/no-unescaped-entities": "off",
+        "react-hooks/exhaustive-deps": "off"
+      }
+    }
+  ],
+ "rules": {
+   "local/no-raw-fetch": "error"
+ }
+}

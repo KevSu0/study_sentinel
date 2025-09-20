@@ -1,0 +1,143 @@
+{
+  "goal": "Restore CI stability within two working days while maintaining strict product linting rules.",
+  "deadline": "2025-09-19",
+  "owner": "Engineering (You)",
+  "tasks": [
+    {
+      "name": "ESLint Policy & Overrides",
+      "description": "Scope React lint enforcement to product code and quiet test/worker noise.",
+      "status": "pending",
+      "subTasks": [
+        {
+          "name": "Configure ESLint overrides",
+          "microTasks": [
+            "Add override for src/worker/** enabling serviceworker env and disabling React rules",
+            "Add override for **/__tests__/** and **/*.test.* disabling display-name, unescaped-entities, exhaustive-deps",
+            "Retain strict rules for product code"
+          ]
+        },
+        {
+          "name": "Document rule posture",
+          "microTasks": [
+            "Draft ADR outlining contexts and acceptable suppressions",
+            "Capture list of rules considered non-negotiable"
+          ]
+        },
+        {
+          "name": "Run lint baseline",
+          "microTasks": [
+            "Execute next lint to capture remaining product violations",
+            "Export lint findings for remediation tracking"
+          ]
+        }
+      ],
+      "acceptance": "npm run lint shows only product-code errors after overrides."
+    },
+    {
+      "name": "Product Remediations",
+      "description": "Resolve lint violations in shipping code without changing behavior.",
+      "status": "pending",
+      "subTasks": [
+        {
+          "name": "Client boundary fixes",
+          "microTasks": [
+            "Insert 'use client' in files that use hooks or router APIs",
+            "Verify server-only files remain unaffected"
+          ]
+        },
+        {
+          "name": "React lint clean-up",
+          "microTasks": [
+            "Add display names for exported components",
+            "Escape JSX literals flagged by react/no-unescaped-entities",
+            "Resolve exhaustive-deps warnings via memoization or justified suppressions"
+          ]
+        }
+      ],
+      "acceptance": "next lint passes with zero errors; smoke tests succeed."
+    },
+    {
+      "name": "Runner Convergence",
+      "description": "Ensure Jest is the sole unit-test runner.",
+      "status": "pending",
+      "subTasks": [
+        {
+          "name": "Remove Vitest usage",
+          "microTasks": [
+            "Replace Vitest imports in zero-network guarantee tests with Jest APIs",
+            "Search repo for remaining Vitest references"
+          ]
+        }
+      ],
+      "acceptance": "npm test runs without Vitest CJS import errors."
+    },
+    {
+      "name": "Test Stabilization",
+      "description": "Repair failing suites with robust selectors and centralized mocks.",
+      "status": "pending",
+      "subTasks": [
+        {
+          "name": "Selector hardening",
+          "microTasks": [
+            "Update SyncPanel tests to role-first queries",
+            "Add approved data-testid anchors (max five)",
+            "Adjust PWA/toast tests to avoid brittle text"
+          ]
+        },
+        {
+          "name": "Mock consolidation",
+          "microTasks": [
+            "Centralize navigator.serviceWorker, Notification, PushManager mocks in jest.setup.js",
+            "Ensure fetch/TextEncoder/polyfills are defined once"
+          ]
+        }
+      ],
+      "acceptance": "Jest suite passes twice consecutively without flaky failures."
+    },
+    {
+      "name": "Pre-commit & CI Hardening",
+      "description": "Speed up local checks and pin CI runtime.",
+      "status": "pending",
+      "subTasks": [
+        {
+          "name": "Pre-commit",
+          "microTasks": [
+            "Install lint-staged running ESLint + tsc --noEmit on staged files",
+            "Update Husky pre-commit hook to invoke lint-staged"
+          ]
+        },
+        {
+          "name": "CI pipeline",
+          "microTasks": [
+            "Pin Node 22.15 in workflow and echo versions",
+            "Order jobs: SW guard ? lint ? typecheck ? Jest (? build on main)"
+          ]
+        }
+      ],
+      "acceptance": "Pre-commit completes in =5s; CI finishes =7m with Node version logged."
+    },
+    {
+      "name": "Governance & Documentation",
+      "description": "Publish supporting guidance and evidence.",
+      "status": "pending",
+      "subTasks": [
+        {
+          "name": "Docs",
+          "microTasks": [
+            "Publish ADR with lint contexts and suppression policy",
+            "Update testing guide with selector hierarchy and mock list",
+            "Refresh README with Jest-only runner, Node version, quickstart"
+          ]
+        },
+        {
+          "name": "Evidence pack",
+          "microTasks": [
+            "Capture before/after lint counts and test timings",
+            "List files receiving 'use client' and any eslint disables"
+          ]
+        }
+      ],
+      "acceptance": "Documentation merged; evidence pack ready for release archive."
+    }
+  ]
+}

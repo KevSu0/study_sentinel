@@ -1,6 +1,7 @@
-import React from 'react';
+﻿import React from 'react';
 window.HTMLElement.prototype.scrollIntoView = jest.fn();
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import SettingsPage from '../page';
 import { useGlobalState } from '@/hooks/use-global-state';
 
@@ -42,8 +43,11 @@ describe('SettingsPage', () => {
       });
     });
 
-    it('should render the settings page with initial values', () => {
+    it('should render the settings page with initial values', async () => {
+      const user = userEvent.setup();
       render(<SettingsPage />);
+
+      await user.click(screen.getByRole('tab', { name: /sounds/i }));
 
       expect(screen.getByRole('heading', { name: /settings/i })).toBeInTheDocument();
       expect(screen.getByText(/customize your experience./i)).toBeInTheDocument();
@@ -56,33 +60,50 @@ describe('SettingsPage', () => {
     });
 
     it('should call setSoundSettings when alarm sound is changed', async () => {
+      const user = userEvent.setup();
       render(<SettingsPage />);
 
-      fireEvent.click(screen.getByLabelText('Alarm Sound'));
+      await user.click(screen.getByRole('tab', { name: /sounds/i }));
+
+      await user.click(screen.getByRole('combobox', { name: /alarm sound/i }));
       const alarmOption = await screen.findByText('Digital Alarm');
-      fireEvent.click(alarmOption);
+      await user.click(alarmOption);
 
       expect(setSoundSettings).toHaveBeenCalledWith({ alarm: 'digital_alarm' });
     });
 
     it('should call setSoundSettings when tick sound is changed', async () => {
+      const user = userEvent.setup();
       render(<SettingsPage />);
 
-      fireEvent.click(screen.getByLabelText('Timer Tick Sound'));
+      await user.click(screen.getByRole('tab', { name: /sounds/i }));
+
+      await user.click(screen.getByRole('combobox', { name: /timer tick sound/i }));
       const tickOption = await screen.findByText('None');
-      fireEvent.click(tickOption);
+      await user.click(tickOption);
 
       expect(setSoundSettings).toHaveBeenCalledWith({ tick: 'none' });
     });
 
     it('should call setSoundSettings when reminder interval is changed', async () => {
+      const user = userEvent.setup();
       render(<SettingsPage />);
 
-      fireEvent.click(screen.getByLabelText('Reminder Interval'));
+      await user.click(screen.getByRole('tab', { name: /sounds/i }));
+
+      await user.click(screen.getByRole('combobox', { name: /reminder interval/i }));
       const intervalOption = await screen.findByText('Every 30 minutes');
-      fireEvent.click(intervalOption);
+      await user.click(intervalOption);
 
       expect(setSoundSettings).toHaveBeenCalledWith({ notificationInterval: 30 });
     });
   });
 });
+
+
+
+
+
+
+
+

@@ -1,6 +1,8 @@
 // Monitoring Dashboard for Internal Cohort Rollout
 // Real-time monitoring of Slice 1: Storage & Analytics
 
+import { remoteApiPaths } from './remote-api-paths';
+
 export interface MonitoringMetrics {
   timestamp: number;
   migration: {
@@ -155,8 +157,8 @@ export class MonitoringDashboard {
       ttr: await this.measureTTR(),
       compaction: await this.getCompactionDuration(),
       memoryUsage: memory ? memory.usedJSHeapSize / (1024 * 1024) : 0,
-      storageUsage: performance.usage / (1024 * 1024),
-      storageQuota: performance.quota / (1024 * 1024)
+      storageUsage: (performance.usage || 0) / (1024 * 1024),
+      storageQuota: (performance.quota || 0) / (1024 * 1024)
     };
   }
 
@@ -171,8 +173,8 @@ export class MonitoringDashboard {
 
   private async collectStorageMetrics(): Promise<MonitoringMetrics['storage']> {
     const performance = await navigator.storage.estimate();
-    const used = performance.usage / (1024 * 1024);
-    const quota = performance.quota / (1024 * 1024);
+    const used = (performance?.usage || 0) / (1024 * 1024);
+    const quota = (performance?.quota || 0) / (1024 * 1024);
     
     // Calculate growth rate from previous metrics
     const growthRate = this.calculateStorageGrowthRate(used);
@@ -261,7 +263,7 @@ export class MonitoringDashboard {
       data.append('alert', alert);
       data.append('severity', severity);
       data.append('timestamp', Date.now().toString());
-      navigator.sendBeacon('/api/alerts', data);
+      navigator.sendBeacon(remoteApiPaths.alerts(), data);
     }
     
     // Show in UI if available
@@ -330,7 +332,7 @@ export class MonitoringDashboard {
       data.append('error_type', type);
       data.append('error_message', message);
       data.append('timestamp', Date.now().toString());
-      navigator.sendBeacon('/api/errors', data);
+      navigator.sendBeacon(remoteApiPaths.errors(), data);
     }
   }
 
@@ -439,7 +441,7 @@ ${this.alerts.map(alert => `  - ${alert}`).join('\n')}
       const data = new FormData();
       data.append('metrics', JSON.stringify(metrics));
       data.append('timestamp', Date.now().toString());
-      navigator.sendBeacon('/api/metrics', data);
+      navigator.sendBeacon(remoteApiPaths.metrics(), data);
     }
   }
 }

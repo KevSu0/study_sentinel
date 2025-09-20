@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { remoteApiPaths } from './remote-api-paths';
 
 /**
  * iOS Networking Validator
@@ -178,7 +179,7 @@ export class iOSNetworkValidator {
         
         // Test actual network reachability
         try {
-          const response = await fetch('/api/health', { 
+          const response = await fetch(remoteApiPaths.health(), { 
             method: 'HEAD',
             cache: 'no-cache'
           });
@@ -427,7 +428,7 @@ export class iOSNetworkValidator {
         
         try {
           // Test iOS-specific sync queue behavior
-          const queueItems = [];
+          const queueItems: any[] = [];
           
           // Add multiple items to queue
           for (let i = 0; i < 5; i++) {
@@ -441,7 +442,7 @@ export class iOSNetworkValidator {
           }
         
           // Retrieve and process queue
-          const retrievedItems = [];
+          const retrievedItems: any[] = [];
           for (let i = 0; i < 5; i++) {
             const itemKey = `sync-queue-sync-item-${i}`;
             const item = localStorage.getItem(itemKey);
@@ -470,7 +471,7 @@ export class iOSNetworkValidator {
         const startTime = performance.now();
         
         try {
-          const response = await fetch('/api/health', { 
+          const response = await fetch(remoteApiPaths.health(), { 
             method: 'GET',
             cache: 'no-cache'
           });
@@ -548,12 +549,12 @@ export class iOSNetworkValidator {
         if (!this.isIOS) return true;
         
         // Test if iOS properly handles concurrent requests
-        const requests = [];
+        const requests: Promise<Response | null>[] = [];
         const requestCount = 10;
         
         for (let i = 0; i < requestCount; i++) {
           requests.push(
-            fetch('/api/health', { 
+            fetch(remoteApiPaths.health(), { 
               method: 'HEAD',
               cache: 'no-cache'
             }).catch(() => null)
@@ -609,7 +610,7 @@ export class iOSNetworkValidator {
         const testData = 'x'.repeat(testDataSize);
         
         try {
-          const response = await fetch('/api/test-throttle', {
+          const response = await fetch(remoteApiPaths.testThrottle(), {
             method: 'POST',
             body: testData,
             headers: { 'Content-Type': 'text/plain' }
@@ -639,7 +640,7 @@ export class iOSNetworkValidator {
         if (saveData) {
           // Should load optimized resources
           try {
-            const response = await fetch('/api/optimized', {
+            const response = await fetch(remoteApiPaths.optimized(), {
               headers: { 'Save-Data': 'on' }
             });
             return response.ok;
@@ -745,7 +746,7 @@ export class iOSNetworkValidator {
         
         for (let i = 0; i < maxRetries; i++) {
           try {
-            const response = await fetch('/api/retry-test', {
+            const response = await fetch(remoteApiPaths.retryTest(), {
               method: 'GET',
               cache: 'no-cache'
             });
@@ -778,7 +779,7 @@ export class iOSNetworkValidator {
         
         try {
           // Test multiple endpoints to verify connection restoration
-          const endpoints = ['/api/health', '/manifest.json', '/sw.js'];
+          const endpoints = [remoteApiPaths.health(), '/manifest.json', '/sw.js'];
           const results = await Promise.all(
             endpoints.map(endpoint => 
               fetch(endpoint, { method: 'HEAD' }).catch(() => null)

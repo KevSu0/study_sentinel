@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+﻿import React, {useState} from 'react';
 import {useCalendarEvents} from '@/hooks/use-calendar-events';
 import {CalendarEvent, StudyBlock, PersonalEvent} from '@/lib/types';
 import {Checkbox} from '@/components/ui/checkbox';
@@ -50,7 +50,7 @@ export function TodoList({currentDay}: TodoListProps) {
   return (
     <Card data-testid="day-view-todo-list">
       <CardHeader>
-        <CardTitle>Today's To-Do</CardTitle>
+        <CardTitle>Today&apos;s To-Do</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">

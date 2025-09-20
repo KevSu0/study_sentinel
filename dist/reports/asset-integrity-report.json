@@ -1,0 +1,162 @@
+{
+  "generatedAt": "2025-09-17T06:50:02.333Z",
+  "summary": {
+    "totalAssets": 17,
+    "issues": 0
+  },
+  "assets": [
+    {
+      "path": "public/icons/icon-72x72.png",
+      "source": "manifest.json",
+      "exists": true,
+      "size": 971,
+      "expectedMimeType": "image/png",
+      "signatureValid": true,
+      "issues": []
+    },
+    {
+      "path": "public/icons/icon-96x96.png",
+      "source": "manifest.json",
+      "exists": true,
+      "size": 1331,
+      "expectedMimeType": "image/png",
+      "signatureValid": true,
+      "issues": []
+    },
+    {
+      "path": "public/icons/icon-128x128.png",
+      "source": "manifest.json",
+      "exists": true,
+      "size": 1746,
+      "expectedMimeType": "image/png",
+      "signatureValid": true,
+      "issues": []
+    },
+    {
+      "path": "public/icons/icon-144x144.png",
+      "source": "manifest.json",
+      "exists": true,
+      "size": 1986,
+      "expectedMimeType": "image/png",
+      "signatureValid": true,
+      "issues": []
+    },
+    {
+      "path": "public/icons/icon-152x152.png",
+      "source": "manifest.json",
+      "exists": true,
+      "size": 2055,
+      "expectedMimeType": "image/png",
+      "signatureValid": true,
+      "issues": []
+    },
+    {
+      "path": "public/icons/icon-192x192.png",
+      "source": "manifest.json",
+      "exists": true,
+      "size": 2737,
+      "expectedMimeType": "image/png",
+      "signatureValid": true,
+      "issues": []
+    },
+    {
+      "path": "public/icons/icon-384x384.png",
+      "source": "manifest.json",
+      "exists": true,
+      "size": 5937,
+      "expectedMimeType": "image/png",
+      "signatureValid": true,
+      "issues": []
+    },
+    {
+      "path": "public/icons/icon-512x512.png",
+      "source": "manifest.json",
+      "exists": true,
+      "size": 8289,
+      "expectedMimeType": "image/png",
+      "signatureValid": true,
+      "issues": []
+    },
+    {
+      "path": "public/fonts/inter-v12-latin-300.woff2",
+      "source": "fonts.css",
+      "exists": true,
+      "size": 112592,
+      "expectedMimeType": "font/woff2",
+      "signatureValid": true,
+      "issues": []
+    },
+    {
+      "path": "public/fonts/inter-v12-latin-regular.woff2",
+      "source": "fonts.css",
+      "exists": true,
+      "size": 111268,
+      "expectedMimeType": "font/woff2",
+      "signatureValid": true,
+      "issues": []
+    },
+    {
+      "path": "public/fonts/inter-v12-latin-500.woff2",
+      "source": "fonts.css",
+      "exists": true,
+      "size": 114348,
+      "expectedMimeType": "font/woff2",
+      "signatureValid": true,
+      "issues": []
+    },
+    {
+      "path": "public/fonts/inter-v12-latin-600.woff2",
+      "source": "fonts.css",
+      "exists": true,
+      "size": 114812,
+      "expectedMimeType": "font/woff2",
+      "signatureValid": true,
+      "issues": []
+    },
+    {
+      "path": "public/fonts/inter-v12-latin-700.woff2",
+      "source": "fonts.css",
+      "exists": true,
+      "size": 114840,
+      "expectedMimeType": "font/woff2",
+      "signatureValid": true,
+      "issues": []
+    },
+    {
+      "path": "public/fonts/jetbrains-mono-v2-latin-regular.woff2",
+      "source": "fonts.css",
+      "exists": true,
+      "size": 92380,
+      "expectedMimeType": "font/woff2",
+      "signatureValid": true,
+      "issues": []
+    },
+    {
+      "path": "public/icons/icon-128x128.png",
+      "source": "browserconfig.xml",
+      "exists": true,
+      "size": 1746,
+      "expectedMimeType": "image/png",
+      "signatureValid": true,
+      "issues": []
+    },
+    {
+      "path": "public/icons/icon-180x180.png",
+      "source": "browserconfig.xml",
+      "exists": true,
+      "size": 2519,
+      "expectedMimeType": "image/png",
+      "signatureValid": true,
+      "issues": []
+    },
+    {
+      "path": "public/icons/icon-384x384.png",
+      "source": "browserconfig.xml",
+      "exists": true,
+      "size": 5937,
+      "expectedMimeType": "image/png",
+      "signatureValid": true,
+      "issues": []
+    }
+  ]
+}

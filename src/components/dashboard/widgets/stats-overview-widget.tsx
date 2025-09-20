@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 import React, {lazy, Suspense, useMemo} from 'react';
 import dynamic from 'next/dynamic';
@@ -60,7 +60,7 @@ export const StatsOverviewWidget = ({
           ) : (
             <Card className="h-full flex flex-col items-center justify-center">
               <CardHeader>
-                <CardTitle>Today's Productivity</CardTitle>
+                <CardTitle>Today&apos;s Productivity</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
@@ -112,3 +112,4 @@ export const StatsOverviewWidget = ({
     </section>
   );
 };
+

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, {
   useState,
@@ -29,17 +29,19 @@ import {SYSTEM_BADGES, checkBadge} from '@/lib/badges';
 import { getSessionDate, getStudyDateForTimestamp, getStudyDay, generateShortId } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { motivationalQuotes, getRandomMotivationalMessage } from '@/lib/motivation';
-
-// --- Constants for localStorage keys ---
-const TASKS_KEY = 'studySentinelTasks_v3';
-const TIMER_KEY = 'studySentinelActiveTimer_v3';
-const EARNED_BADGES_KEY = 'studySentinelEarnedBadges_v3';
-const CUSTOM_BADGES_KEY = 'studySentinelCustomBadges_v3';
-const SYSTEM_BADGES_CONFIG_KEY = 'studySentinelSystemBadgesConfig_v3';
-const PROFILE_KEY = 'studySentinelProfile_v3';
-const ROUTINES_KEY = 'studySentinelRoutines_v3';
-const SOUND_SETTINGS_KEY = 'studySentinelSoundSettings_v1';
-const LOG_PREFIX = 'studySentinelLogs_v3_';
+import { safeApiFetch } from '@/lib/remote-api-gate';
+import { remoteApiPaths } from '@/lib/remote-api-paths';
+import {
+  TASKS_KEY,
+  TIMER_KEY,
+  EARNED_BADGES_KEY,
+  CUSTOM_BADGES_KEY,
+  SYSTEM_BADGES_CONFIG_KEY,
+  PROFILE_KEY,
+  ROUTINES_KEY,
+  SOUND_SETTINGS_KEY,
+  LOG_PREFIX,
+} from '@/lib/storage-keys';
 
 // --- Type Definitions ---
 type StoredTimer = {
@@ -175,18 +177,105 @@ const formatTime = (seconds: number) => {
   const hours = Math.floor(absSeconds / 3600);
   const mins = Math.floor((absSeconds % 3600) / 60);
   const secs = absSeconds % 60;
-  const parts = [];
+  const parts: string[] = [];
   if (hours > 0) parts.push(String(hours).padStart(2, '0'));
   parts.push(String(mins).padStart(2, '0'));
   parts.push(String(secs).padStart(2, '0'));
   return parts.join(':');
 };
 
+const JSON_MIME = 'application/json';
+
+async function parseJsonResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    throw await buildResponseError(response);
+  }
+
+  const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
+  if (!contentType.includes(JSON_MIME)) {
+    const preview = await getResponsePreview(response);
+    const descriptor = contentType || 'unknown';
+    throw new Error(`Expected JSON response but received '${descriptor}'.${preview ? ` Body preview: ${preview}` : ''}`);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+async function ensureSuccessfulResponse(response: Response): Promise<void> {
+  if (response.ok) {
+    return;
+  }
+  throw await buildResponseError(response);
+}
+
+async function buildResponseError(response: Response): Promise<Error> {
+  const statusInfo = `${response.status} ${response.statusText}`.trim();
+  const preview = await getResponsePreview(response);
+  const message = preview ? `Request failed with status ${statusInfo}: ${preview}` : `Request failed with status ${statusInfo}`;
+  return new Error(message);
+}
+
+async function getResponsePreview(response: Response, limit = 120): Promise<string> {
+  try {
+    const text = await response.clone().text();
+    return text.slice(0, limit);
+  } catch {
+    return '';
+  }
+}
 export function GlobalStateProvider({children}: {children: ReactNode}) {
   const [state, setState] = useState<AppState>(initialAppState);
   const {fire} = useConfetti();
   const audioRef = useRef<Record<string, HTMLAudioElement>>({});
   const quoteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const { isLoaded: isAppLoaded, allBadges: badgeList, earnedBadges: earnedBadgeMap, tasks: taskList } = state;
+
+  const updateDerivedState = useCallback((baseState: { tasks: StudyTask[]; routines: Routine[]; profile: UserProfile; logs: LogEvent[]; allBadges: Badge[]; earnedBadges: Map<string, string>; soundSettings: SoundSettings }) => {
+    const {logs, allBadges, earnedBadges} = baseState;
+    const sessionDate = getSessionDate();
+    const todayStr = format(sessionDate, 'yyyy-MM-dd');
+
+    const todaysLogs = logs;
+
+    const allTimeLogs: LogEvent[] = [];
+    if (typeof window !== 'undefined') {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(LOG_PREFIX)) {
+          allTimeLogs.push(...JSON.parse(localStorage.getItem(key) || '[]'));
+        }
+      }
+    }
+    allTimeLogs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    const sessionLogs = allTimeLogs.filter(l => l.type === 'ROUTINE_SESSION_COMPLETE' || l.type === 'TIMER_SESSION_COMPLETE');
+    const workItems: CompletedWork[] = sessionLogs.map(l => ({ 
+        date: format(getStudyDateForTimestamp(l.timestamp), 'yyyy-MM-dd'), 
+        duration: l.payload.duration, 
+        type: l.type === 'ROUTINE_SESSION_COMPLETE' ? 'routine' : 'task', 
+        title: l.payload.title, 
+        points: l.payload.points || 0, 
+        priority: l.payload.priority, 
+        subjectId: l.payload.routineId || l.payload.taskId, 
+        timestamp: l.timestamp 
+    }));
+    const allCompletedWork = workItems;
+    const todaysCompletedWork = allCompletedWork.filter(w => w.date === todayStr);
+    const todaysPoints = todaysCompletedWork.reduce((sum, work) => sum + work.points, 0);
+    const todaysBadges = allBadges.filter(b => earnedBadges.get(b.id) === todayStr);
+
+    return { todaysLogs, allCompletedWork, todaysCompletedWork, todaysPoints, todaysBadges };
+  }, []);
+
+  const setStateAndDerive = useCallback((updater: (prevState: AppState) => Partial<AppState>) => {
+    setState(prevState => {
+      const changes = updater(prevState);
+      const newState = {...prevState, ...changes};
+      const derived = updateDerivedState(newState);
+      return {...newState, ...derived};
+    });
+  }, [updateDerivedState]);
 
   useEffect(() => {
     let savedTasks: StudyTask[] = [], savedProfile: UserProfile = defaultProfile, savedRoutines: Routine[] = [];
@@ -232,7 +321,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
             }
         });
     }
-  }, []);
+  }, [updateDerivedState]);
 
   const playSound = useCallback((soundKey: string, duration?: number) => {
     if (state.isMuted || !soundKey || soundKey === 'none') return;
@@ -336,15 +425,13 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     return () => clearInterval(interval);
   }, [state.activeItem, state.isPaused, state.soundSettings, playSound, stopSound, showNewQuote]);
 
-  // --- Badge Awarding Effect ---
+    // --- Badge Awarding Effect ---
   useEffect(() => {
-    if (!state.isLoaded) return;
-
-    const {allBadges, earnedBadges, tasks} = state;
+    if (!isAppLoaded) return;
 
     const newlyEarnedBadges: Badge[] = [];
-    for (const badge of allBadges) {
-      if (!earnedBadges.has(badge.id) && badge.isEnabled) {
+    for (const badge of badgeList) {
+      if (!earnedBadgeMap.has(badge.id) && badge.isEnabled) {
         const allTimeLogs: LogEvent[] = [];
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
@@ -352,7 +439,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
             allTimeLogs.push(...JSON.parse(localStorage.getItem(key) || '[]'));
           }
         }
-        if (checkBadge(badge, {tasks, logs: allTimeLogs})) {
+        if (checkBadge(badge, {tasks: taskList, logs: allTimeLogs})) {
           newlyEarnedBadges.push(badge);
         }
       }
@@ -366,7 +453,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
         newlyEarnedBadges.forEach(badge => {
           newEarnedMap.set(badge.id, todayStr);
           setTimeout(() => {
-            toast.success(`Badge Unlocked: ${badge.name}! 🎉`);
+            toast.success(`Badge Unlocked: ${badge.name}! ðŸŽ‰`);
           }, 500);
         });
         localStorage.setItem(
@@ -376,53 +463,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
         return {earnedBadges: newEarnedMap};
       });
     }
-  }, [state.isLoaded, state.allCompletedWork, state.tasks, fire]);
-
-  const updateDerivedState = (baseState: { tasks: StudyTask[]; routines: Routine[]; profile: UserProfile; logs: LogEvent[]; allBadges: Badge[]; earnedBadges: Map<string, string>; soundSettings: SoundSettings }) => {
-    const {logs, allBadges, earnedBadges} = baseState;
-    const sessionDate = getSessionDate();
-    const todayStr = format(sessionDate, 'yyyy-MM-dd');
-
-    const todaysLogs = logs;
-
-    const allTimeLogs: LogEvent[] = [];
-    if (typeof window !== 'undefined') {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(LOG_PREFIX)) {
-          allTimeLogs.push(...JSON.parse(localStorage.getItem(key) || '[]'));
-        }
-      }
-    }
-    allTimeLogs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-    const sessionLogs = allTimeLogs.filter(l => l.type === 'ROUTINE_SESSION_COMPLETE' || l.type === 'TIMER_SESSION_COMPLETE');
-    const workItems: CompletedWork[] = sessionLogs.map(l => ({ 
-        date: format(getStudyDateForTimestamp(l.timestamp), 'yyyy-MM-dd'), 
-        duration: l.payload.duration, 
-        type: l.type === 'ROUTINE_SESSION_COMPLETE' ? 'routine' : 'task', 
-        title: l.payload.title, 
-        points: l.payload.points || 0, 
-        priority: l.payload.priority, 
-        subjectId: l.payload.routineId || l.payload.taskId, 
-        timestamp: l.timestamp 
-    }));
-    const allCompletedWork = workItems;
-    const todaysCompletedWork = allCompletedWork.filter(w => w.date === todayStr);
-    const todaysPoints = todaysCompletedWork.reduce((sum, work) => sum + work.points, 0);
-    const todaysBadges = allBadges.filter(b => earnedBadges.get(b.id) === todayStr);
-
-    return { todaysLogs, allCompletedWork, todaysCompletedWork, todaysPoints, todaysBadges };
-  };
-
-  const setStateAndDerive = (updater: (prevState: AppState) => Partial<AppState>) => {
-    setState(prevState => {
-      const changes = updater(prevState);
-      const newState = {...prevState, ...changes};
-      const derived = updateDerivedState(newState);
-      return {...newState, ...derived};
-    });
-  };
+  }, [isAppLoaded, badgeList, earnedBadgeMap, taskList, fire, setStateAndDerive]);
 
   const addLog = useCallback((type: LogEvent['type'], payload: LogEvent['payload']) => {
       setStateAndDerive(prevState => {
@@ -432,7 +473,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
         localStorage.setItem(logKey, JSON.stringify(updatedLogs));
         return {logs: updatedLogs};
       });
-    }, []);
+    }, [setStateAndDerive]);
 
   const removeLog = useCallback((logId: string) => {
     setStateAndDerive(prevState => {
@@ -441,7 +482,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
       localStorage.setItem(logKey, JSON.stringify(updatedLogs));
       return {logs: updatedLogs};
     });
-  }, []);
+  }, [setStateAndDerive]);
 
   const updateLog = useCallback((logId: string, updatedLog: Partial<LogEvent>) => {
     setStateAndDerive(prevState => {
@@ -452,7 +493,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
       localStorage.setItem(logKey, JSON.stringify(updatedLogs));
       return { logs: updatedLogs };
     });
-  }, []);
+  }, [setStateAndDerive]);
 
   useEffect(() => {
     if (!state.activeItem || state.isPaused) return;
@@ -463,169 +504,175 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     return () => clearInterval(quoteInterval);
   }, [state.activeItem, state.isPaused, showNewQuote]);
 
-  const addTask = useCallback((task: Omit<StudyTask, 'id' | 'status' | 'shortId'>) => {
-    const tempId = `temp_${crypto.randomUUID()}`;
-    const newTask: StudyTask = { ...task, id: tempId, shortId: generateShortId('T'), status: 'todo', description: task.description || '' };
+  const addTask = useCallback(async (task: Omit<StudyTask, 'id' | 'status' | 'shortId'>) => {
+  const tempId = `temp_${crypto.randomUUID()}`;
+  const newTask: StudyTask = { ...task, id: tempId, shortId: generateShortId('T'), status: 'todo', description: task.description || '' };
 
-    // Optimistic UI update
-    setStateAndDerive(prev => {
-      const updatedTasks = [...prev.tasks, newTask].sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-      return {tasks: updatedTasks};
-    });
+  // Optimistic UI update
+  setStateAndDerive(prev => {
+    const updatedTasks = [...prev.tasks, newTask].sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+    return {tasks: updatedTasks};
+  });
 
-    // API call
-    fetch('/api/tasks', {
+  try {
+    const response = await safeApiFetch(remoteApiPaths.tasksCollection(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newTask),
-    })
-    .then(response => response.json())
-    .then(savedTask => {
-      // Replace temporary item with the real one from the server
-      setStateAndDerive(prev => {
-        const updatedTasks = prev.tasks.map(t => t.id === tempId ? savedTask : t);
-        localStorage.setItem(TASKS_KEY, JSON.stringify(updatedTasks));
-        addLog('TASK_ADD', {taskId: savedTask.id, title: savedTask.title});
-        return {tasks: updatedTasks};
-      });
-    })
-    .catch(error => {
-      // The background sync will handle the request, but we need to persist the optimistic update
-      console.error("Failed to add task, will be synced in background", error);
-      setStateAndDerive(prev => {
-        localStorage.setItem(TASKS_KEY, JSON.stringify(prev.tasks));
-        addLog('TASK_ADD_OFFLINE', {taskId: tempId, title: newTask.title});
-        return {};
-      });
     });
-  }, [addLog]);
+    const savedTask = await parseJsonResponse<StudyTask>(response);
 
-  const updateTask = useCallback((updatedTask: StudyTask) => {
-    const originalTasks = state.tasks;
-    
-    // Optimistic UI update
     setStateAndDerive(prev => {
-      const newTasks = prev.tasks.map(task => (task.id === updatedTask.id ? updatedTask : task));
-      const sortedTasks = newTasks.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-      return {tasks: sortedTasks};
+      const updatedTasks = prev.tasks.map(t => t.id === tempId ? savedTask : t);
+      localStorage.setItem(TASKS_KEY, JSON.stringify(updatedTasks));
+      addLog('TASK_ADD', {taskId: savedTask.id, title: savedTask.title});
+      return {tasks: updatedTasks};
     });
+  } catch (error) {
+    console.error("Failed to add task, will be synced in background", error);
+    setStateAndDerive(prev => {
+      localStorage.setItem(TASKS_KEY, JSON.stringify(prev.tasks));
+      addLog('TASK_ADD_OFFLINE', {taskId: tempId, title: newTask.title});
+      return {};
+    });
+  }
+}, [addLog, setStateAndDerive]);
 
-    // API call
-    fetch(`/api/tasks/${updatedTask.id}`, {
+  const updateTask = useCallback(async (updatedTask: StudyTask) => {
+  const originalTasks = state.tasks;
+
+  // Optimistic UI update
+  setStateAndDerive(prev => {
+    const newTasks = prev.tasks.map(task => (task.id === updatedTask.id ? updatedTask : task));
+    const sortedTasks = newTasks.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+    return {tasks: sortedTasks};
+  });
+
+  try {
+    const response = await safeApiFetch(remoteApiPaths.task(updatedTask.id), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedTask),
-    })
-    .then(response => response.json())
-    .then(savedTask => {
-      // Confirm the update
-      setStateAndDerive(prev => {
-        const newTasks = prev.tasks.map(task => (task.id === savedTask.id ? savedTask : task));
-        const sortedTasks = newTasks.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-        localStorage.setItem(TASKS_KEY, JSON.stringify(sortedTasks));
-        addLog('TASK_UPDATE', {taskId: savedTask.id, title: savedTask.title, newStatus: savedTask.status});
-        return {tasks: sortedTasks};
-      });
-    })
-    .catch(error => {
-      console.error("Failed to update task, will be synced in background", error);
-      // Revert to original state on error, background sync will handle it
-      setStateAndDerive(() => {
-        localStorage.setItem(TASKS_KEY, JSON.stringify(originalTasks));
-        addLog('TASK_UPDATE_OFFLINE', {taskId: updatedTask.id, title: updatedTask.title});
-        return {tasks: originalTasks};
-      });
     });
-  }, [addLog, state.tasks]);
+    const savedTask = await parseJsonResponse<StudyTask>(response);
+
+    setStateAndDerive(prev => {
+      const newTasks = prev.tasks.map(task => (task.id === savedTask.id ? savedTask : task));
+      const sortedTasks = newTasks.sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+      localStorage.setItem(TASKS_KEY, JSON.stringify(sortedTasks));
+      addLog('TASK_UPDATE', {taskId: savedTask.id, title: savedTask.title});
+      return {tasks: sortedTasks};
+    });
+  } catch (error) {
+    console.error("Failed to update task, will be synced in background", error);
+    setStateAndDerive(() => {
+      localStorage.setItem(TASKS_KEY, JSON.stringify(originalTasks));
+      addLog('TASK_UPDATE_OFFLINE', {taskId: updatedTask.id, title: updatedTask.title});
+      return {tasks: originalTasks};
+    });
+  }
+}, [addLog, setStateAndDerive, state.tasks]);
   
   const archiveTask = useCallback(
-    (taskId: string) => {
-      const originalTasks = state.tasks;
-      
-      // Optimistic UI update
+  async (taskId: string) => {
+    const originalTasks = state.tasks;
+
+    // Optimistic UI update
+    setStateAndDerive(prev => {
+      const newTasks = prev.tasks.map(t =>
+        t.id === taskId ? {...t, status: 'archived' as const} : t
+      );
+      return {tasks: newTasks};
+    });
+
+    try {
+      const response = await safeApiFetch(remoteApiPaths.taskMutation(taskId, 'archive'), { method: 'POST' });
+      await ensureSuccessfulResponse(response);
+
       setStateAndDerive(prev => {
+        const taskToArchive = prev.tasks.find(t => t.id === taskId);
+        if (!taskToArchive) return {};
         const newTasks = prev.tasks.map(t =>
           t.id === taskId ? {...t, status: 'archived' as const} : t
         );
+        addLog('TASK_ARCHIVE', {taskId, title: taskToArchive.title});
+        localStorage.setItem(TASKS_KEY, JSON.stringify(newTasks));
         return {tasks: newTasks};
       });
-
-      // API call
-      fetch(`/api/tasks/${taskId}/archive`, { method: 'POST' })
-      .then(() => {
-        // Confirm archival
-        setStateAndDerive(prev => {
-          const taskToArchive = prev.tasks.find(t => t.id === taskId);
-          if (!taskToArchive) return {};
-          const newTasks = prev.tasks.map(t =>
-            t.id === taskId ? {...t, status: 'archived' as const} : t
-          );
-          addLog('TASK_ARCHIVE', {taskId, title: taskToArchive.title});
-          localStorage.setItem(TASKS_KEY, JSON.stringify(newTasks));
-          return {tasks: newTasks};
-        });
-      })
-      .catch(error => {
-        console.error("Failed to archive task, will be synced in background", error);
-        // Revert to original state on error, background sync will handle it
-        setStateAndDerive(() => {
-          const taskToArchive = originalTasks.find(t => t.id === taskId);
-          localStorage.setItem(TASKS_KEY, JSON.stringify(originalTasks));
-          if(taskToArchive) addLog('TASK_ARCHIVE_OFFLINE', {taskId, title: taskToArchive.title});
-          return {tasks: originalTasks};
-        });
+    } catch (error) {
+      console.error("Failed to archive task, will be synced in background", error);
+      setStateAndDerive(() => {
+        const taskToArchive = originalTasks.find(t => t.id === taskId);
+        localStorage.setItem(TASKS_KEY, JSON.stringify(originalTasks));
+        addLog('TASK_ARCHIVE_OFFLINE', {taskId, title: taskToArchive?.title || ''});
+        return {tasks: originalTasks};
       });
-    },
-    [addLog, state.tasks]
-  );
+    }
+  },
+  [addLog, setStateAndDerive, state.tasks]
+);
 
   const unarchiveTask = useCallback(
-    (taskId: string) => {
-      const originalTasks = state.tasks;
-      
-      // Optimistic UI update
+  async (taskId: string) => {
+    const originalTasks = state.tasks;
+
+    // Optimistic UI update
+    setStateAndDerive(prev => {
+      const newTasks = prev.tasks.map(t =>
+        t.id === taskId ? {...t, status: 'todo' as const} : t
+      );
+      return {tasks: newTasks};
+    });
+
+    try {
+      const response = await safeApiFetch(remoteApiPaths.taskMutation(taskId, 'unarchive'), { method: 'POST' });
+      await ensureSuccessfulResponse(response);
+
       setStateAndDerive(prev => {
+        const taskToUnarchive = prev.tasks.find(t => t.id === taskId);
+        if (!taskToUnarchive) return {};
         const newTasks = prev.tasks.map(t =>
           t.id === taskId ? {...t, status: 'todo' as const} : t
         );
+        addLog('TASK_UNARCHIVE', {taskId, title: taskToUnarchive.title});
+        localStorage.setItem(TASKS_KEY, JSON.stringify(newTasks));
         return {tasks: newTasks};
       });
-
-      // API call
-      fetch(`/api/tasks/${taskId}/unarchive`, { method: 'POST' })
-      .then(() => {
-        // Confirm unarchival
-        setStateAndDerive(prev => {
-          const taskToUnarchive = prev.tasks.find(t => t.id === taskId);
-          if (!taskToUnarchive) return {};
-          const newTasks = prev.tasks.map(t =>
-            t.id === taskId ? {...t, status: 'todo' as const} : t
-          );
-          addLog('TASK_UNARCHIVE', {taskId, title: taskToUnarchive.title});
-          localStorage.setItem(TASKS_KEY, JSON.stringify(newTasks));
-          return {tasks: newTasks};
-        });
-      })
-      .catch(error => {
-        console.error("Failed to unarchive task, will be synced in background", error);
-        // Revert to original state on error, background sync will handle it
-        setStateAndDerive(() => {
-          const taskToUnarchive = originalTasks.find(t => t.id === taskId);
-          localStorage.setItem(TASKS_KEY, JSON.stringify(originalTasks));
-          if(taskToUnarchive) addLog('TASK_UNARCHIVE_OFFLINE', {taskId, title: taskToUnarchive.title});
-          return {tasks: originalTasks};
-        });
+    } catch (error) {
+      console.error("Failed to unarchive task, will be synced in background", error);
+      setStateAndDerive(() => {
+        localStorage.setItem(TASKS_KEY, JSON.stringify(originalTasks));
+        addLog('TASK_UNARCHIVE_OFFLINE', {taskId, title: originalTasks.find(t => t.id === taskId)?.title || ''});
+        return {tasks: originalTasks};
       });
-    },
-    [addLog, state.tasks]
-  );
+    }
+  },
+  [addLog, setStateAndDerive, state.tasks]
+);
 
   const pushTaskToNextDay = useCallback(
-    (taskId: string) => {
-      const originalTasks = state.tasks;
-      
-      // Optimistic UI update
+  async (taskId: string) => {
+    const originalTasks = state.tasks;
+
+    // Optimistic UI update
+    setStateAndDerive(prev => {
+      const newTasks = prev.tasks.map(t => {
+        if (t.id === taskId) {
+          const taskDate = parseISO(t.date);
+          return {...t, date: format(addDays(taskDate, 1), 'yyyy-MM-dd')};
+        }
+        return t;
+      });
+      return {tasks: newTasks};
+    });
+
+    try {
+      const response = await safeApiFetch(remoteApiPaths.taskMutation(taskId, 'push'), { method: 'POST' });
+      await ensureSuccessfulResponse(response);
+
       setStateAndDerive(prev => {
+        const taskToPush = prev.tasks.find(t => t.id === taskId);
+        if (!taskToPush) return {};
         const newTasks = prev.tasks.map(t => {
           if (t.id === taskId) {
             const taskDate = parseISO(t.date);
@@ -633,41 +680,22 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
           }
           return t;
         });
+        addLog('TASK_PUSH_NEXT_DAY', {taskId, title: taskToPush.title});
+        localStorage.setItem(TASKS_KEY, JSON.stringify(newTasks));
         return {tasks: newTasks};
       });
-
-      // API call
-      fetch(`/api/tasks/${taskId}/push`, { method: 'POST' })
-      .then(() => {
-        // Confirm push
-        setStateAndDerive(prev => {
-          const taskToPush = prev.tasks.find(t => t.id === taskId);
-          if (!taskToPush) return {};
-          const newTasks = prev.tasks.map(t => {
-            if (t.id === taskId) {
-              const taskDate = parseISO(t.date);
-              return {...t, date: format(addDays(taskDate, 1), 'yyyy-MM-dd')};
-            }
-            return t;
-          });
-          addLog('TASK_PUSH_NEXT_DAY', {taskId, title: taskToPush.title});
-          localStorage.setItem(TASKS_KEY, JSON.stringify(newTasks));
-          return {tasks: newTasks};
-        });
-      })
-      .catch(error => {
-        console.error("Failed to push task, will be synced in background", error);
-        // Revert to original state on error, background sync will handle it
-        setStateAndDerive(() => {
-          const taskToPush = originalTasks.find(t => t.id === taskId);
-          localStorage.setItem(TASKS_KEY, JSON.stringify(originalTasks));
-          if(taskToPush) addLog('TASK_PUSH_NEXT_DAY_OFFLINE', {taskId, title: taskToPush.title});
-          return {tasks: originalTasks};
-        });
+    } catch (error) {
+      console.error("Failed to push task, will be synced in background", error);
+      setStateAndDerive(() => {
+        const taskToPush = originalTasks.find(t => t.id === taskId);
+        localStorage.setItem(TASKS_KEY, JSON.stringify(originalTasks));
+        addLog('TASK_PUSH_NEXT_DAY_OFFLINE', {taskId, title: taskToPush?.title || ''});
+        return {tasks: originalTasks};
       });
-    },
-    [addLog, state.tasks]
-  );
+    }
+  },
+  [addLog, setStateAndDerive, state.tasks]
+);
 
   const startTimer = useCallback((item: StudyTask | Routine) => {
       if (state.activeItem) { toast.error(`Please stop or complete the timer for "${state.activeItem.item.title}" first.`); return; }
@@ -738,7 +766,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     }
     localStorage.removeItem(TIMER_KEY);
     setStateAndDerive(prev => ({ activeItem: null, isPaused: true, isOvertime: false, timeDisplay: '00:00', timerProgress: null, starCount: 0 }));
-  }, [updateTask, addLog, stopSound, state.soundSettings.tick]);
+  }, [updateTask, addLog, setStateAndDerive, stopSound, state.soundSettings.tick]);
 
   const completeTimer = useCallback((studyLog: string = '') => {
     stopSound(state.soundSettings.tick);
@@ -795,7 +823,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
       timerProgress: null,
       starCount: 0,
     }));
-  }, [updateTask, addLog, fire, stopSound, state.soundSettings.tick]);
+  }, [updateTask, addLog, fire, setStateAndDerive, stopSound, state.soundSettings.tick]);
 
   const manuallyCompleteItem = useCallback((item: StudyTask | Routine, durationMinutes: number, notes?: string) => {
     const isTask = 'status' in item;
@@ -833,109 +861,108 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
   const openRoutineLogDialog = useCallback((action: 'complete' | 'stop') => { setState(prev => ({...prev, routineLogDialog: {isOpen: true, action}})); }, []);
   const closeRoutineLogDialog = useCallback(() => { setState(prev => ({ ...prev, routineLogDialog: {isOpen: false, action: null} })); }, []);
   const addRoutine = useCallback((routine: Omit<Routine, 'id' | 'shortId'>) => {
-    const tempId = `temp_${crypto.randomUUID()}`;
-    const newRoutine: Routine = { ...routine, id: tempId, shortId: generateShortId('R'), description: routine.description || '', priority: routine.priority || 'medium' };
+  const tempId = `temp_${crypto.randomUUID()}`;
+  const newRoutine: Routine = { ...routine, id: tempId, shortId: generateShortId('R'), description: routine.description || '', priority: routine.priority || 'medium' };
 
-    // Optimistic UI update
-    setStateAndDerive(prev => {
-      const updated = [...prev.routines, newRoutine].sort((a, b) => a.startTime.localeCompare(b.startTime));
-      return {routines: updated};
-    });
+  // Optimistic UI update
+  setStateAndDerive(prev => {
+    const updated = [...prev.routines, newRoutine].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    return {routines: updated};
+  });
 
-    // API call
-    fetch('/api/routines', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newRoutine),
-    })
-    .then(response => response.json())
-    .then(savedRoutine => {
-      // Replace temporary item with the real one from the server
+  const persistRoutine = async () => {
+    try {
+      const response = await safeApiFetch(remoteApiPaths.routinesCollection(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newRoutine),
+      });
+      const savedRoutine = await parseJsonResponse<Routine>(response);
+
       setStateAndDerive(prev => {
         const updated = prev.routines.map(r => (r.id === tempId ? savedRoutine : r)).sort((a, b) => a.startTime.localeCompare(b.startTime));
         localStorage.setItem(ROUTINES_KEY, JSON.stringify(updated));
+        addLog('ROUTINE_ADD', {routineId: savedRoutine.id, title: savedRoutine.title});
         return {routines: updated};
       });
-    })
-    .catch(error => {
-      // The background sync will handle the request, but we need to persist the optimistic update
+    } catch (error) {
       console.error("Failed to add routine, will be synced in background", error);
       setStateAndDerive(prev => {
         localStorage.setItem(ROUTINES_KEY, JSON.stringify(prev.routines));
         addLog('ROUTINE_ADD_OFFLINE', {routineId: tempId, title: newRoutine.title});
         return {};
       });
-    });
-  }, []);
-  const updateRoutine = useCallback((updatedRoutine: Routine) => {
-    const originalRoutines = state.routines;
+    }
+  };
 
-    // Optimistic UI update
-    setStateAndDerive(prev => {
-      const updated = prev.routines.map(r => (r.id === updatedRoutine.id ? updatedRoutine : r)).sort((a, b) => a.startTime.localeCompare(b.startTime));
-      return {routines: updated};
-    });
+  void persistRoutine();
+}, [addLog, setStateAndDerive]);
+  const updateRoutine = useCallback(async (updatedRoutine: Routine) => {
+  const originalRoutines = state.routines;
 
-    // API call
-    fetch(`/api/routines/${updatedRoutine.id}`, {
+  // Optimistic UI update
+  setStateAndDerive(prev => {
+    const updated = prev.routines.map(r => (r.id === updatedRoutine.id ? updatedRoutine : r)).sort((a, b) => a.startTime.localeCompare(b.startTime));
+    return {routines: updated};
+  });
+
+  try {
+    const response = await safeApiFetch(remoteApiPaths.routine(updatedRoutine.id), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedRoutine),
-    })
-    .then(response => response.json())
-    .then(savedRoutine => {
-      // Confirm the update
-      setStateAndDerive(prev => {
-        const updated = prev.routines.map(r => (r.id === savedRoutine.id ? savedRoutine : r)).sort((a, b) => a.startTime.localeCompare(b.startTime));
-        localStorage.setItem(ROUTINES_KEY, JSON.stringify(updated));
-        return {routines: updated};
-      });
-    })
-    .catch(error => {
-      console.error("Failed to update routine, will be synced in background", error);
-      // Revert to original state on error, background sync will handle it
-      setStateAndDerive(() => {
-        localStorage.setItem(ROUTINES_KEY, JSON.stringify(originalRoutines));
-        addLog('ROUTINE_UPDATE_OFFLINE', {routineId: updatedRoutine.id, title: updatedRoutine.title});
-        return {routines: originalRoutines};
-      });
     });
-  }, [state.routines, addLog]);
-  const deleteRoutine = useCallback((routineId: string) => {
-    const originalRoutines = state.routines;
-    
-    // Optimistic UI update
+    const savedRoutine = await parseJsonResponse<Routine>(response);
+
     setStateAndDerive(prev => {
-      const updated = prev.routines.filter(r => r.id !== routineId);
+      const updated = prev.routines.map(r => (r.id === savedRoutine.id ? savedRoutine : r)).sort((a, b) => a.startTime.localeCompare(b.startTime));
+      localStorage.setItem(ROUTINES_KEY, JSON.stringify(updated));
+      addLog('ROUTINE_UPDATE', {routineId: savedRoutine.id, title: savedRoutine.title});
       return {routines: updated};
     });
-
-    // API call
-    fetch(`/api/routines/${routineId}`, { method: 'DELETE' })
-    .then(() => {
-      // Confirm deletion
-      setStateAndDerive(prev => {
-        const updated = prev.routines.filter(r => r.id !== routineId);
-        localStorage.setItem(ROUTINES_KEY, JSON.stringify(updated));
-        return {routines: updated};
-      });
-    })
-    .catch(error => {
-      console.error("Failed to delete routine, will be synced in background", error);
-      // Revert to original state on error, background sync will handle it
-      setStateAndDerive(() => {
-        const routineToDelete = originalRoutines.find(r => r.id === routineId);
-        localStorage.setItem(ROUTINES_KEY, JSON.stringify(originalRoutines));
-        if(routineToDelete) addLog('ROUTINE_DELETE_OFFLINE', {routineId, title: routineToDelete.title});
-        return {routines: originalRoutines};
-      });
+  } catch (error) {
+    console.error("Failed to update routine, will be synced in background", error);
+    setStateAndDerive(() => {
+      localStorage.setItem(ROUTINES_KEY, JSON.stringify(originalRoutines));
+      addLog('ROUTINE_UPDATE_OFFLINE', {routineId: updatedRoutine.id, title: updatedRoutine.title});
+      return {routines: originalRoutines};
     });
-  }, [state.routines]);
-  const addBadge = useCallback((badgeData: Omit<Badge, 'id'>) => { const newBadge: Badge = { ...badgeData, id: `custom_${crypto.randomUUID()}` }; setStateAndDerive(prev => { const newAllBadges = [...prev.allBadges, newBadge]; const customBadges = newAllBadges.filter(b => b.isCustom); localStorage.setItem(CUSTOM_BADGES_KEY, JSON.stringify(customBadges)); return {allBadges: newAllBadges}; }); }, []);
-  const updateBadge = useCallback((updatedBadge: Badge) => { setStateAndDerive(prev => { const newAllBadges = prev.allBadges.map(b => b.id === updatedBadge.id ? updatedBadge : b); if (updatedBadge.isCustom) { const customBadges = newAllBadges.filter(b => b.isCustom); localStorage.setItem(CUSTOM_BADGES_KEY, JSON.stringify(customBadges)); } else { const systemBadges = newAllBadges.filter(b => !b.isCustom); localStorage.setItem(SYSTEM_BADGES_CONFIG_KEY, JSON.stringify(systemBadges)); } return {allBadges: newAllBadges}; }); }, []);
-  const deleteBadge = useCallback((badgeId: string) => { setStateAndDerive(prev => { const updatedAllBadges = prev.allBadges.filter(b => b.id !== badgeId); const updatedEarned = new Map(prev.earnedBadges); if (updatedEarned.has(badgeId)) updatedEarned.delete(badgeId); const customBadges = updatedAllBadges.filter(b => b.isCustom); localStorage.setItem(CUSTOM_BADGES_KEY, JSON.stringify(customBadges)); localStorage.setItem(EARNED_BADGES_KEY, JSON.stringify(Array.from(updatedEarned.entries()))); return { allBadges: updatedAllBadges, earnedBadges: updatedEarned }; }); }, []);
-  const updateProfile = useCallback((newProfileData: Partial<UserProfile>) => { setStateAndDerive(prev => { const newProfile = {...prev.profile, ...newProfileData}; localStorage.setItem(PROFILE_KEY, JSON.stringify(newProfile)); return {profile: newProfile}; }); }, []);
-  const setSoundSettings = useCallback((newSettings: Partial<SoundSettings>) => { setStateAndDerive(prev => { const updatedSettings = {...prev.soundSettings, ...newSettings}; localStorage.setItem(SOUND_SETTINGS_KEY, JSON.stringify(updatedSettings)); return {soundSettings: updatedSettings}; }); }, []);
+  }
+}, [state.routines, addLog, setStateAndDerive]);
+  const deleteRoutine = useCallback(async (routineId: string) => {
+  const originalRoutines = state.routines;
+  
+  // Optimistic UI update
+  setStateAndDerive(prev => {
+    const updated = prev.routines.filter(r => r.id !== routineId);
+    return {routines: updated};
+  });
+  
+  try {
+    const response = await safeApiFetch(remoteApiPaths.routine(routineId), { method: 'DELETE' });
+    await ensureSuccessfulResponse(response);
+
+    setStateAndDerive(prev => {
+      const updated = prev.routines.filter(r => r.id !== routineId);
+      localStorage.setItem(ROUTINES_KEY, JSON.stringify(updated));
+      addLog('ROUTINE_DELETE', {routineId});
+      return {routines: updated};
+    });
+  } catch (error) {
+    console.error("Failed to delete routine, will be synced in background", error);
+    setStateAndDerive(() => {
+      const routineToDelete = originalRoutines.find(r => r.id === routineId);
+      localStorage.setItem(ROUTINES_KEY, JSON.stringify(originalRoutines));
+      if(routineToDelete) addLog('ROUTINE_DELETE_OFFLINE', {routineId, title: routineToDelete.title});
+      return {routines: originalRoutines};
+    });
+  }
+}, [state.routines, addLog, setStateAndDerive]);
+  const addBadge = useCallback((badgeData: Omit<Badge, 'id'>) => { const newBadge: Badge = { ...badgeData, id: `custom_${crypto.randomUUID()}` }; setStateAndDerive(prev => { const newAllBadges = [...prev.allBadges, newBadge]; const customBadges = newAllBadges.filter(b => b.isCustom); localStorage.setItem(CUSTOM_BADGES_KEY, JSON.stringify(customBadges)); return {allBadges: newAllBadges}; }); }, [setStateAndDerive]);
+  const updateBadge = useCallback((updatedBadge: Badge) => { setStateAndDerive(prev => { const newAllBadges = prev.allBadges.map(b => b.id === updatedBadge.id ? updatedBadge : b); if (updatedBadge.isCustom) { const customBadges = newAllBadges.filter(b => b.isCustom); localStorage.setItem(CUSTOM_BADGES_KEY, JSON.stringify(customBadges)); } else { const systemBadges = newAllBadges.filter(b => !b.isCustom); localStorage.setItem(SYSTEM_BADGES_CONFIG_KEY, JSON.stringify(systemBadges)); } return {allBadges: newAllBadges}; }); }, [setStateAndDerive]);
+  const deleteBadge = useCallback((badgeId: string) => { setStateAndDerive(prev => { const updatedAllBadges = prev.allBadges.filter(b => b.id !== badgeId); const updatedEarned = new Map(prev.earnedBadges); if (updatedEarned.has(badgeId)) updatedEarned.delete(badgeId); const customBadges = updatedAllBadges.filter(b => b.isCustom); localStorage.setItem(CUSTOM_BADGES_KEY, JSON.stringify(customBadges)); localStorage.setItem(EARNED_BADGES_KEY, JSON.stringify(Array.from(updatedEarned.entries()))); return { allBadges: updatedAllBadges, earnedBadges: updatedEarned }; }); }, [setStateAndDerive]);
+  const updateProfile = useCallback((newProfileData: Partial<UserProfile>) => { setStateAndDerive(prev => { const newProfile = {...prev.profile, ...newProfileData}; localStorage.setItem(PROFILE_KEY, JSON.stringify(newProfile)); return {profile: newProfile}; }); }, [setStateAndDerive]);
+  const setSoundSettings = useCallback((newSettings: Partial<SoundSettings>) => { setStateAndDerive(prev => { const updatedSettings = {...prev.soundSettings, ...newSettings}; localStorage.setItem(SOUND_SETTINGS_KEY, JSON.stringify(updatedSettings)); return {soundSettings: updatedSettings}; }); }, [setStateAndDerive]);
   const toggleMute = useCallback(() => setState(prev => ({...prev, isMuted: !prev.isMuted})), []);
   const todaysActivity = useMemo(() => {
     if (!state.isLoaded) return [];
@@ -1020,3 +1047,18 @@ export const useGlobalState = () => {
   if (context === undefined) throw new Error('useGlobalState must be used within a GlobalStateProvider');
   return context;
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

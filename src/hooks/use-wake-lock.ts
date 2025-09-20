@@ -1,4 +1,4 @@
-// This is a new file to manage the Screen Wake Lock API
+﻿// This is a new file to manage the Screen Wake Lock API
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -35,7 +35,7 @@ export function useWakeLock() {
     requestWakeLock();
     
     const handleVisibilityChange = () => {
-        if (wakeLock === null && document.visibilityState === 'visible') {
+        if (!lock && document.visibilityState === 'visible') {
             requestWakeLock();
         }
     };
@@ -47,6 +47,7 @@ export function useWakeLock() {
       if (lock) {
         lock.release().catch(() => {}); // Release the lock on cleanup, ignore errors.
         setWakeLock(null);
+        lock = null;
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       document.removeEventListener('fullscreenchange', handleVisibilityChange);
@@ -55,3 +56,5 @@ export function useWakeLock() {
 
   return wakeLock;
 }
+
+

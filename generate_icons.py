@@ -227,9 +227,9 @@ def generate_browserconfig():
 <browserconfig>
   <msapplication>
     <tile>
-      <square70x70logo src="/icons/icon-70x70.png"/>
-      <square150x150logo src="/icons/icon-150x150.png"/>
-      <square310x310logo src="/icons/icon-310x310.png"/>
+      <square70x70logo src="/icons/icon-128x128.png"/>
+      <square150x150logo src="/icons/icon-180x180.png"/>
+      <square310x310logo src="/icons/icon-384x384.png"/>
       <TileColor>#4F46E5</TileColor>
     </tile>
   </msapplication>

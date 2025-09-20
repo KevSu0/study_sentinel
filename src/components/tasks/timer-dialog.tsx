@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, {useState} from 'react';
 import {
   Dialog,
@@ -72,7 +72,7 @@ export function TimerDialog({
             <DialogTitle>Another Timer is Active</DialogTitle>
             <DialogDescription>
               You can only have one timer running at a time. Please complete or
-              stop the active timer for "{activeItem.item.title}" before
+              stop the active timer for &ldquo;{activeItem.item.title}&rdquo; before
               starting a new one.
             </DialogDescription>
           </DialogHeader>
@@ -162,3 +162,4 @@ export function TimerDialog({
     </>
   );
 }
+

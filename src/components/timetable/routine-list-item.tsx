@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 
 import React, {useState, memo} from 'react';
@@ -172,7 +172,7 @@ export const RoutineListItem = memo(function RoutineListItem({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the routine "{routine.title}".
+              This will permanently delete the routine &ldquo;{routine.title}&rdquo;.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -186,3 +186,4 @@ export const RoutineListItem = memo(function RoutineListItem({
     </>
   );
 });
+

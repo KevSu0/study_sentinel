@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 
 import React, { useState, lazy, Suspense } from 'react';
@@ -255,7 +255,7 @@ export const PlanItemCard = React.memo(function PlanItemCard({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the routine "{title}". This action cannot be undone.
+              This will permanently delete the routine &ldquo;{title}&rdquo;. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -279,3 +279,4 @@ export const PlanItemCard = React.memo(function PlanItemCard({
     </>
   );
 });
+

@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 
 import {
@@ -67,7 +67,7 @@ export function ManualLogDialog({
         <DialogHeader>
           <DialogTitle>Log Productive Time</DialogTitle>
           <DialogDescription>
-            Manually log time for "{item.title}". This will mark it as complete.
+            Manually log time for &ldquo;{item.title}&rdquo;. This will mark it as complete.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -106,3 +106,4 @@ export function ManualLogDialog({
     </Dialog>
   );
 }
+

@@ -1,4 +1,4 @@
-
+﻿
 'use client';
 import React from 'react';
 import { CompletedPlanListItem } from '@/components/plans/completed-plan-list-item';
@@ -57,7 +57,7 @@ export const CompletedTodayWidget = ({
           <CheckCircle2 className="h-16 w-16 text-primary/80 mb-4" />
           <h2 className="text-xl font-bold">No Activity Yet Today</h2>
           <p className="text-muted-foreground mt-2 max-w-md">
-            Your completed tasks and routines will appear here. Let's get to
+            Your completed tasks and routines will appear here. Let&apos;s get to
             work!
           </p>
         </div>
@@ -81,7 +81,7 @@ export const CompletedTodayWidget = ({
     <section>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
         <h2 className="text-xl font-semibold text-primary">
-          Today's Activity
+          Today&apos;s Activity
         </h2>
       </div>
       <div className={cn("space-y-3", viewMode === 'list' && "space-y-1")}>
@@ -115,3 +115,4 @@ export const CompletedTodayWidget = ({
     </section>
   );
 };
+

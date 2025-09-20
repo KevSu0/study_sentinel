@@ -75,7 +75,11 @@ describe('ManualLogDialog', () => {
   it('renders the dialog with correct title and description', () => {
     renderComponent();
     expect(screen.getByText('Log Productive Time')).toBeInTheDocument();
-    expect(screen.getByText(`Manually log time for "${mockTaskItem.title}". This will mark it as complete.`)).toBeInTheDocument();
+    expect(
+      screen.getByText(content =>
+        content.includes('Manually log time for') && content.includes(mockTaskItem.title)
+      )
+    ).toBeInTheDocument();
   });
 
   it('initializes form with duration from item if available', async () => {

@@ -90,7 +90,7 @@ export default function StatsPage() {
           
           <TabsContent value="daily" className="mt-6 space-y-6">
             <div className="flex items-center justify-center gap-2 mb-4">
-                <Button variant="ghost" size="icon" onClick={() => changeDate(-1)}>
+                <Button aria-label="Previous day" variant="ghost" size="icon" onClick={() => changeDate(-1)}>
                     <ChevronLeft className="h-5 w-5" />
                 </Button>
                 <Popover>
@@ -104,7 +104,7 @@ export default function StatsPage() {
                         <Calendar mode="single" selected={selectedDate} onSelect={(date) => date && setSelectedDate(date)} initialFocus />
                     </PopoverContent>
                 </Popover>
-                <Button variant="ghost" size="icon" onClick={() => changeDate(1)}>
+                <Button aria-label="Next day" variant="ghost" size="icon" onClick={() => changeDate(1)}>
                     <ChevronRight className="h-5 w-5" />
                 </Button>
             </div>

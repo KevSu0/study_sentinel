@@ -1,4 +1,4 @@
-
+﻿
 import {
   Dialog,
   DialogContent,
@@ -220,10 +220,10 @@ function TaskForm({ onSubmit, onCancel, editingItem, selectedDate }: { onSubmit:
           <Input id="date" type="date" {...register('date')} className="mt-1" />
         </div>
         <div>
-          <Label htmlFor="time">Time</Label>
+          <Label id="timeLabel" htmlFor="time">Time</Label>
           <Controller name="time" control={control} render={({field}) => (
             <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <SelectTrigger id="time" className="mt-1"><SelectValue placeholder="Select time" /></SelectTrigger>
+              <SelectTrigger id="time" aria-label="Task Time" className="mt-1"><SelectValue placeholder="Select time" /></SelectTrigger>
               <SelectContent>
                 {timeOptions.map(option => (
                   <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
@@ -235,10 +235,10 @@ function TaskForm({ onSubmit, onCancel, editingItem, selectedDate }: { onSubmit:
       </div>
         <div className={cn("grid gap-4", timerType === 'countdown' ? 'grid-cols-2' : 'grid-cols-1')}>
             <div className={cn("transition-opacity", timerType === 'infinity' ? 'opacity-50 pointer-events-none' : 'opacity-100')}>
-              <Label htmlFor="duration">Duration</Label>
+              <Label id="durationLabel" htmlFor="duration">Duration</Label>
               <Controller name="duration" control={control} render={({field}) => (
                 <Select onValueChange={value => field.onChange(Number(value))} defaultValue={String(field.value)} disabled={timerType === 'infinity'}>
-                  <SelectTrigger id="duration" className="mt-1"><SelectValue placeholder="Select duration" /></SelectTrigger>
+                  <SelectTrigger id="duration" aria-label="Task Duration" className="mt-1"><SelectValue placeholder="Select duration" /></SelectTrigger>
                   <SelectContent>
                     {durationOptions.map(option => (
                       <SelectItem key={option.value} value={String(option.value)}>{option.label}</SelectItem>
@@ -249,10 +249,10 @@ function TaskForm({ onSubmit, onCancel, editingItem, selectedDate }: { onSubmit:
               {errors.duration && <p className="text-sm text-destructive mt-1">{errors.duration.message}</p>}
             </div>
             <div>
-              <Label htmlFor="priority">Priority</Label>
+              <Label id="taskPriorityLabel" htmlFor="taskPriority">Priority</Label>
               <Controller name="priority" control={control} render={({field}) => (
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <SelectTrigger id="priority" className="mt-1"><SelectValue placeholder="Select priority" /></SelectTrigger>
+                  <SelectTrigger id="taskPriority" aria-label="Task Priority" className="mt-1"><SelectValue placeholder="Select priority" /></SelectTrigger>
                   <SelectContent>
                     {priorityOptions.map(option => (
                       <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
@@ -354,10 +354,10 @@ function RoutineForm({ onSubmit, onCancel, editingItem }: { onSubmit: (data: Rou
             </div>
           </div>
            <div>
-              <Label htmlFor="priority">Priority</Label>
+              <Label id="taskPriorityLabel" htmlFor="taskPriority">Priority</Label>
               <Controller name="priority" control={control} render={({field}) => (
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <SelectTrigger id="priority" className="mt-1"><SelectValue placeholder="Select priority" /></SelectTrigger>
+                  <SelectTrigger id="taskPriority" aria-label="Task Priority" className="mt-1"><SelectValue placeholder="Select priority" /></SelectTrigger>
                   <SelectContent>
                     {priorityOptions.map(option => (
                       <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
@@ -466,7 +466,7 @@ export function AddItemDialog({ isOpen, onOpenChange, onAddTask, onUpdateTask, o
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" data-testid="add-item-dialog">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>
@@ -479,7 +479,7 @@ export function AddItemDialog({ isOpen, onOpenChange, onAddTask, onUpdateTask, o
 
   return (
     <Drawer open={open} onOpenChange={handleOpenChange}>
-      <DrawerContent>
+      <DrawerContent data-testid="add-item-dialog">
         <DrawerHeader className="text-left">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -493,3 +493,10 @@ export function AddItemDialog({ isOpen, onOpenChange, onAddTask, onUpdateTask, o
     </Drawer>
   );
 }
+
+
+
+
+
+
+

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format, set, addDays, startOfDay, parse } from 'date-fns';
 import { getTimeSinceStudyDayStart } from '@/lib/utils';
@@ -97,7 +97,7 @@ export const PerformanceCoach: React.FC<PerformanceCoachProps> = ({
       <div className="flex items-start gap-3">
         {diffYesterday >= 0 ? <TrendingUp className="h-5 w-5 text-green-500 flex-shrink-0 mt-1" /> : <TrendingDown className="h-5 w-5 text-red-500 flex-shrink-0 mt-1" />}
         <div>
-            <p className="text-sm font-semibold">Today's Study: {todayFormatted}</p>
+            <p className="text-sm font-semibold">Today&apos;s Study: {todayFormatted}</p>
             <p className="text-sm text-muted-foreground flex gap-4">
                 <span>{yesterdayMessage()}</span>
                 <span>{weeklyMessage()}</span>
@@ -113,11 +113,11 @@ export const PerformanceCoach: React.FC<PerformanceCoachProps> = ({
       let message;
 
       if (todaySeconds === 0) {
-          message = <>Your goal is <Highlight color="blue">{formatDuration(goalInSeconds)}</Highlight>. Let's get started!</>
+          message = <>Your goal is <Highlight color="blue">{formatDuration(goalInSeconds)}</Highlight>. Let&apos;s get started!</>
       } else if (diff >= 0) {
-          message = <>Great job! You've surpassed your daily goal of <Highlight color="green">{formatDuration(goalInSeconds)}</Highlight> by <Highlight color="green">{formatDuration(diff)}</Highlight>.</>
+          message = <>Great job! You&apos;ve surpassed your daily goal of <Highlight color="green">{formatDuration(goalInSeconds)}</Highlight> by <Highlight color="green">{formatDuration(diff)}</Highlight>.</>
       } else {
-          message = <>You're on your way! Just <Highlight color="red">{formatDuration(Math.abs(diff))}</Highlight> left to hit your goal of <Highlight color="blue">{formatDuration(goalInSeconds)}</Highlight>.</>
+          message = <>You&apos;re on your way! Just <Highlight color="red">{formatDuration(Math.abs(diff))}</Highlight> left to hit your goal of <Highlight color="blue">{formatDuration(goalInSeconds)}</Highlight>.</>
       }
       
       return (
@@ -215,3 +215,4 @@ export const PerformanceCoach: React.FC<PerformanceCoachProps> = ({
     </Card>
   );
 };
+

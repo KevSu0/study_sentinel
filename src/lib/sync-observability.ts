@@ -4,6 +4,8 @@
  */
 
 import { useState, useEffect } from 'react';
+import { thirdPartyGate } from '@/lib/third-party/third-party-gate';
+import { remoteApiPaths } from './remote-api-paths';
 
 export interface SyncObservabilityConfig {
   // Metrics collection
@@ -114,7 +116,7 @@ export class SyncObservabilityManager {
       traceSampleRate: 0.01,
       enableErrorTracking: true,
       errorSampleRate: 1.0,
-      serverEndpoint: '/api/sync/metrics',
+      serverEndpoint: remoteApiPaths.syncMetrics(),
       alertThresholds: {
         successRateMin: 0.98,
         duplicateRateMax: 0.005,
@@ -444,7 +446,7 @@ export class SyncObservabilityManager {
         online: navigator.onLine
       };
 
-      const response = await fetch(this.config.serverEndpoint, {
+      const response = await thirdPartyGate.fetchRaw(this.config.serverEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

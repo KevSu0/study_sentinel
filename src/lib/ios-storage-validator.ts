@@ -659,7 +659,7 @@ export class iOSStorageValidator {
     
     try {
       // Start multiple concurrent transactions
-      const transactions = [];
+      const transactions: Promise<void>[] = [];
       for (let i = 0; i < 5; i++) {
         const tx = db.transaction('events', 'readwrite');
         const store = tx.objectStore('events');
@@ -1157,7 +1157,7 @@ export class iOSStorageValidator {
       const db = await this.openDatabase();
       
       const writeCount = 1000;
-      const batchPromises = [];
+      const batchPromises: Promise<void>[] = [];
       
       for (let i = 0; i < writeCount; i++) {
         const tx = db.transaction('events', 'readwrite');
@@ -1438,7 +1438,7 @@ export class iOSStorageValidator {
     
     try {
       // Test for iOS WebKit-specific IndexedDB quirks
-      const quirks = [];
+      const quirks: StorageValidationResult[] = [];
       
       // Check for known iOS WebKit issues
       if (this.metrics.isIOS) {
@@ -1491,7 +1491,7 @@ export class iOSStorageValidator {
       const store = tx.objectStore('events');
       
       // Add multiple operations with delays
-      const operations = [];
+      const operations: Promise<void>[] = [];
       for (let i = 0; i < 10; i++) {
         operations.push(new Promise<void>((resolve) => {
           setTimeout(() => {

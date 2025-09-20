@@ -1,4 +1,4 @@
-
+﻿
 // This is a new file for the settings page
 'use client';
 
@@ -83,12 +83,12 @@ export default function SettingsPage() {
               </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="alarmSound">Alarm Sound</Label>
+              <Label id="alarmSoundLabel" htmlFor="alarmSound">Alarm Sound</Label>
               <Select
                 value={soundSettings.alarm}
                 onValueChange={(value) => handleSoundChange('alarm', value)}
               >
-                <SelectTrigger id="alarmSound">
+                <SelectTrigger id="alarmSound" aria-labelledby="alarmSoundLabel">
                   <SelectValue placeholder="Select an alarm sound" />
                 </SelectTrigger>
                 <SelectContent>
@@ -99,12 +99,12 @@ export default function SettingsPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tickSound">Timer Tick Sound</Label>
+              <Label id="tickSoundLabel" htmlFor="tickSound">Timer Tick Sound</Label>
               <Select
                 value={soundSettings.tick}
                 onValueChange={(value) => handleSoundChange('tick', value)}
               >
-                <SelectTrigger id="tickSound">
+                <SelectTrigger id="tickSound" aria-labelledby="tickSoundLabel">
                   <SelectValue placeholder="Select a ticking sound" />
                 </SelectTrigger>
                 <SelectContent>
@@ -115,12 +115,12 @@ export default function SettingsPage() {
               </Select>
             </div>
             <div className="space-y-2">
-                <Label htmlFor="notificationInterval">Reminder Interval</Label>
+                <Label id="notificationIntervalLabel" htmlFor="notificationInterval">Reminder Interval</Label>
                 <Select
                     value={String(soundSettings.notificationInterval)}
                     onValueChange={(value) => handleSoundChange('notificationInterval', Number(value))}
                 >
-                    <SelectTrigger id="notificationInterval">
+                    <SelectTrigger id="notificationInterval" aria-labelledby="notificationIntervalLabel">
                         <SelectValue placeholder="Select an interval" />
                     </SelectTrigger>
                     <SelectContent>
