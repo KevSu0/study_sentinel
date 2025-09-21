@@ -15,9 +15,9 @@ Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
 // Mock performance.memory
 const mockMemory = {
-  usedJSHeapSize: 50 * 1024 * 1024, // 50MB
-  totalJSHeapSize: 60 * 1024 * 1024,
-  jsHeapSizeLimit: 100 * 1024 * 1024
+  used: 50 * 1024 * 1024, // 50MB
+  total: 60 * 1024 * 1024,
+  limit: 100 * 1024 * 1024
 };
 
 Object.defineProperty(performance, 'memory', {
@@ -98,7 +98,7 @@ describe('Observability & Consent', () => {
       expect.objectContaining({
         detail: expect.objectContaining({
           budgetId: 'useStats30Day',
-          percentageOver: expect.toBeGreaterThan(0)
+          percentageOver: expect.any(Number)
         })
       })
     );

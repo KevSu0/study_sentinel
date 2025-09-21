@@ -93,7 +93,7 @@ describe('Write-time Rollup Materialization', () => {
 });
 
 describe('Raw vs Rollup Parity', () => {
-  test('rollup aggregates equal raw recompute within tolerance', () => {
+  test('rollup aggregates equal raw recompute within tolerance', async () => {
     const events = [
       {
         type: 'study_session_created',
@@ -113,13 +113,13 @@ describe('Raw vs Rollup Parity', () => {
     const rawTotal = events.reduce((sum, e) => sum + e.data.duration, 0) / 60;
 
     // Should be within 0.5% tolerance
-    const diff = Math.abs(rollup.total_minutes - rawTotal);
+    const diff = Math.abs((await rollup).total_minutes - rawTotal);
     const tolerance = rawTotal * 0.005;
 
     expect(diff).toBeLessThanOrEqual(tolerance);
   });
 
-  test('large dataset maintains parity', () => {
+  test('large dataset maintains parity', async () => {
     const events = Array.from({ length: 100 }, (_, i) => ({
       type: 'study_session_created' as const,
       timestamp: Date.now() + i * 60000,
@@ -133,7 +133,7 @@ describe('Raw vs Rollup Parity', () => {
     const rollup = computeDailyRollup('2024-01-01', events);
 
     const rawTotal = events.reduce((sum, e) => sum + e.data.duration, 0) / 60;
-    const rollupTotal = rollup.total_minutes;
+    const rollupTotal = (await rollup).total_minutes;
 
     // Within 1% tolerance for large datasets
     const diff = Math.abs(rollupTotal - rawTotal);
@@ -142,7 +142,7 @@ describe('Raw vs Rollup Parity', () => {
     expect(diff).toBeLessThanOrEqual(tolerance);
   });
 
-  test('by_subject aggregation matches manual calculation', () => {
+  test('by_subject aggregation matches manual calculation', async () => {
     const events = [
       {
         type: 'study_session_created',
@@ -167,7 +167,7 @@ describe('Raw vs Rollup Parity', () => {
     const expectedMath = (3600 + 1800) / 60;
     const expectedPhysics = 2400 / 60;
 
-    expect(rollup.by_subject['Math'].minutes).toBe(expectedMath);
-    expect(rollup.by_subject['Physics'].minutes).toBe(expectedPhysics);
+    expect((await rollup).by_subject['Math'].minutes).toBe(expectedMath);
+    expect((await rollup).by_subject['Physics'].minutes).toBe(expectedPhysics);
   });
 });

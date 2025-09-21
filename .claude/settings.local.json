@@ -31,7 +31,8 @@
       "Bash(npm run lint:*)",
       "Bash(git push:*)",
       "Bash(netstat:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []

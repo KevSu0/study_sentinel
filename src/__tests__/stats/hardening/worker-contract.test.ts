@@ -10,8 +10,8 @@ import { renderHook, act } from '@testing-library/react';
 const mockWorker = {
   postMessage: jest.fn(),
   terminate: jest.fn(),
-  onmessage: null,
-  onerror: null
+  onmessage: null as ((event: MessageEvent) => void) | null,
+  onerror: null as ((event: ErrorEvent) => void) | null
 };
 
 global.Worker = jest.fn(() => mockWorker) as any;
@@ -34,15 +34,17 @@ describe('Worker Offload Contract', () => {
     const { result } = renderHook(() => useStatsWorker());
 
     // Simulate worker response
-    mockWorker.onmessage?.({
-      data: {
-        id: 'test-123',
-        success: true,
-        data: mockResponse,
-        computeTime: 25,
-        metricsVersion: '1.0.0'
-      }
-    });
+    if (mockWorker.onmessage) {
+      mockWorker.onmessage({
+        data: {
+          id: 'test-123',
+          success: true,
+          data: mockResponse,
+          computeTime: 25,
+          metricsVersion: '1.0.0'
+        }
+      } as MessageEvent);
+    }
 
     await act(async () => {
       const stats = await result.current.computeStats({
@@ -74,15 +76,17 @@ describe('Worker Offload Contract', () => {
     await act(async () => {
       // Simulate slow worker response
       setTimeout(() => {
-        mockWorker.onmessage?.({
-          data: {
-            id: 'test-123',
-            success: true,
-            data: { totalHours: '2.0' },
-            computeTime: 45,
-            metricsVersion: '1.0.0'
-          }
-        });
+        if (mockWorker.onmessage) {
+          mockWorker.onmessage({
+            data: {
+              id: 'test-123',
+              success: true,
+              data: { totalHours: '2.0' },
+              computeTime: 45,
+              metricsVersion: '1.0.0'
+            }
+          } as MessageEvent);
+        }
       }, 10);
 
       await result.current.computeStats({
@@ -122,7 +126,9 @@ describe('Worker Offload Contract', () => {
     const { result } = renderHook(() => useStatsWorker());
 
     // Simulate worker crash
-    mockWorker.onerror?.(new ErrorEvent('error'));
+    if (mockWorker.onerror) {
+      mockWorker.onerror(new ErrorEvent('error'));
+    }
 
     await expect(
       act(async () => {

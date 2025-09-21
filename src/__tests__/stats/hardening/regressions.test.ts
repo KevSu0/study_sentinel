@@ -5,6 +5,8 @@
 
 import { getDailyRollup } from '@/lib/daily-rollups';
 import { useStatsWorker } from '@/hooks/use-stats-worker';
+import { renderHook } from '@testing-library/react';
+import type { CompletedWork } from '@/lib/types';
 
 // Mock IDB failure
 const mockDB = {
@@ -90,7 +92,7 @@ describe('Regressions & Fallbacks', () => {
 
       // Should fall back to main thread
       const stats = await result.current.computeStats({
-        work: [{ duration: 3600, date: '2024-01-01' }],
+        work: [{ id: '1', duration: 3600, date: '2024-01-01', timestamp: '2024-01-01T00:00:00.000Z', points: 10, title: 'Test', type: 'task' as const }],
         tasks: [],
         timeRange: 'daily',
         profile: {}
@@ -119,7 +121,7 @@ describe('Regressions & Fallbacks', () => {
       const { computeDailyRollup } = await import('@/lib/daily-rollups');
       const rawRollup = computeDailyRollup('2024-01-01', events);
 
-      expect(rawRollup.total_minutes).toBe(60);
+      expect((await rawRollup).total_minutes).toBe(60);
     });
 
     test('all flags OFF → baseline functionality preserved', () => {

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { MoreHorizontal, CheckCircle, Star, Timer, Undo } from 'lucide-react';
+import { MoreHorizontal, CheckCircle, Star, Timer, Undo, Target, Pause, TrendingUp } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +11,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { ActivityFeedItem } from '@/hooks/use-global-state';
+import {
+  formatDurationMs,
+  formatFocusPercentage,
+  getFocusPercentageColor,
+  extractMetricsFromLog,
+} from '@/lib/format-metrics';
 
 const formatDuration = (seconds: number) => {
   if (seconds < 60) return `${seconds}s`;
@@ -22,6 +28,32 @@ const formatDuration = (seconds: number) => {
     return `${hours}h`;
   }
   return `${hours}h ${remainingMinutes}m`;
+};
+
+// Compact metrics display for plan list items
+const CompactMetricsDisplay = ({ log }: { log: any }) => {
+  const metrics = extractMetricsFromLog(log);
+  
+  if (!metrics) return null;
+  
+  return (
+    <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
+      <span className="flex items-center gap-1">
+        <Target className="h-3 w-3 text-green-500" />
+        {formatDurationMs(metrics.productiveDuration)}
+      </span>
+      <span className="flex items-center gap-1">
+        <Pause className="h-3 w-3 text-orange-500" />
+        {formatDurationMs(metrics.pauseDuration)} ({metrics.pauseCount})
+      </span>
+      <span className="flex items-center gap-1">
+        <TrendingUp className="h-3 w-3 text-purple-500" />
+        <span className={cn("font-medium", getFocusPercentageColor(metrics.focusPercentage))}>
+          {formatFocusPercentage(metrics.focusPercentage)}
+        </span>
+      </span>
+    </div>
+  );
 };
 
 interface CompletedPlanListItemProps {
@@ -71,6 +103,7 @@ export const CompletedPlanListItem = ({ item, onUndo, onHardUndo, isUndone }: Co
           {points || 0} pts
         </span>
       </div>
+      <CompactMetricsDisplay log={isTask ? item.data.log : item.data} />
 
       <div className="flex-shrink-0">
         <DropdownMenu>

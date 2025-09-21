@@ -299,7 +299,7 @@ async function evaluateBadges(payload: EvaluateBadgesPayload) {
 }
 
 // Helper functions
-function filterWorkByTimeRange(work: CompletedWork[], timeRange: string, selectedDate?: string) {
+export function filterWorkByTimeRange(work: CompletedWork[], timeRange: string, selectedDate?: string) {
   const now = new Date();
 
   switch (timeRange) {

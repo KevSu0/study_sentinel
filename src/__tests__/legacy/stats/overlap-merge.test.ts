@@ -6,7 +6,7 @@
 import { computeDailyRollup } from '@/lib/daily-rollups';
 
 describe('Overlap Merge', () => {
-  test('overlapping sessions are merged, not double-counted', () => {
+  test('overlapping sessions are merged, not double-counted', async () => {
     const events = [
       {
         type: 'study_session_created',
@@ -28,7 +28,7 @@ describe('Overlap Merge', () => {
       }
     ];
 
-    const rollup = computeDailyRollup('2024-01-01', events);
+    const rollup = await computeDailyRollup('2024-01-01', events);
 
     // Total should be sum of both durations (merging doesn't reduce total)
     expect(rollup.total_minutes).toBe(120); // 2 hours
@@ -36,7 +36,7 @@ describe('Overlap Merge', () => {
     expect(rollup.by_subject['Math'].minutes).toBe(120);
   });
 
-  test('non-overlapping sessions counted separately', () => {
+  test('non-overlapping sessions counted separately', async () => {
     const events = [
       {
         type: 'study_session_created',
@@ -58,13 +58,13 @@ describe('Overlap Merge', () => {
       }
     ];
 
-    const rollup = computeDailyRollup('2024-01-01', events);
+    const rollup = await computeDailyRollup('2024-01-01', events);
 
     expect(rollup.total_minutes).toBe(60);
     expect(rollup.session_count).toBe(2);
   });
 
-  test('multiple overlapping sessions handled correctly', () => {
+  test('multiple overlapping sessions handled correctly', async () => {
     const events = [
       {
         type: 'study_session_created',
@@ -95,7 +95,7 @@ describe('Overlap Merge', () => {
       }
     ];
 
-    const rollup = computeDailyRollup('2024-01-01', events);
+    const rollup = await computeDailyRollup('2024-01-01', events);
 
     // Each session contributes its full duration
     expect(rollup.total_minutes).toBe(150); // 2.5 hours total

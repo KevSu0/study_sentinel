@@ -25,14 +25,14 @@ const mockTasks: StudyTask[] = [
 
 const mockAllCompletedWork: CompletedWork[] = [
   // Today's work
-  { date: todayStr, duration: 3600, type: 'task', title: 'Completed Task Today', points: 10, timestamp: new Date(new Date(MOCK_DATE).setUTCHours(10, 0, 0, 0)).toISOString(), priority: 'high' },
-  { date: todayStr, duration: 1800, type: 'routine', title: 'Morning Routine', points: 5, timestamp: new Date(new Date(MOCK_DATE).setUTCHours(9, 0, 0, 0)).toISOString(), priority: 'medium' },
+  { date: todayStr, duration: 3600, type: 'task', title: 'Completed Task Today', points: 10, timestamp: new Date(new Date(MOCK_DATE).setUTCHours(10, 0, 0, 0)).toISOString(), priority: 'high', totalDuration: 3600, productiveDuration: 3240, pauseDuration: 360, pauseCount: 2, focusPercentage: 90, metricsVersion: '1.1.0' },
+  { date: todayStr, duration: 1800, type: 'routine', title: 'Morning Routine', points: 5, timestamp: new Date(new Date(MOCK_DATE).setUTCHours(9, 0, 0, 0)).toISOString(), priority: 'medium', totalDuration: 1800, productiveDuration: 1620, pauseDuration: 180, pauseCount: 1, focusPercentage: 90, metricsVersion: '1.1.0' },
   // Yesterday's work
-  { date: yesterdayStr, duration: 7200, type: 'task', title: 'Completed Task Yesterday', points: 2, timestamp: new Date(subDays(new Date(MOCK_DATE), 1).setUTCHours(14, 0, 0, 0)).toISOString(), priority: 'low' },
+  { date: yesterdayStr, duration: 7200, type: 'task', title: 'Completed Task Yesterday', points: 2, timestamp: new Date(subDays(new Date(MOCK_DATE), 1).setUTCHours(14, 0, 0, 0)).toISOString(), priority: 'low', totalDuration: 7200, productiveDuration: 6480, pauseDuration: 720, pauseCount: 3, focusPercentage: 90, metricsVersion: '1.1.0' },
   // Two days ago
-  { date: twoDaysAgoStr, duration: 3600, type: 'task', title: 'Old Task', points: 5, timestamp: new Date(subDays(new Date(MOCK_DATE), 2).setUTCHours(12, 0, 0, 0)).toISOString(), priority: 'medium' },
+  { date: twoDaysAgoStr, duration: 3600, type: 'task', title: 'Old Task', points: 5, timestamp: new Date(subDays(new Date(MOCK_DATE), 2).setUTCHours(12, 0, 0, 0)).toISOString(), priority: 'medium', totalDuration: 3600, productiveDuration: 3240, pauseDuration: 360, pauseCount: 2, focusPercentage: 90, metricsVersion: '1.1.0' },
   // Last month's work
-  { date: lastMonthStr, duration: 5400, type: 'task', title: 'Completed Task Last Month', points: 15, timestamp: new Date(subDays(new Date(MOCK_DATE), 30).setUTCHours(10, 0, 0, 0)).toISOString(), priority: 'high' },
+  { date: lastMonthStr, duration: 5400, type: 'task', title: 'Completed Task Last Month', points: 15, timestamp: new Date(subDays(new Date(MOCK_DATE), 30).setUTCHours(10, 0, 0, 0)).toISOString(), priority: 'high', totalDuration: 5400, productiveDuration: 4860, pauseDuration: 540, pauseCount: 3, focusPercentage: 90, metricsVersion: '1.1.0' },
 ];
 
 const mockAllBadges: Badge[] = [
@@ -185,7 +185,7 @@ describe('useStats', () => {
         const lateNightDate = new Date(today);
         lateNightDate.setUTCHours(2, 0, 0, 0);
         const workAcrossMidnight: CompletedWork[] = [
-            { date: yesterdayStr, duration: 3600, type: 'task', title: 'Late Night Task', points: 10, timestamp: lateNightDate.toISOString(), priority: 'high' },
+            { date: yesterdayStr, duration: 3600, type: 'task', title: 'Late Night Task', points: 10, timestamp: lateNightDate.toISOString(), priority: 'high', totalDuration: 3600, productiveDuration: 3240, pauseDuration: 360, pauseCount: 2, focusPercentage: 90, metricsVersion: '1.1.0' },
         ];
         // Select yesterday, because the 2am work on 'today' belongs to yesterday's study day.
         const { result } = renderHook(() => useStats({ ...defaultProps, allCompletedWork: workAcrossMidnight, selectedDate: subDays(today, 1) }));
@@ -271,9 +271,9 @@ describe('useStats', () => {
     it('should calculate average start/end times in performanceCoachStats', () => {
         const coachWork: CompletedWork[] = [
             // Today: 10am - 11am
-            { date: todayStr, duration: 3600, type: 'task', title: 'Task 1', points: 10, timestamp: new Date(new Date(MOCK_DATE).setUTCHours(10, 0, 0, 0)).toISOString(), priority: 'high' },
+            { date: todayStr, duration: 3600, type: 'task', title: 'Task 1', points: 10, timestamp: new Date(new Date(MOCK_DATE).setUTCHours(10, 0, 0, 0)).toISOString(), priority: 'high', totalDuration: 3600, productiveDuration: 3240, pauseDuration: 360, pauseCount: 2, focusPercentage: 90, metricsVersion: '1.1.0' },
             // Yesterday: 11am - 12pm
-            { date: yesterdayStr, duration: 3600, type: 'task', title: 'Task 2', points: 10, timestamp: new Date(subDays(new Date(MOCK_DATE), 1).setUTCHours(11, 0, 0, 0)).toISOString(), priority: 'high' },
+            { date: yesterdayStr, duration: 3600, type: 'task', title: 'Task 2', points: 10, timestamp: new Date(subDays(new Date(MOCK_DATE), 1).setUTCHours(11, 0, 0, 0)).toISOString(), priority: 'high', totalDuration: 3600, productiveDuration: 3240, pauseDuration: 360, pauseCount: 2, focusPercentage: 90, metricsVersion: '1.1.0' },
         ];
 
         const { result } = renderHook(() => useStats({ ...defaultProps, allCompletedWork: coachWork, selectedDate: today }));
@@ -355,7 +355,7 @@ describe('useStats', () => {
     });
 
     it('should handle invalid timestamp for performance coach', () => {
-        const invalidWork = [{ ...mockAllCompletedWork[0], timestamp: 'invalid-date' }];
+        const invalidWork = [{ ...mockAllCompletedWork[0], timestamp: 'invalid-date', metricsVersion: '1.1.0' }];
         const { result } = renderHook(() => useStats({ ...defaultProps, allCompletedWork: invalidWork }));
         // It should not crash and fallback to null/0
         expect(result.current.performanceCoachStats.selectedDateSession).toBeNull();

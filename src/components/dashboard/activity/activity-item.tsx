@@ -12,6 +12,9 @@ import {
   Clock,
   Undo,
   MoreHorizontal,
+  Target,
+  Pause,
+  TrendingUp,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -25,6 +28,13 @@ import type {ActivityFeedItem} from '@/hooks/use-global-state';
 import {cn} from '@/lib/utils';
 import type {StudyTask} from '@/lib/types';
 import {parseISO, format} from 'date-fns';
+import {
+  formatDurationMs,
+  formatFocusPercentage,
+  getFocusPercentageColor,
+  extractMetricsFromLog,
+  formatPauseCount,
+} from '@/lib/format-metrics';
 
 const formatDuration = (seconds: number) => {
   if (seconds < 60) return `${seconds}s`;
@@ -39,6 +49,40 @@ const formatDuration = (seconds: number) => {
     return `${hours}h`;
   }
   return `${minutes}m`;
+};
+
+// Component to display detailed metrics
+const MetricsDisplay = ({ log }: { log: any }) => {
+  const metrics = extractMetricsFromLog(log);
+  
+  if (!metrics) return null;
+  
+  return (
+    <div className="grid grid-cols-2 gap-2 mt-2 p-2 rounded-md bg-muted/30 text-xs">
+      <div className="flex items-center gap-1.5">
+        <Timer className="h-3 w-3 text-blue-500" />
+        <span className="text-muted-foreground">Total:</span>
+        <span className="font-medium">{formatDurationMs(metrics.totalDuration)}</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <Target className="h-3 w-3 text-green-500" />
+        <span className="text-muted-foreground">Productive:</span>
+        <span className="font-medium">{formatDurationMs(metrics.productiveDuration)}</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <Pause className="h-3 w-3 text-orange-500" />
+        <span className="text-muted-foreground">Pauses:</span>
+        <span className="font-medium">{formatDurationMs(metrics.pauseDuration)} ({metrics.pauseCount})</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <TrendingUp className="h-3 w-3 text-purple-500" />
+        <span className="text-muted-foreground">Focus:</span>
+        <span className={cn("font-medium", getFocusPercentageColor(metrics.focusPercentage))}>
+          {formatFocusPercentage(metrics.focusPercentage)}
+        </span>
+      </div>
+    </div>
+  );
 };
 
 export const ActivityItem = React.memo(function ActivityItem({
@@ -107,6 +151,7 @@ export const ActivityItem = React.memo(function ActivityItem({
                 {task.priority} Priority
               </Badge>
             </div>
+            <MetricsDisplay log={log} />
           </div>
         </div>
       );
@@ -156,6 +201,7 @@ export const ActivityItem = React.memo(function ActivityItem({
                 {formattedTime}
               </span>
             </div>
+            <MetricsDisplay log={log} />
             {studyLog && (
               <div className="flex items-start gap-2 mt-2 p-2 rounded-md bg-muted/50 text-sm">
                 <BookText className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
@@ -184,6 +230,7 @@ export const ActivityItem = React.memo(function ActivityItem({
                 {formattedTime}
               </span>
             </div>
+            <MetricsDisplay log={log} />
             {reason && (
               <div className="flex items-center gap-1.5 text-xs text-amber-600">
                 <AlertTriangle className="h-3 w-3" />

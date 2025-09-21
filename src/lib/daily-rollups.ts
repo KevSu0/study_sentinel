@@ -103,7 +103,7 @@ async function getDB(): Promise<IDBPDatabase<DailyRollupsDB>> {
 }
 
 // Helper: Convert timestamp to IST bucket day
-function getBucketDay(timestamp: number | Date): string {
+export function getBucketDay(timestamp: number | Date): string {
   const date = new Date(timestamp);
 
   // Convert to IST
@@ -161,7 +161,7 @@ export async function createOrUpdateDailyRollup(
   return results[results.length - 1]; // Return last processed
 }
 
-async function computeDailyRollup(
+export async function computeDailyRollup(
   bucketDay: string,
   events: any[]
 ): Promise<DailyRollup> {
