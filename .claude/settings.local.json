@@ -28,7 +28,8 @@
       "Bash(npx eslint:*)",
       "Bash(fold:*)",
       "Bash(xxd:*)",
-      "Bash(npm run lint:*)"
+      "Bash(npm run lint:*)",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
