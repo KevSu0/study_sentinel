@@ -10,8 +10,8 @@ export interface FeatureFlag {
   value?: number | string;
   conditions: FlagCondition[];
   dependsOn?: string[];
-  lastModified: number;
-  modifiedBy: string;
+  lastModified?: number;
+  modifiedBy?: string;
 }
 
 export interface FlagCondition {
@@ -43,7 +43,9 @@ export const ANALYTICS_FLAGS = {
         operator: 'greater_than',
         value: 10 // MB available storage
       }
-    ]
+    ],
+    lastModified: Date.now(),
+    modifiedBy: 'system'
   },
   
   rollup_compaction: {
@@ -52,7 +54,9 @@ export const ANALYTICS_FLAGS = {
     description: 'Enable idle-time rollup compaction',
     enabled: true,
     type: 'boolean' as const,
-    conditions: []
+    conditions: [],
+    lastModified: Date.now(),
+    modifiedBy: 'system'
   },
   
   extended_timeframes: {
@@ -61,11 +65,80 @@ export const ANALYTICS_FLAGS = {
     description: 'Enable 7/30/90 day analytics',
     enabled: false,
     type: 'percentage' as const,
-    value: 10 // 10% of users
+    value: 10, // 10% of users
+    conditions: [],
+    lastModified: Date.now(),
+    modifiedBy: 'system'
   }
 };
 
-// Slice 2: Sync Uplink Flags
+// Slice 2: Productive Time Metrics Flags
+export const PRODUCTIVE_TIME_FLAGS = {
+  productive_time_metrics: {
+    key: 'productive_time_metrics',
+    name: 'Productive Time Metrics',
+    description: 'Track and display productive time, pause duration, and focus percentage',
+    enabled: true,
+    type: 'percentage' as const,
+    value: 100, // Roll out to 100% of users
+    conditions: [],
+    lastModified: Date.now(),
+    modifiedBy: 'system'
+  },
+
+  focus_forecasting: {
+    key: 'focus_forecasting',
+    name: 'Focus Forecasting',
+    description: 'Show focus predictions and recommendations based on historical data',
+    enabled: true,
+    type: 'percentage' as const,
+    value: 100,
+    dependsOn: ['productive_time_metrics'],
+    conditions: [],
+    lastModified: Date.now(),
+    modifiedBy: 'system'
+  },
+
+  session_quality_widget: {
+    key: 'session_quality_widget',
+    name: 'Session Quality Widget',
+    description: 'Display session quality metrics on dashboard',
+    enabled: true,
+    type: 'percentage' as const,
+    value: 100,
+    dependsOn: ['productive_time_metrics'],
+    conditions: [],
+    lastModified: Date.now(),
+    modifiedBy: 'system'
+  },
+
+  activity_insights: {
+    key: 'activity_insights',
+    name: 'Activity Insights',
+    description: 'Show activity insights and baselines on plans page',
+    enabled: true,
+    type: 'percentage' as const,
+    value: 100,
+    dependsOn: ['productive_time_metrics', 'focus_forecasting'],
+    conditions: [],
+    lastModified: Date.now(),
+    modifiedBy: 'system'
+  },
+
+  migration_v2: {
+    key: 'migration_v2',
+    name: 'Metrics Migration v2',
+    description: 'Enable migration to new metrics format with pause tracking',
+    enabled: true,
+    type: 'percentage' as const,
+    value: 100,
+    conditions: [],
+    lastModified: Date.now(),
+    modifiedBy: 'system'
+  }
+};
+
+// Slice 3: Sync Uplink Flags
 export const SYNC_FLAGS = {
   sync_enabled: {
     key: 'sync_enabled',
@@ -73,16 +146,21 @@ export const SYNC_FLAGS = {
     description: 'Enable cloud synchronization',
     enabled: false,
     type: 'boolean' as const,
-    conditions: []
+    conditions: [],
+    lastModified: Date.now(),
+    modifiedBy: 'system'
   },
-  
+
   sync_uplink: {
     key: 'sync_uplink',
     name: 'Sync Uplink',
     description: 'Enable upload to cloud (read-only sync)',
     enabled: false,
     type: 'boolean' as const,
-    dependsOn: ['sync_enabled']
+    dependsOn: ['sync_enabled'],
+    conditions: [],
+    lastModified: Date.now(),
+    modifiedBy: 'system'
   }
 };
 
@@ -94,7 +172,9 @@ export const KILL_SWITCHES = {
     description: 'Stop all analytics processing immediately',
     enabled: false,
     type: 'boolean' as const,
-    priority: 'critical'
+    conditions: [],
+    lastModified: Date.now(),
+    modifiedBy: 'system'
   },
   
   migration_emergency_stop: {
@@ -103,13 +183,16 @@ export const KILL_SWITCHES = {
     description: 'Stop all database migrations immediately',
     enabled: false,
     type: 'boolean' as const,
-    priority: 'critical'
+    conditions: [],
+    lastModified: Date.now(),
+    modifiedBy: 'system'
   }
 };
 
 // Default flag configuration
 export const DEFAULT_FLAGS = {
   ...ANALYTICS_FLAGS,
+  ...PRODUCTIVE_TIME_FLAGS,
   ...SYNC_FLAGS,
   ...KILL_SWITCHES
 };

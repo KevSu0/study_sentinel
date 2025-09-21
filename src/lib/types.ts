@@ -126,13 +126,20 @@ export type ActiveTimerItem =
 
 export type CompletedWork = {
   date: string;
-  duration: number; // seconds
+  duration: number; // seconds (total time)
   type: 'task' | 'routine';
   title: string;
   points: number;
   priority?: TaskPriority;
   subjectId?: string;
   timestamp: string;
+  // New metrics for focus tracking
+  totalDuration: number; // Total session time in ms
+  productiveDuration: number; // Total time minus pauses in ms
+  pauseDuration: number; // Total pause time in ms
+  pauseCount: number; // Number of pause events
+  focusPercentage: number; // (productiveDuration / totalDuration) * 100
+  metricsVersion: string; // Version of metrics calculation
 };
 
 export const PositivePsychologistInputSchema = z.object({

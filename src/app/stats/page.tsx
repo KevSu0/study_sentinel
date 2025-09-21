@@ -29,6 +29,9 @@ const StudyActivityChart = React.lazy(() => import('@/components/stats/weekly-ch
 const ProductivityPieChart = React.lazy(() => import('@/components/dashboard/productivity-pie-chart'));
 const BadgeCollection = React.lazy(() => import('@/components/stats/badge-collection').then(m => ({ default: m.BadgeCollection })));
 const PerformanceCoach = React.lazy(() => import('@/components/stats/performance-coach').then(m => ({ default: m.PerformanceCoach })));
+const FocusAnalysisChart = React.lazy(() => import('@/components/stats/focus-analysis-chart').then(m => ({ default: m.FocusAnalysisChart })));
+const PauseDistributionChart = React.lazy(() => import('@/components/stats/pause-distribution-chart').then(m => ({ default: m.PauseDistributionChart })));
+const ProductivityPausedChart = React.lazy(() => import('@/components/stats/productivity-paused-chart').then(m => ({ default: m.ProductivityPausedChart })));
 
 export default function StatsPage() {
   const {state} = useGlobalState();
@@ -124,9 +127,11 @@ export default function StatsPage() {
             </Suspense>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-                <ProductivityPieChart data={dailyPieChartData} />
+                <FocusAnalysisChart timeRange="daily" selectedDate={selectedDate} />
               </Suspense>
-              <DailyActivityTimeline data={dailyActivityTimelineData} />
+              <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+                <ProductivityPausedChart timeRange="daily" selectedDate={selectedDate} />
+              </Suspense>
             </div>
             <StatComparison stats={dailyComparisonStats} selectedDate={selectedDate} />
           </TabsContent>
@@ -143,17 +148,12 @@ export default function StatsPage() {
             <section className="grid gap-6 lg:grid-cols-5">
               <div className="lg:col-span-3">
                 <Suspense fallback={<Skeleton className="w-full h-[380px] rounded-lg" />}>
-                  <StudyActivityChart
-                    data={barChartData}
-                    title={chartDetails.title}
-                    description={chartDetails.description}
-                    timeRange={timeRange}
-                  />
+                  <FocusAnalysisChart timeRange={timeRange as 'daily' | 'weekly' | 'monthly' | 'overall'} selectedDate={selectedDate} />
                 </Suspense>
               </div>
               <div className="lg:col-span-2">
                 <Suspense fallback={<Skeleton className="w-full h-[380px] rounded-lg" />}>
-                   <ProductivityPieChart data={timeRangePieChartData} />
+                   <PauseDistributionChart timeRange={timeRange as 'daily' | 'weekly' | 'monthly' | 'overall'} selectedDate={selectedDate} />
                 </Suspense>
               </div>
             </section>
@@ -164,6 +164,10 @@ export default function StatsPage() {
                     <RoutineStatsList data={routineStats} />
                  </div>
             </section>
+
+            <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+              <ProductivityPausedChart timeRange={timeRange as 'daily' | 'weekly' | 'monthly' | 'overall'} selectedDate={selectedDate} />
+            </Suspense>
 
             <Suspense fallback={<Skeleton className="h-64 w-full" />}>
               <BadgeCollection

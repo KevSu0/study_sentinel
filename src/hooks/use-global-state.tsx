@@ -22,6 +22,7 @@ import {
   type TaskPriority,
   type SoundSettings,
 } from '@/lib/types';
+import { calculateSessionMetrics, METRICS_VERSION } from '@/lib/metrics';
 import {addDays, format, formatISO, subDays, parseISO} from 'date-fns';
 import {useConfetti} from '@/components/providers/confetti-provider';
 import toast from 'react-hot-toast';
@@ -54,6 +55,10 @@ type StoredTimer = {
   overtimeNotified?: boolean;
   milestones: Record<string, boolean>;
   starCount?: number;
+  // Enhanced pause tracking
+  pauseCount: number;
+  pauseStartTime?: number;
+  lastPauseDuration?: number;
 };
 
 export type ActivityFeedItem = {
@@ -97,6 +102,7 @@ interface AppState {
   previousDayLogs: LogEvent[];
   allCompletedWork: CompletedWork[];
   todaysCompletedWork: CompletedWork[];
+  yesterdaysCompletedWork: CompletedWork[];
   todaysPoints: number;
   todaysBadges: Badge[];
   starCount: number;
@@ -162,6 +168,7 @@ const initialAppState: AppState = {
   previousDayLogs: [],
   allCompletedWork: [],
   todaysCompletedWork: [],
+  yesterdaysCompletedWork: [],
   todaysPoints: 0,
   todaysBadges: [],
   starCount: 0,
@@ -235,6 +242,7 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     const {logs, allBadges, earnedBadges} = baseState;
     const sessionDate = getSessionDate();
     const todayStr = format(sessionDate, 'yyyy-MM-dd');
+    const prevDayStr = format(subDays(sessionDate, 1), 'yyyy-MM-dd');
 
     const todaysLogs = logs;
 
@@ -250,22 +258,35 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     allTimeLogs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     const sessionLogs = allTimeLogs.filter(l => l.type === 'ROUTINE_SESSION_COMPLETE' || l.type === 'TIMER_SESSION_COMPLETE');
-    const workItems: CompletedWork[] = sessionLogs.map(l => ({ 
-        date: format(getStudyDateForTimestamp(l.timestamp), 'yyyy-MM-dd'), 
-        duration: l.payload.duration, 
-        type: l.type === 'ROUTINE_SESSION_COMPLETE' ? 'routine' : 'task', 
-        title: l.payload.title, 
-        points: l.payload.points || 0, 
-        priority: l.payload.priority, 
-        subjectId: l.payload.routineId || l.payload.taskId, 
-        timestamp: l.timestamp 
-    }));
+    const workItems: CompletedWork[] = sessionLogs.map(l => {
+      // Check if new metrics are available
+      const hasNewMetrics = l.payload.metricsVersion === METRICS_VERSION;
+
+      return {
+        date: format(getStudyDateForTimestamp(l.timestamp), 'yyyy-MM-dd'),
+        duration: l.payload.duration,
+        type: l.type === 'ROUTINE_SESSION_COMPLETE' ? 'routine' : 'task',
+        title: l.payload.title,
+        points: l.payload.points || 0,
+        priority: l.payload.priority,
+        subjectId: l.payload.routineId || l.payload.taskId,
+        timestamp: l.timestamp,
+        // New metrics - use fallback values for old sessions
+        totalDuration: hasNewMetrics ? (l.payload.totalDuration || l.payload.duration * 1000) : l.payload.duration * 1000,
+        productiveDuration: hasNewMetrics ? (l.payload.productiveDuration || l.payload.duration * 1000) : l.payload.duration * 1000,
+        pauseDuration: hasNewMetrics ? (l.payload.pauseDuration || 0) : 0,
+        pauseCount: hasNewMetrics ? (l.payload.pauseCount || 0) : 0,
+        focusPercentage: hasNewMetrics ? (l.payload.focusPercentage || 100) : 100,
+        metricsVersion: hasNewMetrics ? l.payload.metricsVersion : '1.0.0',
+      };
+    });
     const allCompletedWork = workItems;
     const todaysCompletedWork = allCompletedWork.filter(w => w.date === todayStr);
+    const yesterdaysCompletedWork = allCompletedWork.filter(w => w.date === prevDayStr);
     const todaysPoints = todaysCompletedWork.reduce((sum, work) => sum + work.points, 0);
     const todaysBadges = allBadges.filter(b => earnedBadges.get(b.id) === todayStr);
 
-    return { todaysLogs, allCompletedWork, todaysCompletedWork, todaysPoints, todaysBadges };
+    return { todaysLogs, allCompletedWork, todaysCompletedWork, yesterdaysCompletedWork, todaysPoints, todaysBadges };
   }, []);
 
   const setStateAndDerive = useCallback((updater: (prevState: AppState) => Partial<AppState>) => {
@@ -700,7 +721,16 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
   const startTimer = useCallback((item: StudyTask | Routine) => {
       if (state.activeItem) { toast.error(`Please stop or complete the timer for "${state.activeItem.item.title}" first.`); return; }
       const type = 'timerType' in item ? 'task' : 'routine';
-      const timerData: StoredTimer = { item: {type, item} as ActiveTimerItem, startTime: Date.now(), isPaused: false, pausedTime: 0, pausedDuration: 0, milestones: {}, starCount: 0 };
+      const timerData: StoredTimer = {
+      item: {type, item} as ActiveTimerItem,
+      startTime: Date.now(),
+      isPaused: false,
+      pausedTime: 0,
+      pausedDuration: 0,
+      milestones: {},
+      starCount: 0,
+      pauseCount: 0
+    };
       
       if (type === 'task') {
         const task = item as StudyTask;
@@ -724,21 +754,34 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     const savedTimer: StoredTimer = JSON.parse(savedTimerJSON);
     const isNowPaused = !savedTimer.isPaused;
     let newTimerState = {...savedTimer, isPaused: isNowPaused};
+
     if (isNowPaused) {
+      // Starting a pause
+      newTimerState.pauseStartTime = Date.now();
+      newTimerState.pauseCount = (savedTimer.pauseCount || 0) + 1;
+
       if (newTimerState.item.type === 'task' && newTimerState.item.item.timerType === 'countdown' && newTimerState.endTime) {
         newTimerState.pausedTime = Math.max(0, newTimerState.endTime - Date.now());
       } else if (newTimerState.startTime) {
         newTimerState.pausedDuration += Date.now() - newTimerState.startTime;
         newTimerState.startTime = 0; // Reset start time as we've captured the duration
       }
-      addLog('TIMER_PAUSE', {title: savedTimer.item.item.title});
+      addLog('TIMER_PAUSE', {title: savedTimer.item.item.title, pauseCount: newTimerState.pauseCount});
     } else {
+      // Resuming from pause
+      const pauseEndTime = Date.now();
+      const lastPauseDuration = savedTimer.pauseStartTime ? Math.max(5000, pauseEndTime - savedTimer.pauseStartTime) : 0;
+
+      newTimerState.lastPauseDuration = lastPauseDuration;
+      newTimerState.pausedDuration += lastPauseDuration;
+      newTimerState.pauseStartTime = undefined;
+
       if (newTimerState.item.type === 'task' && newTimerState.item.item.timerType === 'countdown' && newTimerState.pausedTime > 0) {
         newTimerState.endTime = Date.now() + newTimerState.pausedTime;
       } else {
         newTimerState.startTime = Date.now(); // Set new start time, pausedDuration is already accounted for
       }
-      addLog('TIMER_START', {title: savedTimer.item.item.title, resumed: true});
+      addLog('TIMER_START', {title: savedTimer.item.item.title, resumed: true, lastPauseDuration});
     }
     localStorage.setItem(TIMER_KEY, JSON.stringify(newTimerState));
     setState(prev => ({...prev, isPaused: isNowPaused}));
@@ -750,19 +793,55 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     if (!savedTimerJSON) return;
     const savedTimer: StoredTimer = JSON.parse(savedTimerJSON);
     const {item} = savedTimer;
-    const elapsed = savedTimer.isPaused
-      ? savedTimer.pausedDuration
-      : savedTimer.startTime
-      ? Date.now() - savedTimer.startTime + savedTimer.pausedDuration
-      : 0;
+
+    // Handle any open pause
+    let finalTimerState = { ...savedTimer };
+    if (savedTimer.isPaused && savedTimer.pauseStartTime) {
+      const openPauseDuration = Date.now() - savedTimer.pauseStartTime;
+      finalTimerState.pausedDuration += openPauseDuration;
+      finalTimerState.pauseStartTime = undefined;
+    }
+
+    // Calculate new metrics
+    const metrics = calculateSessionMetrics(finalTimerState);
+
+    const elapsed = finalTimerState.pausedDuration;
     const durationInSeconds = Math.round(elapsed / 1000);
+
     if (item.type === 'task') {
       updateTask({...item.item, status: 'todo'});
-      addLog('TIMER_STOP', { taskId: item.item.id, title: item.item.title, reason, timeSpentSeconds: Math.max(0, durationInSeconds) });
+      addLog('TIMER_STOP', {
+        taskId: item.item.id,
+        title: item.item.title,
+        reason,
+        timeSpentSeconds: Math.max(0, durationInSeconds),
+        // Include metrics for stop events too
+        totalDuration: metrics.totalDuration,
+        productiveDuration: metrics.productiveDuration,
+        pauseDuration: metrics.pauseDuration,
+        pauseCount: metrics.pauseCount,
+        focusPercentage: metrics.focusPercentage,
+        metricsVersion: METRICS_VERSION,
+      });
     } else {
       const priorityMultipliers: Record<TaskPriority, number> = { low: 1, medium: 2, high: 3 };
       const points = Math.floor((durationInSeconds / 60) * priorityMultipliers[item.item.priority]);
-      addLog('ROUTINE_SESSION_COMPLETE', { routineId: item.item.id, title: item.item.title, duration: durationInSeconds, points, studyLog, stopped: true, priority: item.item.priority });
+      addLog('ROUTINE_SESSION_COMPLETE', {
+        routineId: item.item.id,
+        title: item.item.title,
+        duration: durationInSeconds,
+        points,
+        studyLog,
+        stopped: true,
+        priority: item.item.priority,
+        // New metrics
+        totalDuration: metrics.totalDuration,
+        productiveDuration: metrics.productiveDuration,
+        pauseDuration: metrics.pauseDuration,
+        pauseCount: metrics.pauseCount,
+        focusPercentage: metrics.focusPercentage,
+        metricsVersion: METRICS_VERSION,
+      });
     }
     localStorage.removeItem(TIMER_KEY);
     setStateAndDerive(prev => ({ activeItem: null, isPaused: true, isOvertime: false, timeDisplay: '00:00', timerProgress: null, starCount: 0 }));
@@ -774,21 +853,28 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
     if (!savedTimerJSON) return;
     const savedTimer: StoredTimer = JSON.parse(savedTimerJSON);
     const { item } = savedTimer;
-  
-    const elapsed = savedTimer.isPaused
-      ? savedTimer.pausedDuration
-      : savedTimer.startTime
-      ? Date.now() - savedTimer.startTime + savedTimer.pausedDuration
-      : 0;
+
+    // Handle any open pause
+    let finalTimerState = { ...savedTimer };
+    if (savedTimer.isPaused && savedTimer.pauseStartTime) {
+      const openPauseDuration = Date.now() - savedTimer.pauseStartTime;
+      finalTimerState.pausedDuration += openPauseDuration;
+      finalTimerState.pauseStartTime = undefined;
+    }
+
+    // Calculate new metrics
+    const metrics = calculateSessionMetrics(finalTimerState);
+
+    const elapsed = finalTimerState.pausedDuration;
     const durationInSeconds = Math.round(elapsed / 1000);
-  
+
     if (item.type === 'task') {
       let pointsEarned = item.item.points;
       if (item.item.timerType === 'infinity') {
         const priorityMultipliers: Record<TaskPriority, number> = { low: 1, medium: 2, high: 3 };
         pointsEarned = Math.floor((durationInSeconds / 60) * priorityMultipliers[item.item.priority]);
       }
-      
+
       updateTask({ ...item.item, status: 'completed' as const });
       addLog('TIMER_SESSION_COMPLETE', {
         taskId: item.item.id,
@@ -796,9 +882,16 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
         duration: durationInSeconds,
         points: pointsEarned,
         priority: item.item.priority,
+        // New metrics
+        totalDuration: metrics.totalDuration,
+        productiveDuration: metrics.productiveDuration,
+        pauseDuration: metrics.pauseDuration,
+        pauseCount: metrics.pauseCount,
+        focusPercentage: metrics.focusPercentage,
+        metricsVersion: METRICS_VERSION,
       });
       fire();
-      toast.success(`Task Completed! You've earned ${pointsEarned} points!`);
+      toast.success(`Task Completed! You've earned ${pointsEarned} points! Focus: ${metrics.focusPercentage.toFixed(1)}%`);
     } else {
       const priorityMultipliers: Record<TaskPriority, number> = { low: 1, medium: 2, high: 3 };
       const points = Math.floor((durationInSeconds / 60) * priorityMultipliers[item.item.priority]);
@@ -809,9 +902,16 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
         points,
         studyLog,
         priority: item.item.priority,
+        // New metrics
+        totalDuration: metrics.totalDuration,
+        productiveDuration: metrics.productiveDuration,
+        pauseDuration: metrics.pauseDuration,
+        pauseCount: metrics.pauseCount,
+        focusPercentage: metrics.focusPercentage,
+        metricsVersion: METRICS_VERSION,
       });
       fire();
-      toast.success(`You logged ${formatTime(durationInSeconds)} and earned ${points} points.`);
+      toast.success(`You logged ${formatTime(durationInSeconds)} and earned ${points} points. Focus: ${metrics.focusPercentage.toFixed(1)}%`);
     }
   
     localStorage.removeItem(TIMER_KEY);
@@ -828,8 +928,18 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
   const manuallyCompleteItem = useCallback((item: StudyTask | Routine, durationMinutes: number, notes?: string) => {
     const isTask = 'status' in item;
     const durationInSeconds = durationMinutes * 60;
+    const durationInMs = durationMinutes * 60 * 1000;
     const priorityMultipliers: Record<TaskPriority, number> = { low: 1, medium: 2, high: 3 };
     const points = Math.floor((durationInSeconds / 60) * priorityMultipliers[item.priority]);
+
+    // For manual completion, assume 100% focus (no pauses)
+    const metrics = {
+      totalDuration: durationInMs,
+      productiveDuration: durationInMs,
+      pauseDuration: 0,
+      pauseCount: 0,
+      focusPercentage: 100,
+    };
 
     if(isTask) {
         updateTask({...item, status: 'completed'});
@@ -841,6 +951,13 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
             priority: item.priority,
             manual: true,
             notes,
+            // New metrics
+            totalDuration: metrics.totalDuration,
+            productiveDuration: metrics.productiveDuration,
+            pauseDuration: metrics.pauseDuration,
+            pauseCount: metrics.pauseCount,
+            focusPercentage: metrics.focusPercentage,
+            metricsVersion: METRICS_VERSION,
         });
         toast.success(`Logged ${durationMinutes}m for "${item.title}". You earned ${points} pts!`);
     } else {
@@ -852,6 +969,13 @@ export function GlobalStateProvider({children}: {children: ReactNode}) {
             studyLog: notes,
             priority: item.priority,
             manual: true,
+            // New metrics
+            totalDuration: metrics.totalDuration,
+            productiveDuration: metrics.productiveDuration,
+            pauseDuration: metrics.pauseDuration,
+            pauseCount: metrics.pauseCount,
+            focusPercentage: metrics.focusPercentage,
+            metricsVersion: METRICS_VERSION,
         });
         toast.success(`Logged ${durationMinutes}m for routine "${item.title}". You earned ${points} pts!`);
     }

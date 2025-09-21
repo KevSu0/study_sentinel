@@ -35,6 +35,9 @@ const UnlockedBadgesWidget = dynamic(() => import('@/components/dashboard/widget
 const CompletedTodayWidget = dynamic(() => import('@/components/dashboard/widgets/completed-today-widget').then(m => m.CompletedTodayWidget), { ssr: false, loading: () => <Skeleton className="h-28 w-full" /> });
 const TodaysRoutinesWidget = dynamic(() => import('@/components/dashboard/widgets/todays-routines-widget').then(m => m.TodaysRoutinesWidget), { ssr: false, loading: () => <Skeleton className="h-28 w-full" /> });
 const AchievementCountdownWidget = dynamic(() => import('@/components/dashboard/widgets/achievement-countdown-widget').then(m => m.AchievementCountdownWidget), { ssr: false, loading: () => <Skeleton className="h-28 w-full" /> });
+const TodaysFocusWidget = dynamic(() => import('@/components/dashboard/widgets/todays-focus-widget').then(m => m.TodaysFocusWidget), { ssr: false, loading: () => <Skeleton className="h-40 w-full" /> });
+const ProductiveVsPausedWidget = dynamic(() => import('@/components/dashboard/widgets/productive-vs-paused-widget').then(m => m.ProductiveVsPausedWidget), { ssr: false, loading: () => <Skeleton className="h-40 w-full" /> });
+const SessionQualityWidget = dynamic(() => import('@/components/dashboard/widgets/session-quality-widget').then(m => m.SessionQualityWidget), { ssr: false, loading: () => <Skeleton className="h-40 w-full" /> });
 
 
 const CustomizeDialog = dynamic(
@@ -100,6 +103,9 @@ export default function DashboardPage() {
     todays_routines: TodaysRoutinesWidget,
     todays_plan: TodaysPlanWidget,
     achievement_countdown: AchievementCountdownWidget,
+    todays_focus: TodaysFocusWidget,
+    productive_vs_paused: ProductiveVsPausedWidget,
+    session_quality: SessionQualityWidget,
   };
   
   const hasContent = state.tasks.length > 0 || state.routines.length > 0 || state.todaysActivity.length > 0;

@@ -5,6 +5,7 @@ import React, { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useGlobalState } from '@/hooks/use-global-state';
 import { useViewMode } from '@/hooks/use-view-mode';
+import { useFeatureFlags } from '@/hooks/use-feature-flags';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isToday, parseISO } from 'date-fns';
@@ -31,6 +32,7 @@ import { Calendar } from '@/components/ui/calendar';
 import type { StudyTask, Routine, LogEvent } from '@/lib/types';
 import toast from 'react-hot-toast';
 import { CompletedTodayWidget } from '@/components/dashboard/widgets/completed-today-widget';
+import { ActivityInsights } from '@/components/plans/activity-insights';
 import { cn } from '@/lib/utils';
 
 const AddItemDialog = dynamic(
@@ -66,6 +68,7 @@ export default function PlansPage() {
   const [editingItemType, setEditingItemType] = useState<'task' | 'routine' | undefined>(undefined);
 
   const { viewMode, setViewMode } = useViewMode();
+  const { isEnabled } = useFeatureFlags();
   const { isLoaded, tasks, logs, routines, todaysActivity } = state;
 
   const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -265,6 +268,15 @@ export default function PlansPage() {
               }}
               onHardUndoComplete={handleHardUndo}
             />
+
+            {/* Activity Insights for the first upcoming item */}
+            {upcomingItems.length > 0 && isEnabled('activity_insights') && (
+              <ActivityInsights
+                activityId={upcomingItems[0].data.id}
+                activityTitle={upcomingItems[0].data.title}
+                activityType={upcomingItems[0].type}
+              />
+            )}
 
              {upcomingItems.length === 0 && overdueTasks.length === 0 && todaysActivity.filter(activity => activity.timestamp.startsWith(selectedDateStr)).length === 0 && (
                  <div className="pt-16">

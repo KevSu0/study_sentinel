@@ -29,7 +29,9 @@
       "Bash(fold:*)",
       "Bash(xxd:*)",
       "Bash(npm run lint:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

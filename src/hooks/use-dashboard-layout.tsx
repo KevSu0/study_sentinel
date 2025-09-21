@@ -16,7 +16,10 @@ export type DashboardWidgetType =
   | 'todays_routines'
   | 'todays_plan'
   | 'completed_today'
-  | 'achievement_countdown';
+  | 'achievement_countdown'
+  | 'todays_focus'
+  | 'productive_vs_paused'
+  | 'session_quality';
 
 export interface DashboardWidget {
   id: DashboardWidgetType;
@@ -33,6 +36,9 @@ export const WIDGET_NAMES: Record<DashboardWidgetType, string> = {
   todays_plan: "Today's Plan",
   completed_today: "Today's Activity",
   achievement_countdown: 'Achievement Countdown',
+  todays_focus: "Today's Focus",
+  productive_vs_paused: 'Productive vs Paused Time',
+  session_quality: 'Session Quality',
 };
 
 const DEFAULT_LAYOUT: DashboardWidget[] = [
@@ -41,6 +47,9 @@ const DEFAULT_LAYOUT: DashboardWidget[] = [
   {id: 'stats_overview', isVisible: true},
   {id: 'completed_today', isVisible: true},
   {id: 'unlocked_badges', isVisible: true},
+  {id: 'todays_focus', isVisible: true},
+  {id: 'productive_vs_paused', isVisible: true},
+  {id: 'session_quality', isVisible: true},
   {id: 'todays_routines', isVisible: false},
   {id: 'todays_plan', isVisible: false},
 ];
