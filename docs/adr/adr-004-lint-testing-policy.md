@@ -1,7 +1,7 @@
 # ADR-004: Lint and Testing Selector Policy
 
 ## Status
-Accepted – 2025-09-17
+Accepted ï¿½ 2025-09-17
 
 ## Context
 We refactored the PWA and sync suites to run against real hooks and surfaces. To keep future tests consistent and maintainable we need an explicit policy for selector hierarchy, limited data-testid usage, and how we justify 
@@ -12,7 +12,8 @@ eact-hooks/exhaustive-deps exceptions.
 - Centralise browser/platform mocks (service worker bus, navigator stubs, performance observers) in jest.setup.js and the new src/test/mocks/sync-fixtures.ts module.
 - eslint warnings from 
 eact-hooks/exhaustive-deps must be resolved via useMemo/useCallback or explicit dependency lists. Scoped disables require a one-line comment explaining why the dependency cannot be added and a follow-up ticket reference.
-- Pre-commit runs lint-staged to execute ESLint and related Jest checks on staged files so regressions are caught before CI.
+- Pre-commit runs lint-staged to execute ESLint and fast checks on staged files so regressions are caught before CI.
+- Pre-push runs Jest related tests for changed files to ensure quality before code leaves local repos.
 
 ## Consequences
 - New suites should mirror the updated harness patterns and avoid brittle text-based selectors.
@@ -26,4 +27,39 @@ eact-hooks/exhaustive-deps must be resolved via useMemo/useCallback or explicit 
 - Allowlist: scripts/remote-api-allowlist.json with exact, prefix, and contains affordances. Vetted safe zones include the remote API gate/paths, src/test/**, and scripts/**.
 - CI order: SW artifact check -> remote API scan -> ESLint -> typecheck -> Jest. CI sets NEXT_PUBLIC_ENABLE_REMOTE_APIS=false.
 - Developer hooks: lint-staged runs the scanner for staged files. Requests to expand the allowlist must include rationale in PR review.
+
+## Enforcement Ladder Update - 2025-09-21
+
+### Problem
+Original pre-commit hooks running Jest caused significant commit delays, blocking developers during frequent commits.
+
+### Solution
+Rebalanced enforcement to provide fast local feedback while maintaining quality gates:
+
+1. **Pre-commit** (fast, <5s):
+   - ESLint with auto-fix
+   - Remote API literal scanner
+   - Service worker artifact check
+   - Bypass available with HUSKY_BYPASS=true (emergency use only)
+
+2. **Pre-push** (related tests only):
+   - Jest --findRelatedTests for changed files
+   - Bypass available with HUSKY_BYPASS=true (emergency use only)
+
+3. **CI/PR** (full suite):
+   - Complete Jest test suite
+   - TypeScript type checking
+   - All linting and security scans
+   - Required checks on protected branches
+
+### Bypass Policy
+- HUSKY_BYPASS=true may be used for emergency commits
+- Any bypass usage MUST be disclosed in the PR description
+- CI must pass before merges, regardless of bypass usage
+- Reviewers should reject PRs with undocumented bypasses
+
+### Rollback Plan
+To restore previous behavior:
+1. Add `'jest --bail --findRelatedTests'` back to lint-staged.config.js
+2. Remove or comment out the pre-push hook
 

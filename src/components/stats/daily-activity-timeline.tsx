@@ -4,6 +4,8 @@ import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {useTheme} from 'next-themes';
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from '@/components/ui/tooltip';
 import {formatDuration} from '@/lib/utils';
+import { TimezoneBoundaryService } from '@/lib/timezone-boundary-service';
+import { useTimezonePreference } from '@/hooks/use-timezone-preference';
 
 interface Activity {
   name: string;
@@ -74,18 +76,26 @@ const CurrentTimeIndicator: React.FC = () => {
 
 export const DailyActivityTimeline: React.FC<DailyActivityTimelineProps> = ({data}) => {
   const {theme} = useTheme();
+  const { timezone } = useTimezonePreference();
   const timelineColor = theme === 'dark' ? '#333' : '#E5E5E5';
   const taskColor = theme === 'dark' ? 'rgba(136, 132, 216, 0.7)' : 'rgba(136, 132, 216, 0.9)';
   const routineColor = theme === 'dark' ? 'rgba(130, 202, 157, 0.7)' : 'rgba(130, 202, 157, 0.9)';
 
-  const timeLabels = Array.from({length: 25}, (_, i) => (4 + i));
+  // Get boundary hour based on timezone
+  const boundaryHour = timezone === 'IST' ? 4 : 4; // Both use 4 AM as boundary
+  const timeLabels = Array.from({length: 25}, (_, i) => (boundaryHour + i));
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Daily Activity Timeline</CardTitle>
         <p className="text-sm text-muted-foreground">
-          A 24-hour view of your productive sessions from 4 AM to 4 AM.
+          A 24-hour view of your productive sessions from {boundaryHour} AM to {boundaryHour} AM.
+          {timezone === 'IST' && (
+            <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+              IST
+            </span>
+          )}
         </p>
       </CardHeader>
       <CardContent className="pt-8 pb-4">

@@ -47,10 +47,14 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/:path*',
-        headers: [ 
+        headers: [
           {
             key: 'X-Content-Type-Options',
             value: 'nosniff',
+          },
+          {
+            key: 'Time-Zone',
+            value: process.env.TZ || 'Asia/Kolkata',
           },
           {
             key: 'X-Frame-Options',

@@ -7,6 +7,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { WeekView } from "@/components/calendar/week-view";
 import { DayView } from "@/components/calendar/day-view";
 import { useCalendarEvents } from "@/hooks/use-calendar-events";
+import { useTimezonePreference } from "@/hooks/use-timezone-preference";
+import { formatWithTimezone } from "@/lib/date-formatting";
 
 type View = "month" | "week" | "day";
 
@@ -21,6 +23,7 @@ interface CalendarViewProps {
 export function CalendarView({ currentDate, onDateChange, onEventClick }: CalendarViewProps) {
   const [view, setView] = useState<View>("month");
   const { events } = useCalendarEvents();
+  const { timezone } = useTimezonePreference();
 
   const daysWithEvents = useMemo(() => {
     const dates = new Set<string>();
@@ -65,7 +68,12 @@ export function CalendarView({ currentDate, onDateChange, onEventClick }: Calend
     <div className="flex flex-col h-full">
       <div className="p-4 border-b flex justify-between items-center">
         <h2 className="text-lg font-semibold">
-          {currentDate?.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          {currentDate ? formatWithTimezone(currentDate, 'MMMM yyyy', timezone) : ''}
+          {timezone === 'IST' && (
+            <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+              IST
+            </span>
+          )}
         </h2>
         <div className="flex items-center gap-2">
           <Button variant={view === 'month' ? 'default' : 'outline'} onClick={() => setView('month')}>Month</Button>

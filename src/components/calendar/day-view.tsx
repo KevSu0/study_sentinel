@@ -6,6 +6,8 @@ import { EventItem } from './event-item';
 import { format } from 'date-fns';
 import { TodoList } from './todo-list';
 import { CalendarEvent } from '@/lib/types';
+import { TimezoneBoundaryService } from '@/lib/timezone-boundary-service';
+import { useTimezonePreference } from '@/hooks/use-timezone-preference';
 
 interface DayViewProps {
     day: Date;
@@ -15,6 +17,12 @@ interface DayViewProps {
 export function DayView({ day, onEventClick }: DayViewProps) {
   const { events, updateEvent } = useCalendarEvents();
   const { setNodeRef } = useDroppable({ id: 'day-view' });
+  const { timezone } = useTimezonePreference();
+
+  // Get day boundary based on timezone preference
+  const dayBoundary = timezone === 'IST'
+    ? TimezoneBoundaryService.getISTBoundary(day)
+    : TimezoneBoundaryService.getLegacyBoundary(day);
 
   const hours = Array.from({ length: 24 }, (_, i) => {
     const hour = i.toString().padStart(2, '0');
@@ -43,7 +51,7 @@ export function DayView({ day, onEventClick }: DayViewProps) {
   };
 
   const dayEvents = events.filter(
-    (event) => event.date === format(day, 'yyyy-MM-dd')
+    (event) => event.date === format(dayBoundary.start, 'yyyy-MM-dd')
   );
 
   return (

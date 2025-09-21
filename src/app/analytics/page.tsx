@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TimezoneComparisonToggle } from '@/components/analytics/timezone-comparison-toggle';
+import { TimezoneFirstVisitModal } from '@/components/analytics/timezone-first-visit-modal';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -25,6 +27,7 @@ export default function AnalyticsDashboard() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [detailedData, setDetailedData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showTimezoneModal, setShowTimezoneModal] = useState(false);
   const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRange>({
     start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago
     end: new Date().toISOString()
@@ -112,15 +115,16 @@ export default function AnalyticsDashboard() {
 
   return (
     <div className="container mx-auto py-8 space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
           <p className="text-muted-foreground">
             Advanced insights into your study patterns and performance
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          <Badge variant="outline" className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <TimezoneComparisonToggle className="w-full sm:w-auto" />
+          <Badge variant="outline" className="flex items-center gap-2 whitespace-nowrap">
             <Calendar className="h-3 w-3" />
             {formatTimeRange(selectedTimeRange)}
           </Badge>
@@ -431,6 +435,8 @@ export default function AnalyticsDashboard() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <TimezoneFirstVisitModal onOpenChange={setShowTimezoneModal} />
     </div>
   );
 }

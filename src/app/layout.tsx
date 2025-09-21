@@ -4,6 +4,7 @@ import './globals.css';
 import './fonts.css';
 import {Providers} from '@/components/providers';
 import {OfflineIndicator, OfflineBanner} from '@/components/offline-indicator';
+import {TimezoneBanner} from '@/components/ui/timezone-banner';
 
 export const metadata: Metadata = {
   title: "Study Sentinel",
@@ -79,6 +80,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <Providers>
+          <TimezoneBanner />
           {children}
           <OfflineIndicator />
           <OfflineBanner />

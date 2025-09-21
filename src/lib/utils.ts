@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { parseISO } from 'date-fns';
+import { TimezoneBoundaryService } from './timezone-boundary-service';
 
 function subDaysUTC(date: Date, amount: number): Date {
   const newDate = new Date(date);
@@ -22,30 +23,24 @@ export function generateShortId(prefix: 'T' | 'R'): string {
 }
 
 /**
- * Returns the "session date" for the app, where the day rolls over at 4 AM UTC.
+ * Returns the "session date" for the app, where the day rolls over at 4 AM IST.
  * @returns {Date} The current session date object.
  */
 export function getSessionDate(): Date {
-  const now = new Date();
-  // If it's before 4 AM UTC, we're still on the "previous" day's session.
-  if (now.getUTCHours() < 4) {
-    return subDaysUTC(now, 1);
-  }
-  return now;
+  const boundary = TimezoneBoundaryService.getStudyDayBoundary(new Date());
+  return boundary.dayStartUTC;
 }
 
 /**
  * For a given timestamp, returns the "study day" it belongs to.
- * The day rolls over at 4 AM UTC.
+ * The day rolls over at 4 AM IST.
  * @param {string} timestamp ISO 8601 timestamp string.
  * @returns {Date} The date object representing the study day.
  */
 export function getStudyDateForTimestamp(timestamp: string): Date {
   const date = parseISO(timestamp);
-  if (date.getUTCHours() < 4) {
-    return subDaysUTC(date, 1);
-  }
-  return date;
+  const boundary = TimezoneBoundaryService.getStudyDayBoundary(date);
+  return boundary.dayStartUTC;
 };
 
 /**

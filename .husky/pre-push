@@ -1,0 +1,30 @@
+# Check for bypass flag
+if [ "$HUSKY_BYPASS" = "true" ]; then
+  echo "⚠️  HUSKY_BYPASS detected - skipping pre-push hooks"
+  echo "   This should only be used in emergencies and disclosed in your PR"
+  exit 0
+fi
+
+# Use node_modules/.bin directly and add Windows npm to path
+PATH="./node_modules/.bin:/c/Program Files/nodejs:$PATH"
+
+# Get list of changed TypeScript/JavaScript files
+changed_files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx|js|jsx)$' | tr '\n' ' ')
+
+if [ -z "$changed_files" ]; then
+  echo "No TypeScript/JavaScript files to test"
+  exit 0
+fi
+
+echo "Running related tests for changed files..."
+echo "Files: $changed_files"
+
+# Run Jest with related files
+if ! jest --bail --findRelatedTests $changed_files; then
+  echo "❌ Pre-push related tests failed"
+  echo "   Fix failing tests before pushing"
+  echo "   Use HUSKY_BYPASS=true only in emergencies"
+  exit 1
+fi
+
+echo "✅ Pre-push related tests passed"

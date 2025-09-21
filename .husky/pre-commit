@@ -1,2 +1,13 @@
-npm run lint:staged
-npm run lint:sw
+# Check for bypass flag
+if [ "$HUSKY_BYPASS" = "true" ]; then
+  echo "⚠️  HUSKY_BYPASS detected - skipping pre-commit hooks"
+  echo "   This should only be used in emergencies and disclosed in your PR"
+  exit 0
+fi
+
+# Use node_modules/.bin directly
+PATH="./node_modules/.bin:$PATH"
+
+# Run commands directly
+lint-staged
+node ./scripts/check-sw-artifacts.js
