@@ -1,0 +1,54 @@
+{
+  "version": "1.0.0",
+  "scenarios": [
+    {
+      "name": "High Error Rates",
+      "triggers": [
+        "error_rate > 5%",
+        "critical_errors > 10/hour"
+      ],
+      "actions": [
+        "Enable emergency kill switch",
+        "Roll back to previous deployment",
+        "Investigate root cause"
+      ],
+      "estimatedDowntime": "< 5 minutes"
+    },
+    {
+      "name": "Performance Degradation",
+      "triggers": [
+        "p95_latency > 200ms",
+        "cpu_usage > 80%"
+      ],
+      "actions": [
+        "Scale up resources",
+        "Reduce cohort size",
+        "Optimize queries"
+      ],
+      "estimatedDowntime": "None (gradual)"
+    },
+    {
+      "name": "Data Corruption",
+      "triggers": [
+        "data_loss_events > 0",
+        "corruption_detected"
+      ],
+      "actions": [
+        "Immediate rollback",
+        "Restore from backup",
+        "Data integrity check"
+      ],
+      "estimatedDowntime": "15-30 minutes"
+    }
+  ],
+  "commands": {
+    "immediate": "npm run stats:rollback-emergency",
+    "gradual": "npm run stats:ramp-down",
+    "monitor": "npm run stats:monitor-critical"
+  },
+  "contacts": {
+    "primary": "on-call@study-sentinel.com",
+    "escalation": "tech-lead@study-sentinel.com",
+    "emergency": "cto@study-sentinel.com"
+  }
+}

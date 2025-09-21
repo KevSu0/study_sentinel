@@ -21,8 +21,8 @@ export function DayView({ day, onEventClick }: DayViewProps) {
 
   // Get day boundary based on timezone preference
   const dayBoundary = timezone === 'IST'
-    ? TimezoneBoundaryService.getISTBoundary(day)
-    : TimezoneBoundaryService.getLegacyBoundary(day);
+    ? TimezoneBoundaryService.getStudyDayBoundary(day, 'IST_4AM')
+    : TimezoneBoundaryService.getStudyDayBoundary(day, 'UTC_4AM');
 
   const hours = Array.from({ length: 24 }, (_, i) => {
     const hour = i.toString().padStart(2, '0');
@@ -51,7 +51,7 @@ export function DayView({ day, onEventClick }: DayViewProps) {
   };
 
   const dayEvents = events.filter(
-    (event) => event.date === format(dayBoundary.start, 'yyyy-MM-dd')
+    (event) => event.date === format(dayBoundary.dayStartUTC, 'yyyy-MM-dd')
   );
 
   return (

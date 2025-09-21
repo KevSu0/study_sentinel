@@ -1,3 +1,5 @@
+import { thirdPartyGate } from '@/lib/third-party/third-party-gate';
+import { safeApiFetch } from '@/lib/remote-api-gate';
 import { useState, useCallback } from 'react';
 import { remoteApiPaths } from './remote-api-paths';
 
@@ -179,7 +181,7 @@ export class iOSNetworkValidator {
         
         // Test actual network reachability
         try {
-          const response = await fetch(remoteApiPaths.health(), { 
+          const response = await safeApiFetch(remoteApiPaths.health(), { 
             method: 'HEAD',
             cache: 'no-cache'
           });
@@ -471,7 +473,7 @@ export class iOSNetworkValidator {
         const startTime = performance.now();
         
         try {
-          const response = await fetch(remoteApiPaths.health(), { 
+          const response = await safeApiFetch(remoteApiPaths.health(), { 
             method: 'GET',
             cache: 'no-cache'
           });
@@ -526,7 +528,7 @@ export class iOSNetworkValidator {
           resources.map(async (resource) => {
             const startTime = performance.now();
             try {
-              const response = await fetch(resource, { method: 'HEAD' });
+              const response = await thirdPartyGate.fetchRaw(resource, { method: 'HEAD' }) /* TODO: consider thirdPartyGate.fetchJson if response is JSON */;
               const duration = performance.now() - startTime;
               return response.ok && duration < 3000; // Should load within 3s
             } catch (error) {
@@ -554,7 +556,7 @@ export class iOSNetworkValidator {
         
         for (let i = 0; i < requestCount; i++) {
           requests.push(
-            fetch(remoteApiPaths.health(), { 
+            safeApiFetch(remoteApiPaths.health(), { 
               method: 'HEAD',
               cache: 'no-cache'
             }).catch(() => null)
@@ -610,7 +612,7 @@ export class iOSNetworkValidator {
         const testData = 'x'.repeat(testDataSize);
         
         try {
-          const response = await fetch(remoteApiPaths.testThrottle(), {
+          const response = await safeApiFetch(remoteApiPaths.testThrottle(), {
             method: 'POST',
             body: testData,
             headers: { 'Content-Type': 'text/plain' }
@@ -640,7 +642,7 @@ export class iOSNetworkValidator {
         if (saveData) {
           // Should load optimized resources
           try {
-            const response = await fetch(remoteApiPaths.optimized(), {
+            const response = await safeApiFetch(remoteApiPaths.optimized(), {
               headers: { 'Save-Data': 'on' }
             });
             return response.ok;
@@ -746,7 +748,7 @@ export class iOSNetworkValidator {
         
         for (let i = 0; i < maxRetries; i++) {
           try {
-            const response = await fetch(remoteApiPaths.retryTest(), {
+            const response = await safeApiFetch(remoteApiPaths.retryTest(), {
               method: 'GET',
               cache: 'no-cache'
             });
@@ -782,7 +784,7 @@ export class iOSNetworkValidator {
           const endpoints = [remoteApiPaths.health(), '/manifest.json', '/sw.js'];
           const results = await Promise.all(
             endpoints.map(endpoint => 
-              fetch(endpoint, { method: 'HEAD' }).catch(() => null)
+              thirdPartyGate.fetchRaw(endpoint, { method: 'HEAD' }) /* TODO: consider thirdPartyGate.fetchJson if response is JSON */.catch(() => null)
             )
           );
           

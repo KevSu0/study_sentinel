@@ -1,6 +1,6 @@
 // no Next imports needed for this handler in tests
 
-export let counts: Record<string, number> = {};
+import { counts } from './counts';
 
 export async function POST(req: any) {
   try {
@@ -23,7 +23,4 @@ function getCspReportCounts() {
   return { ...counts };
 }
 
-// Utilities for tests to manage internal counts without relying on module export mutation
-// This allows tests using `require()` to reset counts via assignment.
-export function setCounts(v: Record<string, number>) { counts = v; }
-export function getCounts() { return counts; }
+// Test utilities moved to separate file to avoid type issues

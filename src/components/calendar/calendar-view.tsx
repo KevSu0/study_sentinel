@@ -68,7 +68,7 @@ export function CalendarView({ currentDate, onDateChange, onEventClick }: Calend
     <div className="flex flex-col h-full">
       <div className="p-4 border-b flex justify-between items-center">
         <h2 className="text-lg font-semibold">
-          {currentDate ? formatWithTimezone(currentDate, 'MMMM yyyy', timezone) : ''}
+          {currentDate ? formatWithTimezone(currentDate, 'MMMM yyyy', { showTimezone: timezone === 'IST' }) : ''}
           {timezone === 'IST' && (
             <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
               IST

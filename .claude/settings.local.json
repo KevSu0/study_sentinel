@@ -24,7 +24,11 @@
       "WebSearch",
       "WebFetch(domain:vercel.com)",
       "Bash(sort:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(npx eslint:*)",
+      "Bash(fold:*)",
+      "Bash(xxd:*)",
+      "Bash(npm run lint:*)"
     ],
     "deny": [],
     "ask": []

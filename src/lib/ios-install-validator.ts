@@ -1,3 +1,4 @@
+import { thirdPartyGate } from '@/lib/third-party/third-party-gate';
 import { useState, useCallback } from 'react';
 
 /**
@@ -95,7 +96,7 @@ export class iOSInstallValidator {
         }
         
         try {
-          const response = await fetch(manifestUrl);
+          const response = await thirdPartyGate.fetchRaw(manifestUrl) /* TODO: consider thirdPartyGate.fetchJson if response is JSON */;
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
           }
@@ -267,7 +268,7 @@ export class iOSInstallValidator {
         const results = await Promise.all(
           testIcons.map(async (icon) => {
             try {
-              const response = await fetch(icon.src, { method: 'HEAD' });
+              const response = await thirdPartyGate.fetchRaw(icon.src, { method: 'HEAD' }) /* TODO: consider thirdPartyGate.fetchJson if response is JSON */;
               return response.ok;
             } catch (error) {
               return false;

@@ -14,6 +14,9 @@ const DATE_FORMATTING_CONFIG = {
  * @param formatStr Optional format string
  * @param options Formatting options
  */
+// Alias for backward compatibility
+export const formatWithTimezone = formatDateWithTimezone;
+
 export function formatDateWithTimezone(
   date: Date,
   formatStr?: string,

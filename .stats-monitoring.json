@@ -1,0 +1,97 @@
+{
+  "name": "Stats Hardening v1.0.0 Deployment",
+  "description": "Monitor rollout progress and system health",
+  "stages": {
+    "canary": {
+      "percentage": 10,
+      "description": "Initial canary cohort",
+      "duration": "24-48 hours",
+      "metrics": {
+        "max_error_rate": "1%",
+        "max_compute_time": "100ms",
+        "min_success_rate": "99%"
+      }
+    },
+    "ramp-50": {
+      "percentage": 50,
+      "description": "Half user base",
+      "duration": "24-48 hours",
+      "metrics": {
+        "max_error_rate": "0.5%",
+        "max_compute_time": "75ms",
+        "min_success_rate": "99.5%"
+      }
+    },
+    "full": {
+      "percentage": 100,
+      "description": "Full deployment",
+      "duration": "Continuous",
+      "metrics": {
+        "max_error_rate": "0.1%",
+        "max_compute_time": "50ms",
+        "min_success_rate": "99.9%"
+      }
+    }
+  },
+  "currentStage": "canary",
+  "lastUpdated": "2025-09-21T07:56:43.748Z",
+  "panels": [
+    {
+      "title": "Deployment Progress",
+      "metrics": [
+        "stats_deployment_percentage",
+        "stats_active_users",
+        "stats_feature_adoption_rate"
+      ]
+    },
+    {
+      "title": "Performance Metrics",
+      "metrics": [
+        "stats_computation_time_p95",
+        "worker_initialization_time_p95",
+        "ui_response_time_p95"
+      ],
+      "targets": {
+        "p95": "< 100ms",
+        "p99": "< 200ms"
+      }
+    },
+    {
+      "title": "Error Monitoring",
+      "metrics": [
+        "stats_error_rate",
+        "worker_failure_rate",
+        "fallback_activation_rate"
+      ],
+      "thresholds": {
+        "critical": "> 5%",
+        "warning": "> 1%"
+      }
+    },
+    {
+      "title": "User Experience",
+      "metrics": [
+        "stats_page_load_time",
+        "interaction_latency",
+        "user_satisfaction_score"
+      ]
+    }
+  ],
+  "alerts": [
+    {
+      "name": "High Error Rate",
+      "condition": "error_rate > 5%",
+      "action": "Page on-call"
+    },
+    {
+      "name": "Performance Degradation",
+      "condition": "p95_latency > 200ms",
+      "action": "Investigate and potentially rollback"
+    },
+    {
+      "name": "Low Adoption",
+      "condition": "adoption_rate < expected_rate",
+      "action": "Review feature rollout"
+    }
+  ]
+}

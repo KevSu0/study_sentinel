@@ -1,3 +1,4 @@
+import { thirdPartyGate } from '@/lib/third-party/third-party-gate';
 import { useState, useCallback } from 'react';
 
 /**
@@ -426,7 +427,7 @@ export class iOSLifecycleValidator {
         // Navigate to a test route and measure timing
         try {
           const testUrl = new URL('/test-nav', window.location.href).href;
-          const response = await fetch(testUrl);
+          const response = await thirdPartyGate.fetchRaw(testUrl) /* TODO: consider thirdPartyGate.fetchJson if response is JSON */;
           const duration = performance.now() - startTime;
           
           return duration < 2000 && response.ok; // Should complete within 2s
@@ -449,7 +450,7 @@ export class iOSLifecycleValidator {
         try {
           // Test offline navigation to cached routes
           const offlineUrl = new URL('/offline', window.location.href).href;
-          const response = await fetch(offlineUrl, { headers: { 'Service-Worker': 'test' } });
+          const response = await thirdPartyGate.fetchRaw(offlineUrl, { headers: { 'Service-Worker': 'test' } }) /* TODO: consider thirdPartyGate.fetchJson if response is JSON */;
           return response.ok;
         } catch (error) {
           return false;
@@ -505,7 +506,7 @@ export class iOSLifecycleValidator {
         try {
           // Simulate a failed navigation and test fallback
           const fallbackUrl = new URL('/offline.html', window.location.href).href;
-          const response = await fetch(fallbackUrl);
+          const response = await thirdPartyGate.fetchRaw(fallbackUrl) /* TODO: consider thirdPartyGate.fetchJson if response is JSON */;
           const duration = performance.now() - startTime;
           
           return duration < 1500 && response.ok; // Should fallback within 1.5s
@@ -531,7 +532,7 @@ export class iOSLifecycleValidator {
         const results = await Promise.all(
           fallbackResources.map(async (resource) => {
             try {
-              const response = await fetch(resource);
+              const response = await thirdPartyGate.fetchRaw(resource) /* TODO: consider thirdPartyGate.fetchJson if response is JSON */;
               return response.ok;
             } catch (error) {
               return false;

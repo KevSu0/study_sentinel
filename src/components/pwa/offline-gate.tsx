@@ -1,5 +1,7 @@
 ﻿'use client';
 
+import { thirdPartyGate } from '@/lib/third-party/third-party-gate';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -131,10 +133,10 @@ export function useAIFeature(): AIFeatureState {
   const checkConnectivity = useCallback(async () => {
     setIsChecking(true);
     try {
-      const response = await fetch(CONNECTIVITY_PROBE, {
+      const response = await thirdPartyGate.fetchRaw(CONNECTIVITY_PROBE, {
         method: 'HEAD',
         cache: 'no-store',
-      });
+      }) /* TODO: consider thirdPartyGate.fetchJson if response is JSON */;
       const online = response.ok;
       onlineRef.current = online;
       setIsOnline(online);

@@ -131,7 +131,7 @@ export class OfflineResilienceManager {
         if (typeof url === 'string' && /^https?:\/\//.test(url)) {
           return await thirdPartyGate.fetchRaw(url, options);
         }
-        return await fetch(url, options);
+        return await thirdPartyGate.fetchRaw(url, options) /* TODO: consider thirdPartyGate.fetchJson if response is JSON */;
       } catch (error) {
         if (!this.options.enableQueue) {
           throw error;
@@ -167,7 +167,7 @@ export class OfflineResilienceManager {
 
       try {
         const isAbs = typeof request.url === 'string' && /^https?:\/\//.test(request.url);
-        const response = await (isAbs ? thirdPartyGate.fetchRaw(request.url, request.options) : fetch(request.url, request.options));
+        const response = await (isAbs ? thirdPartyGate.fetchRaw(request.url, request.options) : thirdPartyGate.fetchRaw(request.url, request.options) /* TODO: consider thirdPartyGate.fetchJson if response is JSON */);
         if (response.ok) {
           this.removeFromQueue(request.id);
         } else {

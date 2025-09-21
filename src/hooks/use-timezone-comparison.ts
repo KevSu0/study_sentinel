@@ -30,12 +30,11 @@ export function useTimezoneComparison(timestamp?: Date) {
     if (hasDifference) {
       // Determine time of day category (non-PII)
       const hour = timestamp ? timestamp.getUTCHours() : 0;
-      let timeOfDayCategory: TimezoneDiffEvent['timeOfDayCategory'] = 'morning';
-      if (hour >= 0 && hour < 6) timeOfDayCategory = 'early_morning';
-      else if (hour >= 6 && hour < 12) timeOfDayCategory = 'morning';
-      else if (hour >= 12 && hour < 17) timeOfDayCategory = 'afternoon';
-      else if (hour >= 17 && hour < 22) timeOfDayCategory = 'evening';
-      else timeOfDayCategory = 'night';
+      const timeOfDayCategory =
+        hour >= 0 && hour < 6 ? 'early_morning' :
+        hour >= 6 && hour < 12 ? 'morning' :
+        hour >= 12 && hour < 17 ? 'afternoon' :
+        hour >= 17 && hour < 22 ? 'evening' : 'night';
 
       timezoneTelemetry.logBoundaryDifference({
         hasDifference,

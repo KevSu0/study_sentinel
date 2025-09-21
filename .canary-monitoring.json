@@ -1,0 +1,81 @@
+{
+  "dashboard": {
+    "title": "Stats Hardening v1.0.0 - Canary Deployment",
+    "description": "Monitor the 10% canary rollout of hardened stats features",
+    "panels": [
+      {
+        "title": "Cohort Size",
+        "metrics": [
+          "stats_canary_users_total",
+          "stats_canary_users_percentage"
+        ],
+        "targets": [
+          "< 10%",
+          "10%",
+          "> 10%"
+        ]
+      },
+      {
+        "title": "Feature Usage",
+        "metrics": [
+          "stats_worker_usage",
+          "badges_incremental_evaluations",
+          "stats_rollup_reads",
+          "stats_accessibility_features_used"
+        ]
+      },
+      {
+        "title": "Performance Metrics",
+        "metrics": [
+          "worker_initialization_time_p95",
+          "stats_computation_time_p95",
+          "badge_evaluation_time_p95",
+          "rollup_read_latency_p95"
+        ],
+        "thresholds": {
+          "worker_init": "< 100ms",
+          "compute_time": "< 50ms",
+          "badge_eval": "< 25ms",
+          "rollup_read": "< 20ms"
+        }
+      },
+      {
+        "title": "Error Rates",
+        "metrics": [
+          "worker_initialization_failures",
+          "stats_computation_errors",
+          "badge_evaluation_errors",
+          "rollup_read_failures"
+        ],
+        "thresholds": {
+          "error_rate": "< 1%"
+        }
+      },
+      {
+        "title": "User Impact",
+        "metrics": [
+          "stats_page_load_time",
+          "ui_blocking_events",
+          "user_satisfaction_score"
+        ]
+      }
+    ]
+  },
+  "alerts": [
+    {
+      "name": "High Error Rate",
+      "condition": "error_rate > 5%",
+      "severity": "critical"
+    },
+    {
+      "name": "Performance Degradation",
+      "condition": "compute_time_p95 > 100ms",
+      "severity": "warning"
+    },
+    {
+      "name": "Worker Init Failures",
+      "condition": "worker_init_failures > 10%",
+      "severity": "critical"
+    }
+  ]
+}

@@ -237,7 +237,7 @@ export class NetworkEnforcement {
     if (/^https?:\/\//.test(url)) {
       return thirdPartyGate.fetchRaw(url, options);
     }
-    return fetch(url, options);
+    return thirdPartyGate.fetchRaw(url, options) /* TODO: consider thirdPartyGate.fetchJson if response is JSON */;
   }
 
   /**

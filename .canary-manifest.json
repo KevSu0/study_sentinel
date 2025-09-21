@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "deployment": {
+    "type": "development",
+    "cohortPercentage": 100,
+    "enabledAt": "2025-09-21T07:56:16.139Z",
+    "rampedAt": "2025-09-21T07:58:00.000Z",
+    "features": {
+      "stats.worker.v1": true,
+      "badges.incremental.v1": true,
+      "stats.rollup.v2": true,
+      "stats.accessibility.v1": true,
+      "stats.observability.v1": true
+    }
+  },
+  "monitoring": {
+    "metricsEndpoint": "/api/stats/metrics",
+    "healthEndpoint": "/api/stats/health",
+    "errorTracking": "/api/stats/errors"
+  },
+  "rollback": {
+    "command": "npm run rollback-stats-canary",
+    "emergencyKillSwitch": "STATS_EMERGENCY_STOP=true"
+  }
+}

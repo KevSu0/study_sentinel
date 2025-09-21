@@ -1,5 +1,5 @@
 import { timezoneTelemetry, TimezoneDiffEvent } from './telemetry';
-import { TIMEZONE_LAUNCH_CONFIG } from './config/launch-config';
+import { TIMEZONE_LAUNCH_CONFIG } from '../config/launch-config';
 
 // Monitoring dashboard interface
 export interface TimezoneMetrics {
